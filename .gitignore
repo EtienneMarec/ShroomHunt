@@ -1,0 +1,67 @@
+# ---------------------------------------------------------------
+# Unreal Engine generated / cached folders (rebuilt on demand)
+# ---------------------------------------------------------------
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+Build/Receipts/
+
+# Same folders inside project plugins
+Plugins/**/Binaries/
+Plugins/**/Intermediate/
+
+# Packaged builds and cooked data
+Releases/
+Packaged/
+Cooked/
+*.pak
+*.ucas
+*.utoc
+
+# ---------------------------------------------------------------
+# IDE and generated project files (regenerated from the .uproject)
+# ---------------------------------------------------------------
+.vs/
+.vscode/
+.idea/
+*.sln
+*.slnx
+*.suo
+*.user
+*.userprefs
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.opendb
+*.code-workspace
+compile_commands.json
+
+# ---------------------------------------------------------------
+# Compiled artifacts (stray ones outside Binaries/Intermediate)
+# Note: *.obj is NOT ignored here because it is also a mesh format (LFS).
+# ---------------------------------------------------------------
+*.o
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.dll
+*.exe
+*.app
+*.dylib
+*.so
+
+# ---------------------------------------------------------------
+# Python (editor scripts / tools)
+# ---------------------------------------------------------------
+__pycache__/
+*.pyc
+.venv/
+
+# ---------------------------------------------------------------
+# OS clutter
+# ---------------------------------------------------------------
+Thumbs.db
+desktop.ini
+.DS_Store
