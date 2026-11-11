@@ -14,9 +14,6 @@ public class ShroomHunt : ModuleRules
 			"Engine",
 			"InputCore",
 			"EnhancedInput",
-			"AIModule",
-			"StateTreeModule",
-			"GameplayStateTreeModule",
 			"UMG",
 			"Slate"
 		});
@@ -24,13 +21,7 @@ public class ShroomHunt : ModuleRules
 		PrivateDependencyModuleNames.AddRange(new string[] { });
 
 		PublicIncludePaths.AddRange(new string[] {
-			"ShroomHunt",
-			"ShroomHunt/Variant_Horror",
-			"ShroomHunt/Variant_Horror/UI",
-			"ShroomHunt/Variant_Shooter",
-			"ShroomHunt/Variant_Shooter/AI",
-			"ShroomHunt/Variant_Shooter/UI",
-			"ShroomHunt/Variant_Shooter/Weapons"
+			"ShroomHunt"
 		});
 
 		// Uncomment if you are using Slate UI
