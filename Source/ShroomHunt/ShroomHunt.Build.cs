@@ -15,7 +15,9 @@ public class ShroomHunt : ModuleRules
 			"InputCore",
 			"EnhancedInput",
 			"UMG",
-			"Slate"
+			"Slate",
+			"DeveloperSettings",
+			"Niagara"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
