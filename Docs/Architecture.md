@@ -110,7 +110,7 @@ flowchart LR
   HeavyRain, Storm) with hysteresis, `GetRainfall(From, To)`,
   `GetMeanTemperature(From, To)` (hourly cache), debug overrides
   (`ForceWeather(State, DurationHours)`, stored and saved).
-- `AEnvironmentDirector` (Blueprintable actor placed in each forest map) —
+- `AEnvironmentDirector` (`Environment/`, Blueprintable actor placed in each forest map) —
   drives Directional Light (sun & moon), Sky Atmosphere, Volumetric Clouds,
   Exponential Height Fog, Sky Light, rain Niagara, wetness material params
   (`MPC_Environment`). C++ computes targets, BP events allow art tweaks.

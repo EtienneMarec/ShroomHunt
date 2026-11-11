@@ -3,8 +3,8 @@
 *A contemplative first-person mushroom-foraging game in procedurally generated
 French forests — Unreal Engine 5.8, C++.*
 
-> **Status: pre-alpha — design phase (milestone M0).** Screenshots will be
-> added as soon as the vertical slice (M1) is playable.
+> **Status: pre-alpha — vertical slice in progress (M1a: time & weather
+> core).** Screenshots will be added as soon as the slice is playable.
 
 <!-- Screenshots / GIF go here: Docs/Media/*.png -->
 

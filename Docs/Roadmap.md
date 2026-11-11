@@ -11,7 +11,7 @@ world generation, progression, roadmap, decisions).
 ## M1 — Vertical slice (lowland oak–beech, 1 km²)
 | Step | Deliverable | Demo |
 |---|---|---|
-| M1a Time & weather core | `UTimeSettings`, `UCalendarSubsystem`, `FWeatherModel`, `UWeatherSubsystem`, `AEnvironmentDirector` (sun/moon, fog, clouds, rain FX), debug HUD, `sh.Time.*` / `sh.Weather.*` | template map: 10-min day/night, rain arriving and clearing, forced storm |
+| M1a Time & weather core ✅ code (editor setup: `Docs/Milestones/M1a.md`) | `UTimeSettings`, `UCalendarSubsystem`, `FWeatherModel`, `UWeatherSubsystem`, `AEnvironmentDirector` (sun/moon, fog, clouds, rain FX), debug HUD, `sh.Time.*` / `sh.Weather.*` | template map: 10-min day/night, rain arriving and clearing, forced storm |
 | M1b Species data | `FMushroomSpeciesRow`, `import_data.py`, `DT_Species` with 3 species, `USpeciesDatabaseSubsystem` | DataTable visible in editor, reimport after a JSON edit |
 | M1c Procedural mushrooms | `FMushroomMorphology`, `FMushroomMeshBuilder`, `UMushroomMeshCache`, debug "specimen garden" actor | grid of 3 species × stages × variants |
 | M1d Forest terrain | `FForestField`, heightmap/weightmap bake, landscape import steps, landscape material, PCG trees (oak, beech, hornbeam, birch) + understory with custom field node | walk in a 1 km² forest |

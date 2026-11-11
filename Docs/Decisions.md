@@ -84,6 +84,17 @@ files (Epic copyright header) and engine content stay under the Unreal Engine
 EULA; third-party assets are excluded (D-010). New source files carry no Epic
 header.
 
+**D-018 — Weather calibration and debug HUD** · Accepted · 2026-11-11
+Default lowland climate tuned by the `ClimateCalibration` test: ~14 % rainy
+hours, ~2.7 mm/day (~1 000 mm/year), rare natural heavy rain (≥ 3 mm/h,
+mostly storms). Debug HUD is an on-screen message list (no widget asset) so
+it works without editor setup.
+
+**D-019 — Environment director preserves the authored level** · Accepted · 2026-11-11
+The director auto-finds sky actors and uses their authored intensities/fog as
+the "clear day" reference. The editor preview only rotates the sun and moon,
+never intensities, so previewing cannot alter the saved level.
+
 ## Open questions (to the developer)
 
 - None at the moment.

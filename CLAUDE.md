@@ -77,8 +77,8 @@ ShroomHunt/
 - **No global project prefix** on class names: domain names (`UCalendarSubsystem`,
   `FMushroomSpeciesRow`). Check for engine name collisions before adding a class.
 - Source folders by domain inside `Source/ShroomHunt/`:
-  `Core/ Time/ Weather/ Forest/ Mycology/ Mushroom/ Player/ Knowledge/
-  Economy/ Save/ UI/ Debug/`. Template code stays where it is until cleaned up.
+  `Core/ Time/ Weather/ Environment/ Forest/ Mycology/ Mushroom/ Player/
+  Knowledge/ Economy/ Save/ UI/ Debug/`, tests in `<Domain>/Tests/`. Template code stays where it is until cleaned up.
   New folders must be added to `PublicIncludePaths` in `ShroomHunt.Build.cs`
   only if needed; prefer includes relative to the module root
   (`#include "Weather/WeatherSubsystem.h"`).
@@ -173,7 +173,12 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
 ## 10. Architecture cheat sheet (details in `Docs/Architecture.md`)
 
 - **Calendar** (`UCalendarSubsystem`, GameInstance): single source of time
-  (total game seconds) → time of day, day, season, year.
+  (total game seconds) → time of day, day, season, year. Pure math in
+  `CalendarMath` (also sun/moon positions).
+- **Environment** (`AEnvironmentDirector`, one `BP_` per map): applies time +
+  weather to lights, fog, clouds, rain FX and `MPC_Environment`.
+- **Debug**: `sh.*` console commands (`Debug/ShroomConsoleCommands.cpp`) and
+  the on-screen HUD (`UShroomDebugSubsystem`, `sh.Debug.HUD`).
 - **Weather** (`FWeatherModel` pure + `UWeatherSubsystem`): deterministic,
   random-access function of (forest seed, climate, time) + debug overrides.
   Rain history is computed, not stored.
@@ -204,5 +209,12 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   files for `/Game/<Folder>/` and `/Script/ShroomHunt.<Class>` (package paths
   are stored as plain strings). Matches in import metadata (original source
   file paths) are harmless.
+- A `UFUNCTION(BlueprintImplementableEvent)` parameter must not share a name
+  with a class member: the generated `.gen.cpp` fails with C4458 ("masque le
+  membre de classe").
+- Headless test logs contain ~20 `LogAutomationTest: Error: Condition failed`
+  lines at frame 0: they come from an engine self-test (`UnifiedErrorTest`),
+  not from our tests. Read the `Test Completed. Result={...}` lines.
+- `TestEqual` has no overload for enums / `uint32`: use `TestTrue(A == B)`.
 - Player-facing strings are `FText` (localization-ready, D-014); never build
   UI text from `FString` concatenation.
