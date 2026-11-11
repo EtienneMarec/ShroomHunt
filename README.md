@@ -70,4 +70,6 @@ repository; the list of required free assets will be documented here.
 
 ## License
 
-TBD.
+Original code, data, tools and docs: [MIT](LICENSE). Files derived from
+Unreal Engine templates and Unreal Engine content fall under the Unreal
+Engine EULA; third-party assets are not included and keep their own licenses.

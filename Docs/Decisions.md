@@ -78,6 +78,12 @@ they needed. Kept: `FirstPerson` (character, controller, test map),
 `Characters` (first-person arms), `Input`, `LevelPrototyping` (grey-box meshes
 used by the test map).
 
+**D-017 — MIT license for original work** · Accepted · 2026-11-11
+Original code, data, tools and docs are MIT (`LICENSE`). Template-derived
+files (Epic copyright header) and engine content stay under the Unreal Engine
+EULA; third-party assets are excluded (D-010). New source files carry no Epic
+header.
+
 ## Open questions (to the developer)
 
-- License for the public repo (e.g. MIT for code, third-party assets excluded)?
+- None at the moment.
