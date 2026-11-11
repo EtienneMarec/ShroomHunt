@@ -1,6 +1,6 @@
 # Architecture
 
-Status: **proposal (M0)** — to be validated before implementation.
+Status: **accepted at M0 review (2026-11-11)** — living document.
 Goal: a playable slice quickly, with seams that let the project grow
 (more forests, species, systems) without an over-engineered start.
 

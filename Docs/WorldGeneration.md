@@ -1,6 +1,6 @@
 # World generation: forest field, paths, landmarks, PCG
 
-Status: **proposal (M0)**.
+Status: **accepted at M0 review (2026-11-11)** — living document.
 
 ## 1. Pipeline overview
 

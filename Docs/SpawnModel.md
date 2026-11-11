@@ -1,6 +1,6 @@
 # Mushroom spawn model
 
-Status: **proposal (M0)**.
+Status: **accepted at M0 review (2026-11-11)** — living document.
 
 Two layers, as in real life: **mycelium lives in persistent good spots**
 (static), and **fruiting bodies appear when weather and season allow**

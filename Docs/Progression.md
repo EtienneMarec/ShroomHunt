@@ -1,6 +1,6 @@
 # Progression loop: identification, money, books, kits, forests
 
-Status: **proposal (M0)** — options marked ⚖️ need a decision.
+Status: **accepted at M0 review (2026-11-11)**; error consequences decided in D-013.
 
 ## 1. Core loop
 
@@ -87,7 +87,7 @@ A letter from the regional **mycological society** announces each new forest
 (light quest framing, no NPC needed). Knowledge gating ensures the player
 learns; money gating keeps the selling loop meaningful.
 
-## 6. ⚖️ Consequences of an error — options to choose from
+## 6. Consequences of an error (decided: B for selling, C for eating, D opt-in — D-013)
 
 | Option | Selling a toxic specimen | Eating a toxic specimen (later, with cooking) |
 |---|---|---|

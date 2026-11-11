@@ -4,7 +4,7 @@ Each milestone ends with: compiling code, editor steps
 (`Docs/Milestones/Mx.md`), a test procedure, README/CLAUDE.md updates and a
 short "UE concepts learned" section. Sub-steps are individually demoable.
 
-## M0 — Setup & design ✅ (in review)
+## M0 — Setup & design ✅ (done 2026-11-11)
 Git + LFS, CLAUDE.md, design docs (architecture, species schema, spawn model,
 world generation, progression, roadmap, decisions).
 
