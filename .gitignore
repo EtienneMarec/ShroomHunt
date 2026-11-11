@@ -20,6 +20,13 @@ Cooked/
 *.utoc
 
 # ---------------------------------------------------------------
+# Third-party marketplace assets (Fab / Megascans): not redistributable
+# in a public repo and too heavy for the LFS quota. See Docs/Decisions.md D-010.
+# ---------------------------------------------------------------
+Content/Fab/
+Content/Megascans/
+
+# ---------------------------------------------------------------
 # IDE and generated project files (regenerated from the .uproject)
 # ---------------------------------------------------------------
 .vs/
