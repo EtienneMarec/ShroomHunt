@@ -60,7 +60,7 @@ ShroomHunt/
 │  │  ├─ UI/               WBP_* widgets
 │  │  └─ Debug/            debug materials and widgets
 │  ├─ Fab/                 third-party Fab/Megascans assets (NOT versioned, see D-010)
-│  └─ (template folders)   FirstPerson, Characters, Input, LevelPrototyping…
+│  └─ (template folders)   FirstPerson, Characters, Input, LevelPrototyping (kept, D-016)
 ├─ Data/                   source-of-truth gameplay data (JSON), imported by Tools/
 │  ├─ Species/             one JSON file per species
 │  └─ Forests/             one JSON file per forest definition
@@ -108,20 +108,25 @@ ShroomHunt/
 Close the editor (or at least disable Live Coding) before building from the
 command line: UBT refuses to build while Live Coding is active.
 
-```bash
-# Build editor target (Development)
-"/c/Program Files/Epic Games/UE_5.8/Engine/Build/BatchFiles/Build.bat" ShroomHuntEditor Win64 Development -Project="$(pwd -W)/ShroomHunt.uproject" -WaitMutex -MaxParallelActions=6
+Run UBT from **PowerShell** (calling `Build.bat` from Git Bash breaks on the
+space in `Program Files`, see §11):
+
+```powershell
+# Build editor target (Development) — about 1 min incremental
+& "C:\Program Files\Epic Games\UE_5.8\Engine\Build\BatchFiles\Build.bat" ShroomHuntEditor Win64 Development "-Project=$PWD\ShroomHunt.uproject" -WaitMutex -MaxParallelActions=6
 ```
 
-```bash
+```powershell
 # Regenerate Visual Studio project files (also: right-click .uproject > Generate Visual Studio project files)
-"/c/Program Files/Epic Games/UE_5.8/Engine/Build/BatchFiles/Build.bat" -projectfiles -project="$(pwd -W)/ShroomHunt.uproject" -game -engine
+& "C:\Program Files\Epic Games\UE_5.8\Engine\Build\BatchFiles\Build.bat" -projectfiles "-project=$PWD\ShroomHunt.uproject" -game -engine
 ```
 
-```bash
+```powershell
 # Run automation tests headless (filter "ShroomHunt.")
-"/c/Program Files/Epic Games/UE_5.8/Engine/Binaries/Win64/UnrealEditor-Cmd.exe" "$(pwd -W)/ShroomHunt.uproject" -ExecCmds="Automation RunTests ShroomHunt.;Quit" -unattended -nopause -nullrhi -nosplash -log
+& "C:\Program Files\Epic Games\UE_5.8\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "$PWD\ShroomHunt.uproject" "-ExecCmds=Automation RunTests ShroomHunt.;Quit" -unattended -nopause -nullrhi -nosplash -log
 ```
+
+Always check the log for `Result: Succeeded`, not only the exit code.
 
 - Automation tests live next to the code in `Source/ShroomHunt/<Domain>/Tests/`
   (`IMPLEMENT_SIMPLE_AUTOMATION_TEST`, names `ShroomHunt.<Domain>.<Test>`).
@@ -193,3 +198,11 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
 - World Partition stores actors as one file per actor in
   `Content/__ExternalActors__/` — these must be committed with the map.
 - Git warns "LF will be replaced by CRLF": harmless, normalized by `.gitattributes`.
+- Calling `Build.bat` from Git Bash fails ("'C:\Program' n'est pas reconnu…")
+  **with exit code 0**: use PowerShell for UBT and check `Result: Succeeded`.
+- Before deleting assets outside the editor, grep the remaining `.uasset`
+  files for `/Game/<Folder>/` and `/Script/ShroomHunt.<Class>` (package paths
+  are stored as plain strings). Matches in import metadata (original source
+  file paths) are harmless.
+- Player-facing strings are `FText` (localization-ready, D-014); never build
+  UI text from `FString` concatenation.

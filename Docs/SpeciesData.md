@@ -1,6 +1,6 @@
 # Species data schema
 
-Status: **proposal (M0)**.
+Status: **accepted at M0 review (2026-11-11)** — living document.
 
 Each species is one JSON file in `Data/Species/<SpeciesId>.json`. The editor
 script `Tools/Python/import_data.py` merges them into the DataTable
