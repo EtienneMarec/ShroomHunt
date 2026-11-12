@@ -143,6 +143,12 @@ Always check the log for `Result: Succeeded`, not only the exit code.
 - Data pipeline: `Data/**/*.json` (source of truth, diffable) →
   `Tools/Python/import_data.py` (run in editor: *Tools > Execute Python Script*)
   → DataTables in `Content/ShroomHunt/Data/`. Never hand-edit those DataTables.
+  Parsing/validation is C++ (`Mycology/SpeciesJsonParser`, D-021); Python only
+  creates the asset and calls `unreal.SpeciesDataLibrary`. After editing a
+  JSON, re-run the import (the `DataTableInSync` test fails otherwise).
+- Claude can run the import headless (`-run=pythonscript`, see
+  `Docs/Milestones/M1b.md`) and commit the regenerated DataTable as a
+  `content(data):` commit.
 - Python scripts must be idempotent (safe to re-run) and log what they change.
 
 ## 8. Asset naming (Content/)
@@ -185,8 +191,9 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
 - **Forest field** (`FForestField`): deterministic sampler (altitude, moisture,
   pH, soil, exposure, stand composition, canopy, parcels) shared by terrain
   bake, PCG custom nodes and mushroom suitability.
-- **Mycology**: species rows (DataTable) → static suitability → persistent
-  mycelium patches → daily flush roll from lagged weather → fruit bodies.
+- **Mycology**: species rows (`FMushroomSpeciesRow` in `DT_Species`, loaded by
+  `USpeciesDatabaseSubsystem`) → static suitability → persistent mycelium
+  patches → daily flush roll from lagged weather → fruit bodies.
 - **Mushroom mesh**: species ranges + seed → `FMushroomMorphology` →
   `FDynamicMesh3` (revolve + deform) → cached `UStaticMesh` variants rendered
   by ISM; the inspected specimen gets a unique mesh.
@@ -216,5 +223,13 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   lines at frame 0: they come from an engine self-test (`UnifiedErrorTest`),
   not from our tests. Read the `Test Completed. Result={...}` lines.
 - `TestEqual` has no overload for enums / `uint32`: use `TestTrue(A == B)`.
+- **Unity builds** merge several `.cpp` into one translation unit: two files
+  defining the same helper in an anonymous namespace fail to compile (C2084)
+  as soon as UBT groups them. Put shared helpers in `Core/` (`ShroomMath.h`)
+  and give file-local helpers specific names.
+- `FJsonObject::Values.Find` does not compile on a `const FJsonObject`; use
+  `TryGetField`.
+- `-run=pythonscript -script=` path: use forward slashes (`\t` in
+  `C:\Users\tytym` is read as a tab).
 - Player-facing strings are `FText` (localization-ready, D-014); never build
   UI text from `FString` concatenation.

@@ -23,9 +23,15 @@ Edit JSON → re-run the script → no recompilation.
 - Colors are sRGB hex; a range is two colors, the individual lerps between
   them (in Oklab) plus small noise.
 - The JSON uses a **compact authoring form** (e.g. a trapezoid is
-  `[min, optLow, optHigh, max]`). The import script normalizes it into the
-  exact struct layout UE expects (`{"Min":…, "OptLow":…}`), validates
-  ranges/enums and fails loudly with the file name on errors.
+  `[min, optLow, optHigh, max]`). The C++ parser (`Mycology/SpeciesJsonParser`)
+  converts it into `FMushroomSpeciesRow`, validates ranges/enums and reports
+  errors with file and field (`BoletusEdulis.json: Cap.DiameterCm: ...`);
+  unknown keys are warnings, keys starting with `_` are comments. A month
+  trapezoid may go past 13 for winter species (`[11, 12, 14, 15.5]`).
+- Mapping to the C++ row: `CommonNames.en` → `CommonName` (FText),
+  `CommonNames.fr` → `FrenchName`; `Cap.ShapesByStage.*` → `YoungShapes` /
+  `MatureShapes` / `OldShapes`; `Underside.ColorsByStage.*` → `YoungColor`…;
+  `StageSplit` → `YoungUntil`, `MatureUntil`.
 - Texts are English source strings (`FText`, localization-ready). French
   vernacular names are data, shown in the encyclopedia.
 
@@ -216,7 +222,7 @@ Observability of criteria (drives identification, `Docs/Progression.md`):
     "Reticulation": { "present": false },
     "Ring": "None", "Volva": "None"
   },
-  "Flesh": { "Color": "#FFF6DD", "ColorChange": "None", "Odor": "Fruity, apricot", "Taste": "Mild, slightly peppery" },
+  "Flesh": { "Color": "#FFF6DD", "ColorChange": "None", "Odor": "Fruity, apricot", "Taste": "Mild" },
   "SporePrint": "#F2E3B3",
 
   "Lookalikes": [
@@ -225,7 +231,7 @@ Observability of criteria (drives identification, `Docs/Progression.md`):
     { "species": "HygrophoropsisAurantiaca", "danger": "Inedible",
       "keyDifferences": ["True forked gills", "Orange, darker centre", "On conifer debris"] }
   ],
-  "Description": "Egg-yolk yellow, irregular funnel-shaped cap with a wavy margin; underside of blunt, forked ridges running down the stem; fruity smell.",
+  "Description": "Egg-yolk yellow, irregular funnel-shaped cap with a wavy margin; underside of blunt, forked ridges running down the stem; fruity smell, mild and slightly peppery taste.",
   "HabitatText": "Mossy acidic broadleaf and mixed woods; appears from early summer after storms and lasts long."
 }
 ```

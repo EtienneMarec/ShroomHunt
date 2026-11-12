@@ -103,6 +103,15 @@ direction, blended towards the real moon direction as the moon rises, so
 there is no shadow jump. Gameplay over strict realism: foraging at night
 must stay possible.
 
+**D-021 — Species JSON is parsed and validated in C++** · Accepted · 2026-11-12
+Refines D-006. The compact JSON is converted by `SpeciesJson` (C++) instead of
+Python, so the same validator serves the editor import, the automation tests
+(real files + error detection) and a development hot reload
+(`sh.Species.Reload`). Python stays a thin asset-creation script. In
+development builds the game falls back to the JSON files when `DT_Species` is
+missing. Player-facing texts get stable localization keys
+(`ShroomHunt.Species`, `<Id>.<Field>`).
+
 ## Open questions (to the developer)
 
 - None at the moment.

@@ -140,8 +140,12 @@ flowchart LR
   `ULandmarkCatalog` DataAsset maps landmark types to BP classes.
 
 ### Mycology
-- `FMushroomSpeciesRow : FTableRowBase` — see `Docs/SpeciesData.md`.
-- `USpeciesDatabaseSubsystem` — loads `DT_Species`, lookups by id/genus/group.
+- `FMushroomSpeciesRow : FTableRowBase` (+ `FTrapezoid`, morphology structs,
+  enums) — see `Docs/SpeciesData.md`.
+- `SpeciesJson` parser + `USpeciesDataLibrary` (Python entry points) +
+  `UMycologySettings` (which DataTable) — the data pipeline (D-021).
+- `USpeciesDatabaseSubsystem` — loads `DT_Species` (JSON fallback in
+  development), lookups by id and guide group.
 - `FSuitabilityModel` (pure) — static suitability per species and point.
 - `FMyceliumPatch` — persistent "good spot": species, position, radius,
   strength, cluster pattern, phase. Generated deterministically per forest.
