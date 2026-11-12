@@ -1,10 +1,13 @@
 #include "Weather/WeatherModel.h"
 
 #include "Core/ShroomHash.h"
+#include "Core/ShroomMath.h"
 #include "Time/CalendarMath.h"
 
 namespace
 {
+	using ShroomMath::SmoothStep01;
+
 	// Independent noise channels (salts) so that each variable has its own random stream.
 	namespace Channel
 	{
@@ -16,16 +19,6 @@ namespace
 		constexpr uint32 FogDay = 6;
 		constexpr uint32 CloudDetail = 7;
 		constexpr uint32 FogDetail = 8;
-	}
-
-	float SmoothStep01(float Edge0, float Edge1, float X)
-	{
-		if (Edge1 <= Edge0)
-		{
-			return X >= Edge1 ? 1.0f : 0.0f;
-		}
-		const float T = FMath::Clamp((X - Edge0) / (Edge1 - Edge0), 0.0f, 1.0f);
-		return T * T * (3.0f - 2.0f * T);
 	}
 
 	/**

@@ -6,6 +6,7 @@
 #include "Components/SkyLightComponent.h"
 #include "Components/VolumetricCloudComponent.h"
 #include "Core/ShroomLog.h"
+#include "Core/ShroomMath.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/ExponentialHeightFog.h"
 #include "Engine/GameInstance.h"
@@ -24,11 +25,7 @@
 
 namespace
 {
-	float SmoothStep01(float Edge0, float Edge1, float X)
-	{
-		const float T = FMath::Clamp((X - Edge0) / (Edge1 - Edge0), 0.0f, 1.0f);
-		return T * T * (3.0f - 2.0f * T);
-	}
+	using ShroomMath::SmoothStep01;
 
 	FRotator LightRotationFor(const FCelestialPosition& Position, float NorthYawDeg)
 	{
