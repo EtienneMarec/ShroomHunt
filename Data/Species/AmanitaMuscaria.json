@@ -1,0 +1,64 @@
+{
+  "Name": "AmanitaMuscaria",
+  "ScientificName": "Amanita muscaria",
+  "CommonNames": { "en": "Fly agaric", "fr": "Amanite tue-mouches" },
+  "Genus": "Amanita", "Family": "Amanitaceae", "GuideGroup": "Amanitas",
+  "Edibility": "Toxic", "ToxicSyndrome": "Pantherinic", "PricePerKg": 0.0,
+
+  "Trophic": "Mycorrhizal",
+  "Substrates": ["Soil", "Litter", "Moss"],
+  "Hosts": [
+    { "genus": "Betula", "affinity": 1.0 }, { "genus": "Picea", "affinity": 0.9 },
+    { "genus": "Pinus", "affinity": 0.8 }, { "genus": "Fagus", "affinity": 0.35 },
+    { "genus": "Quercus", "affinity": 0.35 }
+  ],
+  "pH": [3.5, 4.0, 5.5, 6.5],
+  "AltitudeM": [0, 0, 1800, 2300],
+  "Moisture": [0.20, 0.35, 0.70, 0.85],
+  "Canopy": [0.10, 0.30, 0.70, 0.90],
+  "EdgeAffinity": 0.5,
+  "Soils": [ { "type": "Sandy", "weight": 1.0 }, { "type": "Loam", "weight": 0.7 },
+             { "type": "Peat", "weight": 0.5 }, { "type": "Limestone", "weight": 0.05 } ],
+
+  "FruitingMonths": [7.5, 9.0, 10.8, 12.0],
+  "RainWindowDays": 14, "RainMm": [20, 45],
+  "TempC": [5, 9, 17, 22],
+  "LagDays": [6, 11],
+  "FlushRate": 1.0, "FlushCooldownDays": 7,
+
+  "PatchDensityPerHa": 0.8, "PatchRadiusM": [5, 12],
+  "Clustering": "FairyRing", "FruitsPerFlush": 7,
+  "LifetimeDays": 9, "StageSplit": [0.25, 0.65], "WormyChance": 0.2,
+
+  "Cap": {
+    "ShapesByStage": {
+      "young":  [ { "shape": "Hemispherical", "weight": 1.0 } ],
+      "mature": [ { "shape": "Convex", "weight": 1.0 } ],
+      "old":    [ { "shape": "Flat", "weight": 0.8 }, { "shape": "Depressed", "weight": 0.2 } ]
+    },
+    "DiameterCm": [8, 20], "MarginType": "Striate", "Surface": "Warty",
+    "Colors": ["#E8341C", "#F07A1E"],
+    "Warts": { "color": "#FAF7EE", "density": 0.7, "washOffByRain": true }
+  },
+  "Underside": {
+    "Type": "Gills", "Attachment": "Free",
+    "ColorsByStage": { "young": "#FFFFFF", "mature": "#FDFBF3", "old": "#F1EAD2" }
+  },
+  "Stem": {
+    "LengthCm": [8, 22], "ThicknessCm": [1.5, 3], "Shape": "Bulbous",
+    "Colors": ["#FFFFFF", "#F4F0E2"],
+    "Reticulation": { "present": false },
+    "Ring": "Skirt", "Volva": "Friable"
+  },
+  "Flesh": { "Color": "#FFFFFF", "ColorChange": "None", "Odor": "Faint", "Taste": "Untested" },
+  "SporePrint": "#FFFFFF",
+
+  "Lookalikes": [
+    { "species": "AmanitaCaesarea", "danger": "Edible",
+      "keyDifferences": ["Yellow gills and stem", "Large white sac-like volva", "Orange cap usually without warts", "Southern, warm oak woods"] },
+    { "species": "AmanitaPantherina", "danger": "Toxic",
+      "keyDifferences": ["Brown cap with white warts", "Rimmed volva at base"] }
+  ],
+  "Description": "Iconic red cap dotted with white warts, white free gills, white stem with a hanging skirt and a bulb ringed by warty volva remnants.",
+  "HabitatText": "Mostly with birch and spruce on acidic soils, often at wood edges and clearings; late summer to autumn."
+}

@@ -1,0 +1,65 @@
+{
+  "Name": "BoletusEdulis",
+  "ScientificName": "Boletus edulis",
+  "CommonNames": { "en": "Penny bun / Cep", "fr": "Cèpe de Bordeaux" },
+  "Genus": "Boletus", "Family": "Boletaceae", "GuideGroup": "Boletes",
+  "Edibility": "Excellent", "ToxicSyndrome": "None", "PricePerKg": 30.0,
+
+  "Trophic": "Mycorrhizal",
+  "Substrates": ["Soil", "Litter", "Moss"],
+  "Hosts": [
+    { "genus": "Fagus", "affinity": 1.0 }, { "genus": "Quercus", "affinity": 1.0 },
+    { "genus": "Castanea", "affinity": 0.9 }, { "genus": "Picea", "affinity": 0.9 },
+    { "genus": "Pinus", "affinity": 0.7 }, { "genus": "Betula", "affinity": 0.5 },
+    { "genus": "Carpinus", "affinity": 0.3 }
+  ],
+  "pH": [3.8, 4.5, 6.0, 7.2],
+  "AltitudeM": [0, 0, 1600, 2100],
+  "Moisture": [0.25, 0.40, 0.70, 0.85],
+  "Canopy": [0.30, 0.50, 0.80, 0.95],
+  "EdgeAffinity": 0.2,
+  "Soils": [ { "type": "Sandy", "weight": 1.0 }, { "type": "Loam", "weight": 1.0 },
+             { "type": "Clay", "weight": 0.5 }, { "type": "Limestone", "weight": 0.4 } ],
+
+  "FruitingMonths": [6.0, 8.0, 10.5, 11.8],
+  "RainWindowDays": 15, "RainMm": [20, 40],
+  "TempC": [8, 12, 20, 24],
+  "LagDays": [7, 12],
+  "FlushRate": 1.2, "FlushCooldownDays": 6,
+
+  "PatchDensityPerHa": 1.5, "PatchRadiusM": [3, 8],
+  "Clustering": "Scattered", "FruitsPerFlush": 5,
+  "LifetimeDays": 8, "StageSplit": [0.25, 0.7], "WormyChance": 0.45,
+
+  "Cap": {
+    "ShapesByStage": {
+      "young":  [ { "shape": "Hemispherical", "weight": 1.0 } ],
+      "mature": [ { "shape": "Convex", "weight": 0.8 }, { "shape": "Flat", "weight": 0.2 } ],
+      "old":    [ { "shape": "Flat", "weight": 0.7 }, { "shape": "Convex", "weight": 0.3 } ]
+    },
+    "DiameterCm": [6, 22], "MarginType": "Even", "Surface": "Smooth",
+    "Colors": ["#C9A47A", "#6B3F22"],
+    "Warts": null
+  },
+  "Underside": {
+    "Type": "Pores", "Attachment": "Adnate",
+    "ColorsByStage": { "young": "#F2EEE4", "mature": "#E3D27A", "old": "#9A9A45" }
+  },
+  "Stem": {
+    "LengthCm": [6, 18], "ThicknessCm": [3, 7], "Shape": "Clavate",
+    "Colors": ["#F0E6D4", "#D8C3A0"],
+    "Reticulation": { "present": true, "color": "#FFFFFF", "extent": 0.5 },
+    "Ring": "None", "Volva": "None"
+  },
+  "Flesh": { "Color": "#FFFFFF", "ColorChange": "None", "Odor": "Pleasant, nutty", "Taste": "Mild" },
+  "SporePrint": "#6E5A2E",
+
+  "Lookalikes": [
+    { "species": "TylopilusFelleus", "danger": "Inedible",
+      "keyDifferences": ["Pores turn pink", "Dark brown network on stem", "Very bitter taste"] },
+    { "species": "RubroboletusSatanas", "danger": "Toxic",
+      "keyDifferences": ["Red pores", "Red stem network", "Flesh turns blue", "Calcareous soils"] }
+  ],
+  "Description": "Stocky bolete with a bun-like brown cap, white then olive pores and a pale club-shaped stem covered by a fine white network.",
+  "HabitatText": "Broadleaf and conifer woods, often on acidic soils, from late summer to autumn after warm rains followed by cooler nights."
+}

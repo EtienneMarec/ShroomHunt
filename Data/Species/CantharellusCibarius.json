@@ -1,0 +1,65 @@
+{
+  "Name": "CantharellusCibarius",
+  "ScientificName": "Cantharellus cibarius",
+  "CommonNames": { "en": "Golden chanterelle", "fr": "Girolle" },
+  "Genus": "Cantharellus", "Family": "Cantharellaceae", "GuideGroup": "Chanterelles",
+  "Edibility": "Excellent", "ToxicSyndrome": "None", "PricePerKg": 25.0,
+
+  "Trophic": "Mycorrhizal",
+  "Substrates": ["Soil", "Moss"],
+  "Hosts": [
+    { "genus": "Quercus", "affinity": 1.0 }, { "genus": "Fagus", "affinity": 1.0 },
+    { "genus": "Castanea", "affinity": 0.9 }, { "genus": "Carpinus", "affinity": 0.6 },
+    { "genus": "Picea", "affinity": 0.8 }, { "genus": "Pinus", "affinity": 0.6 },
+    { "genus": "Betula", "affinity": 0.6 }
+  ],
+  "pH": [3.5, 4.0, 5.8, 6.8],
+  "AltitudeM": [0, 0, 1500, 1900],
+  "Moisture": [0.30, 0.45, 0.75, 0.90],
+  "Canopy": [0.35, 0.55, 0.90, 1.00],
+  "EdgeAffinity": -0.1,
+  "Soils": [ { "type": "Sandy", "weight": 1.0 }, { "type": "Loam", "weight": 0.9 },
+             { "type": "Clay", "weight": 0.4 }, { "type": "Limestone", "weight": 0.1 } ],
+
+  "FruitingMonths": [5.5, 7.0, 9.5, 11.0],
+  "RainWindowDays": 10, "RainMm": [15, 30],
+  "TempC": [10, 15, 24, 28],
+  "LagDays": [5, 10],
+  "FlushRate": 0.9, "FlushCooldownDays": 10,
+
+  "PatchDensityPerHa": 1.0, "PatchRadiusM": [4, 10],
+  "Clustering": "Troop", "FruitsPerFlush": 9,
+  "LifetimeDays": 18, "StageSplit": [0.2, 0.75], "WormyChance": 0.05,
+
+  "Cap": {
+    "ShapesByStage": {
+      "young":  [ { "shape": "Convex", "weight": 1.0 } ],
+      "mature": [ { "shape": "Depressed", "weight": 0.6 }, { "shape": "Infundibuliform", "weight": 0.4 } ],
+      "old":    [ { "shape": "Infundibuliform", "weight": 1.0 } ]
+    },
+    "DiameterCm": [2, 9], "MarginType": "Wavy", "Surface": "Smooth",
+    "Colors": ["#F6D36B", "#E5A93A"],
+    "Warts": null
+  },
+  "Underside": {
+    "Type": "Ridges", "Attachment": "Decurrent",
+    "ColorsByStage": { "young": "#F3D57A", "mature": "#EDC560", "old": "#D9AE4E" }
+  },
+  "Stem": {
+    "LengthCm": [2, 7], "ThicknessCm": [0.8, 2], "Shape": "Tapering",
+    "Colors": ["#F4D77E", "#E2B550"],
+    "Reticulation": { "present": false },
+    "Ring": "None", "Volva": "None"
+  },
+  "Flesh": { "Color": "#FFF6DD", "ColorChange": "None", "Odor": "Fruity, apricot", "Taste": "Mild" },
+  "SporePrint": "#F2E3B3",
+
+  "Lookalikes": [
+    { "species": "OmphalotusOlearius", "danger": "Toxic",
+      "keyDifferences": ["True thin gills", "Grows in dense clusters on wood or roots", "Brighter orange", "No fruity smell"] },
+    { "species": "HygrophoropsisAurantiaca", "danger": "Inedible",
+      "keyDifferences": ["True forked gills", "Orange, darker centre", "On conifer debris"] }
+  ],
+  "Description": "Egg-yolk yellow, irregular funnel-shaped cap with a wavy margin; underside of blunt, forked ridges running down the stem; fruity smell, mild and slightly peppery taste.",
+  "HabitatText": "Mossy acidic broadleaf and mixed woods; appears from early summer after storms and lasts long."
+}
