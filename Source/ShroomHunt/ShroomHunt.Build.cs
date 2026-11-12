@@ -20,7 +20,7 @@ public class ShroomHunt : ModuleRules
 			"Niagara"
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] { });
+		PrivateDependencyModuleNames.AddRange(new string[] { "Json" });
 
 		PublicIncludePaths.AddRange(new string[] {
 			"ShroomHunt"
