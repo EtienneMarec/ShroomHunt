@@ -205,7 +205,10 @@ keyboard) and try:
 ## Test checklist
 - [ ] HUD visible; the clock advances ~1 game hour every 25 real seconds.
 - [ ] `sh.Time.Scale 20`: the sun rises in the east, culminates south, sets
-      west; nights are dark (moon visible when up), dawn/dusk are colored.
+      west; dawn/dusk are colored. Nights are dark but readable (night
+      ambient floor), brighter and with moon shadows when the moon is up.
+      The moon follows its phases over 8 game days: on the first autumn day it
+      is waning and rises after midnight, as in reality.
 - [ ] `sh.Time.SkipDays 6` moves to winter: lower noon sun, shorter days.
 - [ ] `sh.Weather.Force Fog 3` at dawn: fog thickens smoothly, then clears.
 - [ ] `sh.Weather.Force Rain 4`: clouds close, light dims, rain particles
@@ -216,6 +219,11 @@ keyboard) and try:
       by the director, cloud coverage parameter found, weather transitions.
 - [ ] Automation: *Tools > Session Frontend > Automation*, filter
       `ShroomHunt`, run all: 7 tests green.
+
+Night brightness: on `BP_EnvironmentDirector`, *Sky > Night Ambient
+Fraction* (default 0.15 of the full-moon intensity) sets how dark a moonless
+night is; 0 gives physically black nights. *Min EV100* on the Post Process
+Volume also changes how much the camera adapts to the dark.
 
 If the clouds do not react, the log says which material parameter was not
 found: set *Clouds > Cloud Coverage Parameter* on the director to the right
