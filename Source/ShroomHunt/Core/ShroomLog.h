@@ -7,6 +7,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogShroomTime, Log, All);
 DECLARE_LOG_CATEGORY_EXTERN(LogShroomWeather, Log, All);
 DECLARE_LOG_CATEGORY_EXTERN(LogShroomEnvironment, Log, All);
 DECLARE_LOG_CATEGORY_EXTERN(LogShroomForest, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(LogShroomMycology, Log, All);
 DECLARE_LOG_CATEGORY_EXTERN(LogShroomSpawn, Log, All);
 DECLARE_LOG_CATEGORY_EXTERN(LogShroomMesh, Log, All);
 DECLARE_LOG_CATEGORY_EXTERN(LogShroomKnowledge, Log, All);
