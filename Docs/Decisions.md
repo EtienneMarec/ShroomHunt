@@ -95,6 +95,14 @@ The director auto-finds sky actors and uses their authored intensities/fog as
 the "clear day" reference. The editor preview only rotates the sun and moon,
 never intensities, so previewing cannot alter the saved level.
 
+**D-020 — Night ambient floor through the moon light** · Accepted · 2026-11-12
+Real-time sky light capture returns black at night, so moonless nights were
+pitch black. The moon light now carries a minimum "starlight / sky glow"
+intensity (`NightAmbientFraction`, 15 % of full moon) from a fixed high
+direction, blended towards the real moon direction as the moon rises, so
+there is no shadow jump. Gameplay over strict realism: foraging at night
+must stay possible.
+
 ## Open questions (to the developer)
 
 - None at the moment.

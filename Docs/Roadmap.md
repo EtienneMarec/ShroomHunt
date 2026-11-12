@@ -19,6 +19,11 @@ world generation, progression, roadmap, decisions).
 | M1f Spawning | suitability, patches, daily flushes, ISM streaming, debug maps | rain → mushrooms 2–3 days later in predictable spots |
 | M1g Interaction & knowledge | interaction/inspection components, basket, poster + torn page, minimal encyclopedia, observable criteria | find, examine, identify, pick |
 
+**After M1d — rain polish** (needs the real forest): wind-driven slant
+(wind speed from the weather), streak texture, ground splashes via particle
+depth-buffer collision, less direct rain and dripping leaves under dense
+canopy, rain sounds, wet materials through `MPC_Environment.Wetness`.
+
 ## M2 — Seasons
 Season-driven temperature/weather, foliage color & leaf fall (`MPC_Season`),
 litter/moss/snow layers, phenology fully active, winter species
