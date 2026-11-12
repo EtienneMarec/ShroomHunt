@@ -96,6 +96,22 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Sky")
 	float MoonFullIntensity = -1.0f;
 
+	/**
+	 * Minimum night light (starlight / sky glow), as a fraction of the full-moon intensity.
+	 * Applied through the moon light, so a moonless night stays dark but readable.
+	 * 0 = physically dark nights.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Sky", meta = (ClampMin = "0", ClampMax = "1"))
+	float NightAmbientFraction = 0.15f;
+
+	/** Elevation of the night ambient light when the moon is down (high = soft, few long shadows). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Sky", meta = (ClampMin = "10", ClampMax = "90", Units = "deg"))
+	float NightAmbientElevationDeg = 60.0f;
+
+	/** Azimuth (clockwise from north) of the night ambient light when the moon is down. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Sky", meta = (ClampMin = "0", ClampMax = "360", Units = "deg"))
+	float NightAmbientAzimuthDeg = 200.0f;
+
 	/** Sky light intensity at night, as a fraction of the day intensity. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Sky", meta = (ClampMin = "0", ClampMax = "1"))
 	float SkyLightNightFraction = 0.12f;

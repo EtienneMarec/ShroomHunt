@@ -115,6 +115,10 @@ void AEnvironmentDirector::BeginPlay()
 		Weather->OnLightningStrike.AddDynamic(this, &AEnvironmentDirector::HandleLightningStrike);
 	}
 
+	if (!MoonLight && NightAmbientFraction > 0.0f)
+	{
+		UE_LOG(LogShroomEnvironment, Warning, TEXT("Environment director: no moon light (Atmosphere Sun Light Index 1): nights will be fully dark."));
+	}
 	if (!SunLight)
 	{
 		UE_LOG(LogShroomEnvironment, Warning, TEXT("Environment director: no sun found (Directional Light with Atmosphere Sun Light Index 0)."));
@@ -301,10 +305,25 @@ void AEnvironmentDirector::ApplyEnvironment(const FGameDate& Date, double TotalG
 
 	if (MoonLight && MoonLight->GetLightComponent())
 	{
-		MoonLight->SetActorRotation(LightRotationFor(Moon, NorthYawDeg));
+		const float Night = 1.0f - Daylight;
 		const float AboveHorizon = SmoothStep01(-2.0f, 6.0f, Moon.ElevationDeg);
-		const float MoonFactor = Moon.Illumination * AboveHorizon * (1.0f - Daylight) * (1.0f - 0.85f * Overcast);
-		MoonLight->GetLightComponent()->SetIntensity(Initial.MoonIntensity * MoonFactor);
+		const float MoonFactor = Moon.Illumination * AboveHorizon * Night * (1.0f - 0.85f * Overcast);
+
+		// Night ambient floor (starlight / sky glow): keeps moonless nights readable.
+		const float AmbientFactor = NightAmbientFraction * Night * (1.0f - 0.4f * Overcast);
+		const float Total = MoonFactor + AmbientFactor * (1.0f - MoonFactor);
+
+		// Light comes from the moon when it dominates, otherwise from a fixed high direction.
+		// Blending the directions avoids any shadow jump when the moon rises or sets.
+		FCelestialPosition AmbientPosition;
+		AmbientPosition.ElevationDeg = NightAmbientElevationDeg;
+		AmbientPosition.AzimuthDeg = NightAmbientAzimuthDeg;
+		const float MoonWeight = MoonFactor / FMath::Max(MoonFactor + AmbientFactor, KINDA_SMALL_NUMBER);
+		const FVector Towards = FMath::Lerp(CalendarMath::DirectionTowards(AmbientPosition), CalendarMath::DirectionTowards(Moon), MoonWeight).GetSafeNormal();
+		const FVector TowardsWorld = (Towards.IsNearlyZero() ? FVector::UpVector : Towards).RotateAngleAxis(NorthYawDeg, FVector::UpVector);
+
+		MoonLight->SetActorRotation((-TowardsWorld).Rotation());
+		MoonLight->GetLightComponent()->SetIntensity(Initial.MoonIntensity * Total);
 	}
 
 	if (SkyLight && SkyLight->GetLightComponent())
