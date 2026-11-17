@@ -1,0 +1,36 @@
+{
+  "_comment": "Forest 1: lowland oak-beech forest (central France plain). See Docs/WorldGeneration.md.",
+  "Name": "F01_LowlandOakBeech",
+  "DisplayName": "Lowland oak-beech forest",
+  "Seed": 20261118,
+
+  "HeightmapResolution": 1009,
+  "BaseAltitudeM": 150,
+  "ReliefM": 38,
+  "TerrainScaleM": 420,
+  "ValleyDepthM": 9,
+  "StreamThresholdHa": 5,
+  "PondMinDepthM": 0.4,
+  "MaxPonds": 3,
+  "PondMaxAreaHa": 1.2,
+
+  "SoilScaleM": 260,
+  "LimestoneShare": 0.15,
+  "ParcelSizeHa": 13,
+
+  "AgeClasses": {
+    "ClearCut": 0.07,
+    "Regeneration": 0.13,
+    "Pole": 0.25,
+    "Mature": 0.38,
+    "Old": 0.17
+  },
+
+  "Stands": [
+    { "Genus": "Fagus",    "Share": 0.40, "Moisture": [0.15, 0.30, 0.70, 0.85], "PH": [3.8, 4.5, 7.6, 8.2], "Pioneer": 0.0, "Riparian": 0.0 },
+    { "Genus": "Quercus",  "Share": 0.35, "Moisture": [0.00, 0.10, 0.85, 0.97], "PH": [3.5, 4.0, 7.8, 8.4], "Pioneer": 0.1, "Riparian": 0.0 },
+    { "Genus": "Carpinus", "Share": 0.12, "Moisture": [0.25, 0.40, 0.85, 0.95], "PH": [4.5, 5.5, 7.8, 8.4], "Pioneer": 0.0, "Riparian": 0.0 },
+    { "Genus": "Betula",   "Share": 0.08, "Moisture": [0.05, 0.15, 0.75, 0.95], "PH": [3.5, 3.8, 5.5, 6.8], "Pioneer": 1.0, "Riparian": 0.0 },
+    { "Genus": "Alnus",    "Share": 0.05, "Moisture": [0.60, 0.80, 1.00, 1.00], "PH": [4.0, 5.0, 7.5, 8.2], "Pioneer": 0.0, "Riparian": 1.0 }
+  ]
+}
