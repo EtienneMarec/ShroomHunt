@@ -25,7 +25,9 @@ public class ShroomHunt : ModuleRules
 			"GeometryCore",
 			"MeshConversion",
 			"MeshDescription",
-			"StaticMeshDescription"
+			"StaticMeshDescription",
+			"ImageWrapper",
+			"JsonUtilities"
 		});
 
 		PublicIncludePaths.AddRange(new string[] {
