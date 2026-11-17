@@ -75,6 +75,12 @@ namespace ShroomHash
 	/** 2D value noise in [-1, 1]. */
 	SHROOMHUNT_API float ValueNoise2D(uint32 Seed, double X, double Y);
 
+	/** 2D gradient (Perlin-style) noise in about [-1, 1]: smoother, less grid-aligned than value noise (terrain). */
+	SHROOMHUNT_API float GradientNoise2D(uint32 Seed, double X, double Y);
+
+	/** Fractal sum of 2D gradient noise, normalized to about [-1, 1]. */
+	SHROOMHUNT_API float GradientFbm2D(uint32 Seed, double X, double Y, int32 Octaves, float Lacunarity = 2.0f, float Gain = 0.5f);
+
 	/** Fractal sum of 1D value noise, normalized to [-1, 1]. */
 	SHROOMHUNT_API float Fbm1D(uint32 Seed, double X, int32 Octaves, float Lacunarity = 2.0f, float Gain = 0.5f);
 
