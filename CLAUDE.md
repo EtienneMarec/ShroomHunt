@@ -108,6 +108,15 @@ ShroomHunt/
 Close the editor (or at least disable Live Coding) before building from the
 command line: UBT refuses to build while Live Coding is active.
 
+**Editor open or closed?** Tell the developer at the start of each step:
+- docs, JSON, Python, `.ini` only → the editor can stay open;
+- `.cpp` changes only → the developer may apply them with Live Coding
+  (`Ctrl+Alt+F11`), but Claude cannot build/test from the command line meanwhile;
+- any header change (`UPROPERTY`, `UFUNCTION`, new class) → the editor must be
+  closed (Save All first).
+Headless tests/exports start a second editor process (~2 GB): with the editor
+open, free RAM is often too low (16 GB machine). Batch work that needs a build.
+
 Run UBT from **PowerShell** (calling `Build.bat` from Git Bash breaks on the
 space in `Program Files`, see §11):
 
@@ -238,6 +247,12 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
 - `-ExecCmds=` separates commands with **commas**, and `Quit` does not close
   `UnrealEditor-Cmd`: use `"-ExecCmds=sh.Some.Command,QUIT_EDITOR"`
   (`Automation RunTests X;Quit` is special: the automation command parses `;Quit`).
+- **Triangle winding is left-handed in Unreal**: GeometryCore's
+  `VectorUtil::Normal(A, B, C)` is `(C - A) x (B - A)` and that side is the
+  rendered front face. A mesh built with the usual right-handed rule renders
+  inside out (back faces culled: we saw mushroom gills through the caps).
+  `FMeshAccumulator::AddTriangle` swaps B/C; tests check the volume with the
+  engine formula, and the preview renderer culls back faces like UE.
 - Using `FDynamicMesh3::Attributes()` needs `DynamicMesh/DynamicMeshAttributeSet.h`
   (forward-declared in `DynamicMesh3.h`).
 - `UStaticMesh::BuildFromMeshDescriptions` matches sections to materials by

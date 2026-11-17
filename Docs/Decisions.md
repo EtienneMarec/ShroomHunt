@@ -119,7 +119,9 @@ double-sided fins on the near LOD only; warts and volva scales are small
 pyramids. Albedo in vertex colors (sRGB), surface id in UV1, so one material
 covers every species. The mesh cache is an engine subsystem (editor + game).
 Shapes are reviewed headless through OBJ export + a stdlib Python renderer, and
-an automation test checks winding through the signed volume.
+an automation test checks winding through the signed volume. (Fixed 2026-11-18: the first version used right-handed winding and rendered
+inside out in UE; the renderer now culls back faces with UE's convention and the
+tests use the engine's normal formula.)
 
 ## Open questions (to the developer)
 
