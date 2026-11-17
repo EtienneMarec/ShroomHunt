@@ -70,6 +70,31 @@ bool USpeciesDatabaseSubsystem::LoadFromJsonFolder(FString& OutReport)
 	return true;
 }
 
+bool USpeciesDatabaseSubsystem::LoadSpeciesForTools(TMap<FName, FMushroomSpeciesRow>& OutSpecies, FString& OutSource)
+{
+	OutSpecies.Reset();
+	if (const UDataTable* Table = GetDefault<UMycologySettings>()->SpeciesTable.LoadSynchronous())
+	{
+		if (Table->GetRowStruct() == FMushroomSpeciesRow::StaticStruct() && Table->GetRowMap().Num() > 0)
+		{
+			Table->ForeachRow<FMushroomSpeciesRow>(TEXT("SpeciesForTools"), [&OutSpecies](const FName& Key, const FMushroomSpeciesRow& Row)
+			{
+				OutSpecies.Add(Key, Row);
+			});
+			OutSource = FString::Printf(TEXT("DataTable %s"), *Table->GetPathName());
+			return true;
+		}
+	}
+#if !UE_BUILD_SHIPPING
+	SpeciesJson::FParseReport Report;
+	SpeciesJson::LoadFolder(SpeciesJson::GetDefaultFolder(), OutSpecies, Report);
+	OutSource = TEXT("JSON ") + SpeciesJson::GetDefaultFolder();
+	return OutSpecies.Num() > 0;
+#else
+	return false;
+#endif
+}
+
 bool USpeciesDatabaseSubsystem::ReloadFromJson(FString& OutReport)
 {
 #if UE_BUILD_SHIPPING

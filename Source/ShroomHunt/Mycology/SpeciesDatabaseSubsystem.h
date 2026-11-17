@@ -39,6 +39,12 @@ public:
 	/** Where the current data came from ("DataTable /Game/..." or "JSON <folder>"). */
 	const FString& GetSourceDescription() const { return SourceDescription; }
 
+	/**
+	 * Loads all species without a game instance (editor tools such as the specimen garden):
+	 * the DataTable from the settings, else the JSON files in development builds.
+	 */
+	static bool LoadSpeciesForTools(TMap<FName, FMushroomSpeciesRow>& OutSpecies, FString& OutSource);
+
 	/** Development: reloads Data/Species/*.json, replacing the current data if valid. */
 	bool ReloadFromJson(FString& OutReport);
 
