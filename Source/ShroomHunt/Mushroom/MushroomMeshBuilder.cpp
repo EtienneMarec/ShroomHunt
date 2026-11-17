@@ -46,11 +46,14 @@ namespace MushroomMeshDetail
 			{
 				return;
 			}
+			// Callers describe triangles with the right-handed rule (B - A) x (C - A) = outward.
+			// Unreal is left-handed: GeometryCore computes normals as (C - A) x (B - A) and UE
+			// renders that side as the front face, so the stored order is A, C, B.
 			FTriangle& Tri = Triangles.AddDefaulted_GetRef();
-			Tri.Vertices = FIntVector(A, B, C);
+			Tri.Vertices = FIntVector(A, C, B);
 			Tri.UVs[0] = UvA;
-			Tri.UVs[1] = UvB;
-			Tri.UVs[2] = UvC;
+			Tri.UVs[1] = UvC;
+			Tri.UVs[2] = UvB;
 			Tri.Surface = Surface;
 		}
 
@@ -134,7 +137,8 @@ namespace MushroomMeshDetail
 
 	/**
 	 * Revolves a profile. The profile must go "top -> outward -> down -> inward" (like the
-	 * outline of a mushroom cut in half, read clockwise) so normals point outward.
+	 * outline of a mushroom cut in half, read clockwise) so normals point outward
+	 * (triangles are written with the right-handed rule, see FMeshAccumulator::AddTriangle).
 	 * Points with R ~ 0 become a single pole vertex.
 	 */
 	void Revolve(FMeshAccumulator& Acc, const TArray<FProfilePoint>& Profile, int32 Segments,
