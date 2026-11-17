@@ -1,5 +1,6 @@
 #include "DynamicMesh/DynamicMesh3.h"
 #include "DynamicMesh/DynamicMeshAttributeSet.h"
+#include "VectorUtil.h"
 #include "Misc/AutomationTest.h"
 #include "Mushroom/MushroomMeshBuilder.h"
 #include "Mushroom/MushroomMorphology.h"
@@ -21,7 +22,11 @@ namespace MushroomMeshTestsDetail
 		return true;
 	}
 
-	/** Signed volume (divergence theorem): positive when triangle normals point outward. */
+	/**
+	 * Signed volume using Unreal's own triangle normal (UE::Geometry::VectorUtil::Normal,
+	 * left-handed: (C - A) x (B - A)). Positive when the faces UE renders as front faces
+	 * point outward; negative for an inside-out mesh.
+	 */
 	double SignedVolume(const UE::Geometry::FDynamicMesh3& Mesh)
 	{
 		double Volume = 0.0;
@@ -29,9 +34,53 @@ namespace MushroomMeshTestsDetail
 		{
 			FVector3d A, B, C;
 			Mesh.GetTriVertices(TriangleId, A, B, C);
-			Volume += FVector3d::DotProduct(A, FVector3d::CrossProduct(B, C)) / 6.0;
+			const FVector3d AreaNormal = FVector3d::CrossProduct(C - A, B - A); // = 2 * area * VectorUtil::Normal(A, B, C)
+			Volume += FVector3d::DotProduct(A, AreaNormal) / 6.0;
 		}
 		return Volume;
+	}
+
+	/** Unreal's triangle normal must agree with our left-handed formula (guards the convention). */
+	bool MatchesEngineNormal(const UE::Geometry::FDynamicMesh3& Mesh)
+	{
+		for (const int32 TriangleId : Mesh.TriangleIndicesItr())
+		{
+			FVector3d A, B, C;
+			Mesh.GetTriVertices(TriangleId, A, B, C);
+			const FVector3d Engine = UE::Geometry::VectorUtil::Normal(A, B, C);
+			const FVector3d Ours = FVector3d::CrossProduct(C - A, B - A).GetSafeNormal();
+			if (!Ours.IsNearlyZero() && FVector3d::DotProduct(Engine, Ours) < 0.99)
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/** The rendered normal at the highest vertex (top of the cap) must point up. */
+	bool TopNormalPointsUp(const UE::Geometry::FDynamicMesh3& Mesh)
+	{
+		int32 TopVertex = INDEX_NONE;
+		double TopZ = -1e30;
+		for (const int32 VertexId : Mesh.VertexIndicesItr())
+		{
+			if (Mesh.GetVertex(VertexId).Z > TopZ)
+			{
+				TopZ = Mesh.GetVertex(VertexId).Z;
+				TopVertex = VertexId;
+			}
+		}
+		const UE::Geometry::FDynamicMeshNormalOverlay* Normals = Mesh.Attributes()->PrimaryNormals();
+		TArray<int32> Elements;
+		Normals->GetVertexElements(TopVertex, Elements);
+		for (const int32 Element : Elements)
+		{
+			if (Normals->GetElement(Element).Z < 0.3f)
+			{
+				return false;
+			}
+		}
+		return Elements.Num() > 0;
 	}
 
 	uint32 HashMesh(const UE::Geometry::FDynamicMesh3& Mesh)
@@ -112,6 +161,14 @@ bool FMushroomMeshBuilderTest::RunTest(const FString& Parameters)
 		return false;
 	}
 
+	// Guard the winding convention itself: our formula must equal the engine's triangle normal.
+	{
+		const FMushroomMorphology Probe = MushroomMorphology::Sample(Species.CreateConstIterator()->Value, Species.CreateConstIterator()->Key, 1u, EMushroomStage::Mature);
+		UE::Geometry::FDynamicMesh3 ProbeMesh;
+		MushroomMeshBuilder::Build(Probe, FMushroomMeshDetail::Far(), ProbeMesh);
+		TestTrue(TEXT("Test normal formula matches UE::Geometry::VectorUtil::Normal"), MatchesEngineNormal(ProbeMesh));
+	}
+
 	static const EMushroomStage Stages[3] = { EMushroomStage::Young, EMushroomStage::Mature, EMushroomStage::Old };
 	for (const TPair<FName, FMushroomSpeciesRow>& Pair : Species)
 	{
@@ -145,7 +202,9 @@ bool FMushroomMeshBuilderTest::RunTest(const FString& Parameters)
 
 				// Winding: outward normals give a clearly positive signed volume (stem alone ~ pi r^2 L).
 				const double StemVolume = UE_DOUBLE_PI * FMath::Square(0.5 * M.StemDiameter) * M.StemLength;
-				TestTrue(Label + TEXT(": outward normals (positive volume)"), SignedVolume(Near) > 0.3 * StemVolume);
+				TestTrue(Label + TEXT(": front faces point outward (positive volume)"), SignedVolume(Near) > 0.3 * StemVolume);
+				TestTrue(Label + TEXT(": far LOD front faces point outward"), SignedVolume(Far) > 0.3 * StemVolume);
+				TestTrue(Label + TEXT(": rendered normal on top of the cap points up"), TopNormalPointsUp(Near));
 
 				// Determinism.
 				UE::Geometry::FDynamicMesh3 Again;
