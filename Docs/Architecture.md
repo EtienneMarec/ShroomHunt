@@ -125,6 +125,9 @@ flowchart LR
   age class, distance to path/water}. Some layers are rasterized once at load
   (hydrology, distances) into `FFieldRaster` grids (4 m cells → 250×250 floats
   per layer for 1 km², ≈ 250 KB each).
+  *Implemented (M1d-1):* `FFieldRaster`, `FForestField::Generate/Sample`,
+  `ForestBake` (heightmap, weightmaps, debug maps), `UForestGenerationLibrary`,
+  `sh.Forest.Bake`; definition read from JSON by `ForestData::LoadForest`.
 - `FForestLayout` (JSON-serializable) — parcels, path graph (nodes, edges,
   rank, polylines), streams, landmarks. Output of the generator, committed in
   `Data/Forests/<Id>.layout.json` for review and reproducibility.

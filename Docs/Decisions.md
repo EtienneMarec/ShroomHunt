@@ -123,6 +123,17 @@ an automation test checks winding through the signed volume. (Fixed 2026-11-18: 
 inside out in UE; the renderer now culls back faces with UE's convention and the
 tests use the engine's normal formula.)
 
+**D-023 — Forest field implementation and terrain bake** · Accepted · 2026-11-18
+Forest parameters in `Data/Forests/<Id>.json`, read with `FJsonObjectConverter`
+(no DataTable until runtime needs it). Terrain uses gradient (Perlin-style)
+noise: value noise produced grid-aligned streaks. Hydrology: priority-flood +
+D8 + flow accumulation; only `MaxPonds` qualifying depressions hold water (the
+first version flooded every hollow: 13 ha of ponds). Soil shares are exact via
+percentile thresholds. The bake writes PNG files and the landscape is imported
+by hand (one-time per forest; automating Landscape creation needs an editor
+module). Tree genera are names shared with species hosts (`Fagus`, `Quercus`…).
+
 ## Open questions (to the developer)
 
-- None at the moment.
+- Tree assets for M1d-2: Fab/Megascans trees, UE's Procedural Vegetation
+  Editor, or procedural placeholder trees first?

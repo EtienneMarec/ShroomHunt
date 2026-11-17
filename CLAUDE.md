@@ -201,9 +201,11 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
 - **Weather** (`FWeatherModel` pure + `UWeatherSubsystem`): deterministic,
   random-access function of (forest seed, climate, time) + debug overrides.
   Rain history is computed, not stored.
-- **Forest field** (`FForestField`): deterministic sampler (altitude, moisture,
-  pH, soil, exposure, stand composition, canopy, parcels) shared by terrain
-  bake, PCG custom nodes and mushroom suitability.
+- **Forest field** (`FForestField`, from `Data/Forests/<Id>.json`): terrain
+  (1 m), hydrology/moisture/soil/pH/parcels/stands/canopy (4 m cells).
+  `sh.Forest.Bake` writes heightmap + weightmaps + debug maps to
+  `Saved/ForestBake/<Id>/` (landscape imported by hand, `Docs/Milestones/M1d.md`).
+  Check `debug_maps.png` visually after any change to the field.
 - **Mycology**: species rows (`FMushroomSpeciesRow` in `DT_Species`, loaded by
   `USpeciesDatabaseSubsystem`) → static suitability → persistent mycelium
   patches → daily flush roll from lagged weather → fruit bodies.
@@ -260,5 +262,11 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   slot name, or sections get no material.
 - `-run=pythonscript -script=` path: use forward slashes (`\t` in
   `C:\Users\tytym` is read as a tab).
+- Bash heredocs in this environment sometimes fail on large multi-line
+  content ("unexpected EOF"): write helper scripts to the scratchpad with the
+  Write tool and run them with `python -I <script> <args>`.
+- Landscape heightmaps are 16-bit PNG, big-endian in the file (ImageWrapper
+  handles it): 32768 = height 0, 128 units per meter at Z scale 100. Verified by
+  decoding the PNG.
 - Player-facing strings are `FText` (localization-ready, D-014); never build
   UI text from `FString` concatenation.

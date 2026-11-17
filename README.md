@@ -4,12 +4,18 @@
 French forests — Unreal Engine 5.8, C++.*
 
 > **Status: pre-alpha — vertical slice in progress (M1a time & weather ✅,
-> M1b species data ✅, M1c procedural mushrooms ✅).** Screenshots will be added as soon as the slice is playable.
+> M1b species data ✅, M1c procedural mushrooms ✅, M1d-1 forest terrain ✅).** Screenshots will be added as soon as the slice is playable.
 
 ![Procedural mushrooms: fly agaric, cep and chanterelle at three growth stages](Docs/Media/procedural_mushrooms.png)
 
 *Procedural mushrooms generated from species data — fly agaric, cep and
 chanterelle, young / mature / old (offline preview render).*
+
+![Forest field of the first forest: terrain, water, moisture, soils, pH, stands and canopy](Docs/Media/forest_f01_maps.png)
+
+*The deterministic "forest field" of the first forest (1 km²): terrain with
+streams and ponds, wetness, soils, pH, dominant tree genus per parcel, canopy.
+It drives the terrain, the vegetation and where each mushroom species grows.*
 
 ## Pitch
 
