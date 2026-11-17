@@ -11,6 +11,10 @@ Workflow (no editor window needed):
 The grid has one row per species and the columns Young / Mature / Old, drawn at a common
 scale per species so growth is visible. Software rasterizer with a z-buffer and Lambert
 shading of the per-vertex sRGB colors; good enough to review shapes and colors.
+
+Like Unreal, it uses the left-handed convention (front-face normal = (C - A) x (B - A))
+and culls back faces, so a mesh with inverted winding shows up as "inside out" here too.
+Pass "--no-cull" to draw both sides.
 """
 
 import math
@@ -65,7 +69,7 @@ def to_view(p):
     return x1, ce * y1 - se * z, se * y1 + ce * z
 
 
-def render_tile(image, origin_x, origin_y, mesh, scale, center):
+def render_tile(image, origin_x, origin_y, mesh, scale, center, cull=True):
     vertices, colors, faces = mesh
     depth_buffer = [[1e30] * TILE for _ in range(TILE)]
     light = normalize(LIGHT_DIRECTION)
@@ -77,15 +81,20 @@ def render_tile(image, origin_x, origin_y, mesh, scale, center):
 
     for a, b, c in faces:
         A, B, C = vertices[a], vertices[b], vertices[c]
+        # Unreal convention (left-handed): front-face normal = (C - A) x (B - A).
+        e1 = (B[0] - A[0], B[1] - A[1], B[2] - A[2])
+        e2 = (C[0] - A[0], C[1] - A[1], C[2] - A[2])
         normal = normalize((
-            (B[1] - A[1]) * (C[2] - A[2]) - (B[2] - A[2]) * (C[1] - A[1]),
-            (B[2] - A[2]) * (C[0] - A[0]) - (B[0] - A[0]) * (C[2] - A[2]),
-            (B[0] - A[0]) * (C[1] - A[1]) - (B[1] - A[1]) * (C[0] - A[0]),
+            e2[1] * e1[2] - e2[2] * e1[1],
+            e2[2] * e1[0] - e2[0] * e1[2],
+            e2[0] * e1[1] - e2[1] * e1[0],
         ))
         facing_camera = to_view(normal)[1] < 0
-        lambert = sum(normal[i] * light[i] for i in range(3))
         if not facing_camera:
-            lambert = -lambert * 0.6  # back faces (thin gills, ring): dimmer two-sided lighting
+            if cull:
+                continue  # back face: invisible in Unreal (single-sided material)
+            normal = (-normal[0], -normal[1], -normal[2])
+        lambert = sum(normal[i] * light[i] for i in range(3))
         shade = 0.32 + 0.75 * max(0.0, lambert)
         color = [(colors[a][i] + colors[b][i] + colors[c][i]) / 3 for i in range(3)]
         rgb = tuple(int(255 * linear_to_srgb(srgb_to_linear(ch) * shade)) for ch in color)
@@ -128,8 +137,10 @@ def main():
     if len(sys.argv) < 3:
         print(__doc__)
         sys.exit(1)
-    folder, output = sys.argv[1], sys.argv[2]
-    suffix = sys.argv[3] if len(sys.argv) > 3 else ""
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    cull = "--no-cull" not in sys.argv
+    folder, output = args[0], args[1]
+    suffix = args[2] if len(args) > 2 else ""
 
     species = sorted({name.rsplit("_", 1)[0] for name in os.listdir(folder)
                       if name.endswith(".obj") and not name.endswith("_far.obj")})
@@ -144,7 +155,7 @@ def main():
         for stage, mesh in enumerate(meshes):
             xs, ys, _ = zip(*mesh[0])
             center = ((max(xs) + min(xs)) / 2, (max(ys) + min(ys)) / 2, 0.0)
-            render_tile(image, stage * TILE, row * TILE, mesh, scale, center)
+            render_tile(image, stage * TILE, row * TILE, mesh, scale, center, cull)
             print(f"{species_id} stage {stage}: {len(mesh[2])} triangles")
     write_png(output, image)
     print("wrote", output)
