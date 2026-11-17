@@ -4,9 +4,12 @@
 French forests — Unreal Engine 5.8, C++.*
 
 > **Status: pre-alpha — vertical slice in progress (M1a time & weather ✅,
-> M1b species data ✅).** Screenshots will be added as soon as the slice is playable.
+> M1b species data ✅, M1c procedural mushrooms ✅).** Screenshots will be added as soon as the slice is playable.
 
-<!-- Screenshots / GIF go here: Docs/Media/*.png -->
+![Procedural mushrooms: fly agaric, cep and chanterelle at three growth stages](Docs/Media/procedural_mushrooms.png)
+
+*Procedural mushrooms generated from species data — fly agaric, cep and
+chanterelle, young / mature / old (offline preview render).*
 
 ## Pitch
 

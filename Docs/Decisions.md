@@ -112,6 +112,15 @@ development builds the game falls back to the JSON files when `DT_Species` is
 missing. Player-facing texts get stable localization keys
 (`ShroomHunt.Species`, `<Id>.<Field>`).
 
+**D-022 — Procedural mushroom geometry and preview pipeline** · Accepted · 2026-11-17
+Implements D-008. Cap, stem, ring and sac volva are revolved 2D profiles with
+one shape function per `ECapShape` / `EStemShape`; gills/ridges are real
+double-sided fins on the near LOD only; warts and volva scales are small
+pyramids. Albedo in vertex colors (sRGB), surface id in UV1, so one material
+covers every species. The mesh cache is an engine subsystem (editor + game).
+Shapes are reviewed headless through OBJ export + a stdlib Python renderer, and
+an automation test checks winding through the signed volume.
+
 ## Open questions (to the developer)
 
 - None at the moment.

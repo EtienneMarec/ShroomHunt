@@ -150,6 +150,10 @@ Always check the log for `Result: Succeeded`, not only the exit code.
   `Docs/Milestones/M1b.md`) and commit the regenerated DataTable as a
   `content(data):` commit.
 - Python scripts must be idempotent (safe to re-run) and log what they change.
+- **Visual check without the editor**: `sh.Mesh.ExportObj` (headless, see
+  `Docs/Milestones/M1c.md`) + `Tools/Python/render_mushroom_preview.py`
+  (stdlib-only renderer) produce a PNG Claude can look at. Use it after any
+  change to the mesh builder or to morphology data.
 
 ## 8. Asset naming (Content/)
 
@@ -195,8 +199,10 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   `USpeciesDatabaseSubsystem`) → static suitability → persistent mycelium
   patches → daily flush roll from lagged weather → fruit bodies.
 - **Mushroom mesh**: species ranges + seed → `FMushroomMorphology` →
-  `FDynamicMesh3` (revolve + deform) → cached `UStaticMesh` variants rendered
-  by ISM; the inspected specimen gets a unique mesh.
+  `MushroomMeshBuilder` (`FDynamicMesh3`, revolve + deform, 2 LODs) →
+  `UStaticMesh` cached per species x stage x variant in `UMushroomMeshSubsystem`
+  (engine subsystem: works in the editor too); the inspected specimen gets a
+  unique mesh. `AMushroomGarden` previews them.
 - **Knowledge**: per-species knowledge level; unknown specimens shown by
   observable criteria only.
 
@@ -229,6 +235,14 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   and give file-local helpers specific names.
 - `FJsonObject::Values.Find` does not compile on a `const FJsonObject`; use
   `TryGetField`.
+- `-ExecCmds=` separates commands with **commas**, and `Quit` does not close
+  `UnrealEditor-Cmd`: use `"-ExecCmds=sh.Some.Command,QUIT_EDITOR"`
+  (`Automation RunTests X;Quit` is special: the automation command parses `;Quit`).
+- Using `FDynamicMesh3::Attributes()` needs `DynamicMesh/DynamicMeshAttributeSet.h`
+  (forward-declared in `DynamicMesh3.h`).
+- `UStaticMesh::BuildFromMeshDescriptions` matches sections to materials by
+  **slot name**: set `PolygonGroupMaterialSlotNames` to the `FStaticMaterial`
+  slot name, or sections get no material.
 - `-run=pythonscript -script=` path: use forward slashes (`\t` in
   `C:\Users\tytym` is read as a tab).
 - Player-facing strings are `FText` (localization-ready, D-014); never build

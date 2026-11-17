@@ -164,9 +164,11 @@ flowchart LR
   are **surfaces of revolution** of 2D profile curves, then deformed (noise,
   asymmetry, tilt, margin waviness), with vertex colors and UVs; gills/pores
   via underside material (normal + mask) rather than geometry.
-- `UMushroomMeshCache : UGameInstanceSubsystem` — `(species, stage, variant)
-  → UStaticMesh` (2 LODs) via `FDynamicMesh3 → FMeshDescription →
-  UStaticMesh::BuildFromMeshDescriptions`. ~8 variants × 3 stages per species.
+- `UMushroomMeshSubsystem : UEngineSubsystem` — `(species, stage, variant)
+  → UStaticMesh` (2 LODs, box collision) via `FDynamicMesh3 → FMeshDescription →
+  UStaticMesh::BuildFromMeshDescriptions`; 6 variants × 3 stages per species
+  (`UMushroomMeshSettings`). Engine subsystem so the editor preview works.
+- `AMushroomGarden` — debug grid of species × stages (editor and game).
 - `AMushroomSpecimen` — interactable actor for the focused/picked individual,
   with a **unique** mesh generated from its exact morphology.
 
