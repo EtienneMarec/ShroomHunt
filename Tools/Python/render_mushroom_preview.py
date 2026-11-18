@@ -1,4 +1,4 @@
-"""Render procedural mushroom OBJ files into a PNG contact sheet (standard library only).
+"""Render procedural mushroom (and vegetation) OBJ files into a PNG contact sheet (standard library only).
 
 Workflow (no editor window needed):
   1. Export the meshes: in the editor console `sh.Mesh.ExportObj [seed]`, or headless:
@@ -11,6 +11,11 @@ Workflow (no editor window needed):
 The grid has one row per species and the columns Young / Mature / Old, drawn at a common
 scale per species so growth is visible. Software rasterizer with a z-buffer and Lambert
 shading of the per-vertex sRGB colors; good enough to review shapes and colors.
+
+Vegetation (M1d-2): `sh.Vegetation.ExportObj` writes Saved/VegetationDebug/<Key>.obj, then
+       python Tools/Python/render_mushroom_preview.py Saved/VegetationDebug out.png --grid
+draws one row per tree genus (Sapling, Pole, Mature..., Old at a common scale) and one row
+for the understory (each tile at its own scale).
 
 Like Unreal, it uses the left-handed convention (front-face normal = (C - A) x (B - A))
 and culls back faces, so a mesh with inverted winding shows up as "inside out" here too.
@@ -133,6 +138,43 @@ def write_png(path, image):
         file.write(png)
 
 
+def grid_key(name):
+    """'Fagus_Mature_0' -> ('Fagus', column order); 'Bracken_1' -> ('~Understory', ...)."""
+    parts = name.split("_")
+    forms = {"Sapling": 0, "Pole": 1, "Mature": 2, "Old": 3}
+    if len(parts) == 3 and parts[1] in forms:
+        return parts[0], (forms[parts[1]], parts[1], int(parts[2]))
+    return "~Understory", (0, parts[0], int(parts[-1]) if parts[-1].isdigit() else 0)
+
+
+def render_grid(folder, output, cull):
+    rows = {}
+    for name in sorted(os.listdir(folder)):
+        if name.endswith(".obj"):
+            row, order = grid_key(name[:-4])
+            rows.setdefault(row, []).append((order, name))
+    row_names = sorted(rows)
+    columns = max(len(items) for items in rows.values())
+    image = [[BACKGROUND] * (TILE * columns) for _ in range(TILE * len(row_names))]
+    for r, row in enumerate(row_names):
+        items = sorted(rows[row])
+        meshes = [load_obj(os.path.join(folder, name)) for _, name in items]
+
+        def extent(mesh):
+            xs, ys, zs = zip(*mesh[0])
+            return max(max(xs) - min(xs), max(ys) - min(ys), max(zs) - min(zs), 1e-3)
+
+        common = max(extent(m) for m in meshes)
+        for c, ((_, name), mesh) in enumerate(zip(items, meshes)):
+            largest = extent(mesh) if row.startswith("~") else common
+            xs, ys, _ = zip(*mesh[0])
+            center = ((max(xs) + min(xs)) / 2, (max(ys) + min(ys)) / 2, 0.0)
+            render_tile(image, c * TILE, r * TILE, mesh, TILE * 0.62 / largest, center, cull)
+            print(f"{name}: {len(mesh[2])} triangles")
+    write_png(output, image)
+    print("wrote", output)
+
+
 def main():
     if len(sys.argv) < 3:
         print(__doc__)
@@ -140,6 +182,9 @@ def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     cull = "--no-cull" not in sys.argv
     folder, output = args[0], args[1]
+    if "--grid" in sys.argv:
+        render_grid(folder, output, cull)
+        return
     suffix = args[2] if len(args) > 2 else ""
 
     species = sorted({name.rsplit("_", 1)[0] for name in os.listdir(folder)
