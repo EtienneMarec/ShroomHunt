@@ -186,7 +186,8 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   in LFS.
 - Never commit `Binaries/ Intermediate/ Saved/ DerivedDataCache/ .vs/ *.sln`,
   nor `Content/Fab/` (license + LFS quota, D-010).
-- Commit messages end with the Co-Authored-By line when written by Claude.
+- **No `Co-Authored-By` trailer** (nor any AI attribution line) in commit
+  messages or PR descriptions: the developer is the sole author.
 - Ask before pushing, force-pushing or rewriting published history.
 
 ## 10. Architecture cheat sheet (details in `Docs/Architecture.md`)
