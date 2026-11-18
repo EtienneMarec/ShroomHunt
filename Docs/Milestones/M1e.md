@@ -72,9 +72,14 @@ The C++ is built and the bake files are already in
 ### 2. Create the layer infos
 1. Open `Lvl_F01_LowlandOakBeech`, switch to **Landscape** mode (`Shift+2`),
    tab **Paint**.
-2. In **Target Layers**, `Gravel` and `Dirt` now appear without a layer info.
-   For each: click the **+** icon on its row > *Weight-Blended Layer
-   (normal)* > save in `Content/ShroomHunt/Forests/F01/LayerInfo`.
+2. UE 5.8 does not add new material layers to the landscape by itself. On the
+   **Target Layers** header row, click the **sync** icon (two arrows, tooltip
+   *Create Layers From Assigned Materials*): `Gravel` and `Dirt` appear. If
+   the icon is greyed out (*All Material Layers Created*), the material does
+   not have the layers yet: check their exact names, **Apply** and **Save**.
+3. For each new row: click its **+** icon (*Create Layer Info*) >
+   *Weight-Blended Layer (normal)* > save in
+   `Content/ShroomHunt/Forests/F01/LayerInfo`.
 
 ### 3. Re-import heights and layers
 1. Landscape mode, tab **Manage**, tool **Import**.
