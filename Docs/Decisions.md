@@ -191,6 +191,18 @@ Paths do not grade within ~3 m of a stream (the bed stays open under bridges);
 bridges rest on the graded banks 6 m beyond the water. UE's Water plugin was not used: experimental,
 heavy, and it would duplicate our own hydrology.
 
+**D-027 — Stateless mushroom spawning** · Accepted · 2026-11-18
+The spawn model of `Docs/SpawnModel.md` is implemented as pure functions
+(`SpawnModel`): live fruit bodies at time t = f(forest, weather history, t).
+Cooldowns use *raw* rolls of the previous days instead of stored history, so
+any time can be evaluated directly and the answer never changes when the
+player comes back later. A `AMushroomSpawner` actor per forest map builds the
+patches at play, re-evaluates every game hour and draws instanced meshes; the
+weather triggers are cached per (species, day, lag bucket of 0.25 real day).
+The fly agaric got more presence under beech and oak (affinity 0.5, 1.6
+patches/ha): it is on the starting poster (D-015) and birches are rare in F01.
+Play-test tuning knobs: `PatchDensityPerHa`, `FlushRate`, `FruitsPerFlush`.
+
 ## Open questions (to the developer)
 
 - None at the moment.

@@ -172,6 +172,10 @@ flowchart LR
 - `FMyceliumPatch` — persistent "good spot": species, position, radius,
   strength, cluster pattern, phase. Generated deterministically per forest.
 - `FFlushModel` (pure) — daily flush probability from lagged weather.
+- *Implemented (M1f, D-027):* `SpawnModel` (pure: suitability, patches,
+  trigger, raw rolls, fruit bodies), `AMushroomSpawner` (one per forest map:
+  patches, hourly re-evaluation, instanced meshes), `sh.Spawn.*` commands. The
+  subsystem below was replaced by the actor (the map declares its forest).
 - `UMushroomSpawnSubsystem : UTickableWorldSubsystem` — builds patches at load
   (spatial hash, 32 m cells), runs the **daily growth tick** (and catch-up for
   missed days when returning to a forest), holds fruit-body states, streams

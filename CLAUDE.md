@@ -218,7 +218,9 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   Check `debug_maps.png` visually after any change to the field.
 - **Mycology**: species rows (`FMushroomSpeciesRow` in `DT_Species`, loaded by
   `USpeciesDatabaseSubsystem`) → static suitability → persistent mycelium
-  patches → daily flush roll from lagged weather → fruit bodies.
+  patches → daily flush roll from lagged weather → fruit bodies, all pure and
+  stateless in `SpawnModel` (D-027); the *Mushroom Spawner* actor draws them.
+  Tuning: `sh.Spawn.Simulate` (offline years), `sh.Spawn.Map`, `sh.Spawn.Stats`.
 - **Mushroom mesh**: species ranges + seed → `FMushroomMorphology` →
   `MushroomMeshBuilder` (`FDynamicMesh3`, revolve + deform, 2 LODs) →
   `UStaticMesh` cached per species x stage x variant in `UMushroomMeshSubsystem`
@@ -301,5 +303,8 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   partitions. Load the whole region (World Partition Editor > Load Region From
   Selection) before regenerating, or far areas keep stale instances.
   `sh.Forest.CheckGround` compares the loaded landscape with the field.
+- Seasons are compressed (autumn = 8 game days for 3 months, ~0.4 month per
+  day): a 2–3 game day lag moves a month. Test scenarios must pick their date
+  by `CalendarMath::MonthAt`, not by a fixed season day.
 - Player-facing strings are `FText` (localization-ready, D-014); never build
   UI text from `FString` concatenation.
