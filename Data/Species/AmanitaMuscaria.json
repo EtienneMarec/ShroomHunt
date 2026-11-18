@@ -9,8 +9,8 @@
   "Substrates": ["Soil", "Litter", "Moss"],
   "Hosts": [
     { "genus": "Betula", "affinity": 1.0 }, { "genus": "Picea", "affinity": 0.9 },
-    { "genus": "Pinus", "affinity": 0.8 }, { "genus": "Fagus", "affinity": 0.35 },
-    { "genus": "Quercus", "affinity": 0.35 }
+    { "genus": "Pinus", "affinity": 0.8 }, { "genus": "Fagus", "affinity": 0.5 },
+    { "genus": "Quercus", "affinity": 0.5 }
   ],
   "pH": [3.5, 4.0, 5.5, 6.5],
   "AltitudeM": [0, 0, 1800, 2300],
@@ -26,7 +26,7 @@
   "LagDays": [6, 11],
   "FlushRate": 1.0, "FlushCooldownDays": 7,
 
-  "PatchDensityPerHa": 0.8, "PatchRadiusM": [5, 12],
+  "PatchDensityPerHa": 1.6, "PatchRadiusM": [5, 12],
   "Clustering": "FairyRing", "FruitsPerFlush": 7,
   "LifetimeDays": 9, "StageSplit": [0.25, 0.65], "WormyChance": 0.2,
 
