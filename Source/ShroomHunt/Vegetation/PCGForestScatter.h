@@ -45,7 +45,15 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Settings, meta = (PCG_Overridable))
 	EVegetationLayer Layer = EVegetationLayer::Trees;
 
-	/** World location (cm) of the field origin = the Landscape actor's location (its corner). */
+	/**
+	 * Place the forest on the level's Landscape: field point (x m, y m, height h m) goes to the
+	 * landscape's local position (x, y, h), i.e. vertex x, y (1 m per vertex) and the height the
+	 * imported heightmap encodes. Follows the landscape's location, rotation and scale.
+	 */
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Settings, meta = (PCG_Overridable))
+	bool bAlignToLandscape = true;
+
+	/** Used when bAlignToLandscape is off or no Landscape exists: world location (cm) of the field's corner (0, 0, height 0). */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Settings, meta = (PCG_Overridable))
 	FVector ForestOrigin = FVector::ZeroVector;
 
@@ -59,6 +67,9 @@ class FPCGForestScatterElement : public IPCGElement
 public:
 	/** The output also depends on Data/ JSON files, which PCG cannot track: never reuse cached results. */
 	virtual bool IsCacheable(const UPCGSettings* InSettings) const override { return false; }
+
+	/** Finding the Landscape iterates the world's actors: game thread only (the scatter itself takes ~10 ms). */
+	virtual bool CanExecuteOnlyOnMainThread(FPCGContext* Context) const override { return true; }
 
 protected:
 	virtual bool ExecuteInternal(FPCGContext* Context) const override;

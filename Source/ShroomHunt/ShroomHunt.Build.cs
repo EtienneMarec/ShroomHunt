@@ -29,7 +29,8 @@ public class ShroomHunt : ModuleRules
 			"ImageWrapper",
 			"JsonUtilities",
 			"PCG",
-			"AssetRegistry"
+			"AssetRegistry",
+			"Landscape"
 		});
 
 		PublicIncludePaths.AddRange(new string[] {

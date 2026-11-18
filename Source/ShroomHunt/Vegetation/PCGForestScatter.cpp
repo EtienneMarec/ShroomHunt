@@ -2,9 +2,12 @@
 
 #include "Core/ShroomLog.h"
 #include "Data/PCGBasePointData.h"
+#include "EngineUtils.h"
 #include "Forest/ForestField.h"
 #include "Forest/ForestFieldCache.h"
 #include "Helpers/PCGHelpers.h"
+#include "Landscape.h"
+#include "LandscapeProxy.h"
 #include "Metadata/PCGMetadata.h"
 #include "Metadata/PCGMetadataDomain.h"
 #include "PCGContext.h"
@@ -13,6 +16,28 @@
 #include "Vegetation/VegetationSettings.h"
 
 #define LOCTEXT_NAMESPACE "PCGForestScatterElement"
+
+namespace PCGForestScatterDetail
+{
+	/** The level's landscape (the main actor if loaded, else any streaming proxy: they share its transform). */
+	const ALandscapeProxy* FindLandscape(UWorld* World)
+	{
+		if (!World)
+		{
+			return nullptr;
+		}
+		const ALandscapeProxy* Found = nullptr;
+		for (TActorIterator<ALandscapeProxy> It(World); It; ++It)
+		{
+			if (It->IsA<ALandscape>())
+			{
+				return *It;
+			}
+			Found = Found ? Found : *It;
+		}
+		return Found;
+	}
+}
 
 #if WITH_EDITOR
 FText UPCGForestScatterSettings::GetDefaultNodeTitle() const
@@ -54,13 +79,26 @@ bool FPCGForestScatterElement::ExecuteInternal(FPCGContext* Context) const
 		return true;
 	}
 
-	// Field meters <-> world centimeters: 1 m per landscape vertex, height 0 at the origin's Z.
+	// Field (x m, y m, height m) -> world. The baked heightmap stores 128 units per meter and
+	// the landscape reads (value - 32768) / 128 as local Z, and one vertex is one meter, so the
+	// field point is exactly the landscape's local position (x, y, height). New landscapes are
+	// created centered on the chosen location, hence the alignment on the actual actor.
 	constexpr double CmPerM = 100.0;
-	const FVector Origin = Settings->ForestOrigin;
+	FTransform FieldToWorld(FQuat::Identity, Settings->ForestOrigin, FVector(CmPerM));
+	if (Settings->bAlignToLandscape)
+	{
+		if (const ALandscapeProxy* Landscape = PCGForestScatterDetail::FindLandscape(Context->ExecutionSource->GetExecutionState().GetWorld()))
+		{
+			FieldToWorld = Landscape->LandscapeActorToWorld();
+		}
+		else
+		{
+			PCGE_LOG(Warning, GraphAndLog, LOCTEXT("NoLandscape", "No Landscape in the level: using Forest Origin."));
+		}
+	}
 	const FBox Bounds = Context->ExecutionSource->GetExecutionState().GetBounds();
-	const FBox2d BoundsM(
-		FVector2d((Bounds.Min.X - Origin.X) / CmPerM, (Bounds.Min.Y - Origin.Y) / CmPerM),
-		FVector2d((Bounds.Max.X - Origin.X) / CmPerM, (Bounds.Max.Y - Origin.Y) / CmPerM));
+	const FBox LocalBounds = Bounds.InverseTransformBy(FieldToWorld);
+	const FBox2d BoundsM(FVector2d(LocalBounds.Min.X, LocalBounds.Min.Y), FVector2d(LocalBounds.Max.X, LocalBounds.Max.Y));
 
 	TArray<FVegetationInstance> Instances;
 	VegetationScatter::Scatter(*Field, *Vegetation, Settings->Layer, BoundsM, Instances);
@@ -91,8 +129,9 @@ bool FPCGForestScatterElement::ExecuteInternal(FPCGContext* Context) const
 	for (int32 Index = 0; Index < Instances.Num(); ++Index)
 	{
 		const FVegetationInstance& Instance = Instances[Index];
-		const FVector Location = Origin + FVector(Instance.PositionM.X, Instance.PositionM.Y, Instance.PositionM.Z) * CmPerM;
-		Transforms[Index] = FTransform(FRotator(Instance.PitchDeg, Instance.YawDeg, Instance.RollDeg), Location, FVector(Instance.Scale));
+		const FVector Location = FieldToWorld.TransformPosition(FVector(Instance.PositionM.X, Instance.PositionM.Y, Instance.PositionM.Z));
+		const FQuat Rotation = FieldToWorld.GetRotation() * FRotator(Instance.PitchDeg, Instance.YawDeg, Instance.RollDeg).Quaternion();
+		Transforms[Index] = FTransform(Rotation, Location, FVector(Instance.Scale));
 		Seeds[Index] = PCGHelpers::ComputeSeedFromPosition(Location);
 
 		Entries[Index] = PCGInvalidEntryKey;
