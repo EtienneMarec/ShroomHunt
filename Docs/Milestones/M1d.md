@@ -209,8 +209,8 @@ The C++ is already built; the **PCG** plugin is now enabled in
 ### 1. Create the vegetation material
 1. Content Browser: create `Content/ShroomHunt/Environment/Vegetation`.
 2. In it: right-click > **Material**, name `M_Vegetation`, open it.
-3. Right-click an empty spot > `Vertex Color` > wire its **RGB** output to
-   **Base Color**.
+3. Right-click an empty spot > `Vertex Color` > drag its white **RGB**
+   output pin (the top one) onto **Base Color**.
 4. Right-click > `Constant`, value `0.85` → **Roughness**.
 5. **Apply**, **Save**.
 
