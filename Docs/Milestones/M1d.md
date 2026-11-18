@@ -67,14 +67,16 @@ editing the JSON): *Window > Output Log*, command box in **Cmd** mode, type
    entry set **Layer Name** and keep **Blend Type** = *LB Weight Blend*:
    `Litter`, `Moss`, `Grass`, `Mud` (exact names: they must match the files).
 5. The node now has four inputs *Layer Litter*, *Layer Moss*… For each one:
-   hold `3` and left-click in the graph (a color constant appears), set its
-   value in *Details > Constant*, and wire it to the matching input:
+   right-click an empty spot of the graph, type `Constant3Vector` and pick it
+   (a color constant appears; shortcut: hold `3` + left-click, which needs
+   `Shift` on an AZERTY keyboard). Double-click its color swatch or set
+   *Details > Constant* R, G, B, then wire it to the matching input:
    - Litter: R 0.20, G 0.12, B 0.06 (brown leaves)
    - Moss: R 0.10, G 0.19, B 0.05
    - Grass: R 0.17, G 0.25, B 0.07
    - Mud: R 0.09, G 0.07, B 0.05
-6. Wire the Layer Blend output to **Base Color**. Hold `1` + click for a
-   constant `0.85` → **Roughness**.
+6. Wire the Layer Blend output to **Base Color**. Right-click > `Constant`
+   (shortcut `1` + click) with value `0.85` → **Roughness**.
 7. **Apply**, **Save**. (Plain colors for now; real textures come with the
    vegetation assets.)
 
