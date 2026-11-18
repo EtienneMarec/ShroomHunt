@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Forest/ForestDefinition.h"
+#include "Forest/ForestPaths.h"
 
 /** A regular grid of floats covering the forest (meters). Node (i, j) sits at (i * CellSize, j * CellSize). */
 struct SHROOMHUNT_API FFieldRaster
@@ -43,6 +44,9 @@ struct SHROOMHUNT_API FForestSample
 	bool bWater = false;
 	/** Distance to the nearest stream or pond cell (m, 0 on water). */
 	float WaterDistanceM = 0.0f;
+	/** Distance to the nearest path centerline (m, capped at ~20) and that path's rank (-1: none near). */
+	float PathDistanceM = 1000.0f;
+	int32 PathRank = -1;
 	int32 ParcelNumber = 0;
 	EStandAgeClass AgeClass = EStandAgeClass::Mature;
 	/** Fraction of each tree genus (same order as GetGenera()), sums to 1. */
@@ -104,6 +108,13 @@ public:
 	/** Index of a genus in GetGenera(), or INDEX_NONE. */
 	int32 FindGenus(FName Genus) const { return Genera.IndexOfByKey(Genus); }
 
+	/** Roads, rides and footpaths with their nodes (entrances, base, hubs, crossroads...). */
+	const FForestPathNetwork& GetPathNetwork() const { return PathNetwork; }
+	/** Fine (1 m) distance to the nearest path centerline, capped. */
+	const FFieldRaster& GetPathDistance() const { return PathDistance; }
+	/** Fine (1 m) rank of the nearest path (EForestPathRank), 255 when none is near. */
+	const TArray<uint8>& GetPathRankCells() const { return PathRankCells; }
+
 	int32 GetStreamCellCount() const { return StreamCellCount; }
 	int32 GetPondCellCount() const { return PondCellCount; }
 
@@ -115,6 +126,9 @@ private:
 	void GenerateParcels();
 	void GenerateStands();
 	void GenerateCanopyAndEdges();
+	// Paths (ForestPaths.cpp): network, then grading of the terrain and the path rasters.
+	void GeneratePaths();
+	void RasterizePaths();
 	int32 CoarseIndexAt(float XM, float YM) const;
 
 	FForestDefinition Definition;
@@ -136,6 +150,9 @@ private:
 	TArray<FForestParcel> Parcels;
 	TArray<FName> Genera;
 	TArray<float> StandWeights;    // coarse cells x genera
+	FForestPathNetwork PathNetwork;
+	FFieldRaster PathDistance;     // fine, distance to the nearest path (m)
+	TArray<uint8> PathRankCells;   // fine, EForestPathRank of the nearest path, 255 = none
 
 	int32 StreamCellCount = 0;
 	int32 PondCellCount = 0;

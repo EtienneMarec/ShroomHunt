@@ -128,6 +128,42 @@ struct SHROOMHUNT_API FForestDefinition
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stands")
 	TArray<FStandSpecies> Stands;
 
+	/** Public road entrances on the map border. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paths")
+	int32 Entrances = 2;
+
+	/** Flat spots linked by forest roads (future clearings and landmarks). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paths")
+	int32 Hubs = 4;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paths")
+	float HubSpacingM = 220.0f;
+
+	/** Roads added to the minimum spanning tree to make loops. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paths")
+	int32 ExtraRoadLoops = 1;
+
+	/** Road routing cost per meter: 1 + RoadGradeCost x grade^2 (400: a 10 % grade costs 5x flat ground). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paths")
+	float RoadGradeCost = 400.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paths")
+	float RoadHalfWidthM = 2.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paths")
+	float RideHalfWidthM = 1.6f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paths")
+	float FootpathHalfWidthM = 0.6f;
+
+	/** Footpaths to ponds, then to old stands. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paths")
+	int32 Footpaths = 3;
+
+	/** Shorter ride pieces (cut by water or the border) are dropped. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Paths")
+	float RideMinLengthM = 60.0f;
+
 	/** Side length in meters (1 m per heightmap vertex). */
 	float GetSizeM() const { return static_cast<float>(HeightmapResolution - 1); }
 };

@@ -87,6 +87,14 @@ namespace ForestData
 				Error(Field, TEXT("Pioneer and Riparian must be in [0, 1]"));
 			}
 		}
+		if (Out.Entrances < 1 || Out.Hubs < 0 || Out.ExtraRoadLoops < 0 || Out.Footpaths < 0)
+		{
+			Error(TEXT("Entrances/Hubs/ExtraRoadLoops/Footpaths"), TEXT("need at least one entrance and no negative count"));
+		}
+		if (Out.RoadHalfWidthM <= 0.0f || Out.RideHalfWidthM <= 0.0f || Out.FootpathHalfWidthM <= 0.0f || Out.RoadGradeCost < 0.0f)
+		{
+			Error(TEXT("RoadHalfWidthM/RideHalfWidthM/FootpathHalfWidthM/RoadGradeCost"), TEXT("widths must be > 0 and the grade cost >= 0"));
+		}
 		if (Out.Stands.Num() > 0 && ShareSum <= 0.0f)
 		{
 			Error(TEXT("Stands"), TEXT("shares must not all be 0"));

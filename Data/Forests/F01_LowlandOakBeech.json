@@ -18,6 +18,17 @@
   "LimestoneShare": 0.15,
   "ParcelSizeHa": 13,
 
+  "Entrances": 2,
+  "Hubs": 4,
+  "HubSpacingM": 220,
+  "ExtraRoadLoops": 1,
+  "RoadGradeCost": 800,
+  "RoadHalfWidthM": 2.0,
+  "RideHalfWidthM": 1.6,
+  "FootpathHalfWidthM": 0.6,
+  "Footpaths": 3,
+  "RideMinLengthM": 60,
+
   "AgeClasses": {
     "ClearCut": 0.07,
     "Regeneration": 0.13,

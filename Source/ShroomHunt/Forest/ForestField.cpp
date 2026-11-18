@@ -191,12 +191,14 @@ bool FForestField::Generate(const FForestDefinition& InDefinition)
 	GenerateHydrology();
 	GenerateMoistureAndSoil();
 	GenerateParcels();
+	GeneratePaths();
 	GenerateCanopyAndEdges();
 	GenerateStands();
 
-	UE_LOG(LogShroomForest, Log, TEXT("Forest field %s generated in %.2f s: %d x %d m, %d parcels, %d stream cells, %d pond cells"),
+	UE_LOG(LogShroomForest, Log, TEXT("Forest field %s generated in %.2f s: %d x %d m, %d parcels, %d stream cells, %d pond cells, roads %.0f m, rides %.0f m, footpaths %.0f m"),
 		*Definition.Name, FPlatformTime::Seconds() - Start, FMath::RoundToInt(GetSizeM()), FMath::RoundToInt(GetSizeM()),
-		Parcels.Num(), StreamCellCount, PondCellCount);
+		Parcels.Num(), StreamCellCount, PondCellCount, PathNetwork.GetLengthM(EForestPathRank::Road),
+		PathNetwork.GetLengthM(EForestPathRank::Ride), PathNetwork.GetLengthM(EForestPathRank::Footpath));
 	return true;
 }
 
@@ -703,6 +705,17 @@ void FForestField::GenerateCanopyAndEdges()
 		{
 			C = 0.0f;
 		}
+		// Roads and rides open a strip of sky (light, edge species along them).
+		if (PathDistance.IsValid())
+		{
+			const int32 Fine = PathDistance.Index(FMath::Min(FMath::RoundToInt(FX), PathDistance.Width - 1), FMath::Min(FMath::RoundToInt(FY), PathDistance.Height - 1));
+			const uint8 Rank = PathRankCells[Fine];
+			if (Rank != 255 && static_cast<EForestPathRank>(Rank) != EForestPathRank::Footpath
+				&& PathDistance.Values[Fine] < ForestPaths::HalfWidthM(static_cast<EForestPathRank>(Rank), Definition) + 1.0f)
+			{
+				C = FMath::Min(C, static_cast<EForestPathRank>(Rank) == EForestPathRank::Road ? 0.2f : 0.3f);
+			}
+		}
 		C = FMath::Clamp(C, 0.0f, 1.0f);
 		Canopy.Values[Index] = C;
 		Open[Index] = C < 0.35f;
@@ -802,6 +815,14 @@ FForestSample FForestField::Sample(float XM, float YM) const
 	Out.Edgeness = Edgeness.Sample(XM, YM);
 	Out.bWater = WaterCells[Cell] != 0;
 	Out.WaterDistanceM = Out.bWater ? 0.0f : WaterDistance.Sample(XM, YM);
+	if (PathDistance.IsValid())
+	{
+		Out.PathDistanceM = PathDistance.Sample(XM, YM);
+		const int32 PX = FMath::Clamp(FMath::RoundToInt(XM), 0, PathDistance.Width - 1);
+		const int32 PY = FMath::Clamp(FMath::RoundToInt(YM), 0, PathDistance.Height - 1);
+		const uint8 Rank = PathRankCells[PathDistance.Index(PX, PY)];
+		Out.PathRank = Rank == 255 ? -1 : static_cast<int32>(Rank);
+	}
 	const FForestParcel& Parcel = Parcels[ParcelCells[Cell]];
 	Out.ParcelNumber = Parcel.Number;
 	Out.AgeClass = Parcel.AgeClass;
