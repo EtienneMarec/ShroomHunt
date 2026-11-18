@@ -248,6 +248,12 @@ void AEnvironmentDirector::CaptureInitialValues()
 
 void AEnvironmentDirector::SetupCloudMaterial()
 {
+	CloudMaterial = nullptr;
+	bCloudCoverageFound = false;
+	if (!bDriveCloudCoverage)
+	{
+		return;
+	}
 	UVolumetricCloudComponent* CloudComponent = VolumetricCloud ? VolumetricCloud->FindComponentByClass<UVolumetricCloudComponent>() : nullptr;
 	UMaterialInterface* Material = CloudComponent ? CloudComponent->GetMaterial() : nullptr;
 	if (!Material || CloudCoverageParameter.IsNone())

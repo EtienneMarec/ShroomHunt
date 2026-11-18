@@ -130,6 +130,15 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Fog", meta = (ClampMin = "1"))
 	float FogDensityMultiplierInHeavyRain = 3.0f;
 
+	/**
+	 * Drive the cloud coverage from the weather through a dynamic instance of the volumetric
+	 * cloud material. Off by default: with the engine's m_SimpleVolumetricCloud this crashed the
+	 * editor (renderer assertion "UniformExpressionCache should be up to date") when shaders
+	 * recompiled. To come back with a project cloud material reading MPC_Environment.CloudCover.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Clouds")
+	bool bDriveCloudCoverage = false;
+
 	/** Scalar parameter on the volumetric cloud material controlling coverage. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Clouds")
 	FName CloudCoverageParameter = TEXT("Cloud_GlobalCoverage");
