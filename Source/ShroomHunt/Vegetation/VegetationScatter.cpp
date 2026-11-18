@@ -172,7 +172,22 @@ namespace VegetationScatterDetail
 		}
 	}
 
-	FVegetationInstance MakeInstance(const FForestField& Field, const FVegetationDefinition& Definition, const FCandidate& C, float ScaleJitter, float SinkM, float MaxTiltDeg)
+	/** Steepest ground slope (rise over run) around a point, on the 1 m heightmap. */
+	float FineSlope(const FForestField& Field, const FVector2d& P)
+	{
+		const FFieldRaster& H = Field.GetHeights();
+		const float X = static_cast<float>(P.X);
+		const float Y = static_cast<float>(P.Y);
+		const float GX = (H.Sample(X + 1.0f, Y) - H.Sample(X - 1.0f, Y)) * 0.5f;
+		const float GY = (H.Sample(X, Y + 1.0f) - H.Sample(X, Y - 1.0f)) * 0.5f;
+		return FMath::Sqrt(GX * GX + GY * GY);
+	}
+
+	/**
+	 * SinkM is how deep the origin goes below the ground at the center; SlopeSinkM adds that much
+	 * per unit of slope so the downhill side of a trunk or a log does not float on steep banks.
+	 */
+	FVegetationInstance MakeInstance(const FForestField& Field, const FVegetationDefinition& Definition, const FCandidate& C, float ScaleJitter, float SinkM, float MaxTiltDeg, float SlopeSinkM = 0.0f)
 	{
 		FVegetationInstance Out;
 		Out.Kind = C.Kind;
@@ -183,7 +198,8 @@ namespace VegetationScatterDetail
 		Out.PitchDeg = MaxTiltDeg * ShroomHash::ToSignedFloat(ShroomHash::Hash(C.CellHash, 7u));
 		Out.RollDeg = MaxTiltDeg * ShroomHash::ToSignedFloat(ShroomHash::Hash(C.CellHash, 8u));
 		Out.Scale = 1.0f + ScaleJitter * ShroomHash::ToSignedFloat(ShroomHash::Hash(C.CellHash, 9u));
-		Out.PositionM = FVector3d(C.Position.X, C.Position.Y, Field.GetHeights().Sample(static_cast<float>(C.Position.X), static_cast<float>(C.Position.Y)) - SinkM);
+		const float Sink = SinkM + SlopeSinkM * FineSlope(Field, C.Position) * Out.Scale;
+		Out.PositionM = FVector3d(C.Position.X, C.Position.Y, Field.GetHeights().Sample(static_cast<float>(C.Position.X), static_cast<float>(C.Position.Y)) - Sink);
 		return Out;
 	}
 }
@@ -269,7 +285,8 @@ namespace VegetationScatter
 				}, Kept);
 			for (const FCandidate& C : Kept)
 			{
-				Out.Add(MakeInstance(Field, Definition, C, Trees.ScaleJitter, 0.15f, 2.0f));
+				// Old trunks reach ~0.7 m radius at the flare.
+				Out.Add(MakeInstance(Field, Definition, C, Trees.ScaleJitter, 0.15f, 2.0f, C.Kind == EVegetationKind::Old ? 0.8f : 0.5f));
 			}
 			return;
 		}
@@ -288,6 +305,10 @@ namespace VegetationScatter
 						return false;
 					}
 					C.Kind = Rule.Kind;
+					if (Rule.Kind == EVegetationKind::Log && FineSlope(Field, P) > 0.15f)
+					{
+						return false; // a horizontal log on a steep slope would float
+					}
 					if (bSapling)
 					{
 						const int32 GenusIndex = PickGenus(Sample, ShroomHash::Hash(Hash, 10u));
@@ -303,7 +324,8 @@ namespace VegetationScatter
 			const float MaxTilt = (Rule.Kind == EVegetationKind::Log || Rule.Kind == EVegetationKind::Stump) ? 3.0f : 8.0f;
 			for (const FCandidate& C : Kept)
 			{
-				Out.Add(MakeInstance(Field, Definition, C, Rule.ScaleJitter, 0.05f, MaxTilt));
+				const float SlopeSink = Rule.Kind == EVegetationKind::Log ? 3.0f : (Rule.Kind == EVegetationKind::Stump ? 0.4f : 0.0f);
+				Out.Add(MakeInstance(Field, Definition, C, Rule.ScaleJitter, 0.05f, MaxTilt, SlopeSink));
 			}
 		}
 	}
