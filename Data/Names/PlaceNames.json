@@ -1,0 +1,28 @@
+{
+  "_comment": "French place names for forest crossroads (proper nouns, not translated; D-026). A name is Prefix + ' ' + Specific. Context lists are tried first, then Generic.",
+
+  "Prefixes": {
+    "Crossroads": "Carrefour",
+    "Star": "Étoile",
+    "Hub": "Rond",
+    "Junction": "Carrefour",
+    "Entrance": "Barrière",
+    "Base": "Maison forestière"
+  },
+
+  "Lists": [
+    { "Context": "Pond",     "Names": ["de la Mare", "de l'Étang", "des Grenouilles", "de la Fontaine", "des Joncs"] },
+    { "Context": "Open",     "Names": ["de la Coupe", "des Ronces", "de la Belle Épine", "des Genêts", "du Taillis"] },
+    { "Context": "Fagus",    "Names": ["du Hêtre Tordu", "de la Hêtraie", "du Gros Fayard", "des Fayards"] },
+    { "Context": "Quercus",  "Names": ["du Gros Chêne", "des Chênes", "du Chêne Brûlé", "du Chêne de Saint-Louis"] },
+    { "Context": "Carpinus", "Names": ["des Charmes", "de la Charmille"] },
+    { "Context": "Betula",   "Names": ["des Bouleaux", "de la Boulaie"] },
+    { "Context": "Alnus",    "Names": ["des Aulnes", "de l'Aulnaie", "du Vergne"] },
+    { "Context": "Generic",  "Names": [
+      "du Cerf", "de la Biche", "des Sangliers", "du Renard", "de la Croix", "du Garde", "du Roi", "de la Reine",
+      "du Loup", "des Fées", "du Puits", "de la Chapelle", "du Bûcheron", "des Charbonniers", "de la Vieille Borne",
+      "des Trois Sœurs", "de Saint-Hubert", "du Grand Veneur", "de la Louve", "du Chevreuil", "de la Bécasse",
+      "du Pavillon", "des Quatre Vents", "de la Dame Blanche", "du Sabotier", "de l'Ermitage"
+    ] }
+  ]
+}
