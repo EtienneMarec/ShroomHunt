@@ -16,7 +16,8 @@ world generation, progression, roadmap, decisions).
 | M1c Procedural mushrooms ✅ (`Docs/Milestones/M1c.md`) | `FMushroomMorphology`, `FMushroomMeshBuilder`, `UMushroomMeshCache`, debug "specimen garden" actor | grid of 3 species × stages × variants |
 | M1d-1 Forest field & terrain ✅ (`Docs/Milestones/M1d.md`) | `FForestField`, heightmap/weightmap bake, debug maps, landscape import steps, landscape material | walk on the 1 km² terrain |
 | M1d-2 Forest vegetation ✅ (`Docs/Milestones/M1d.md`, part 2) | placeholder procedural trees (beech, oak, hornbeam, birch, alder) + understory baked to Nanite meshes, PCG `Forest Scatter` node | walk in a 1 km² forest |
-| M1e Paths & landmarks | parcels, roads/rides/footpaths, splines, 3 landmarks (hunting hut, pond with bridge, calvary/crossroads) | follow a ride to a named crossroads |
+| M1e-1 Path network ✅ (`Docs/Milestones/M1e.md`) | roads (A*, MST + loop), rides on parcel boundaries, footpaths, terrain grading, gravel/dirt layers, vegetation clearance | walk the roads and rides |
+| M1e-2 Landmarks & water | named crossroads and signposts, parcel stones, base house, hunting hut, bridge, calvary, pond and stream water surfaces | follow a ride to a named crossroads |
 | M1f Spawning | suitability, patches, daily flushes, ISM streaming, debug maps | rain → mushrooms 2–3 days later in predictable spots |
 | M1g Interaction & knowledge | interaction/inspection components, basket, poster + torn page, minimal encyclopedia, observable criteria | find, examine, identify, pick |
 

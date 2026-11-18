@@ -150,6 +150,21 @@ outputs those points (Mesh/Kind/Genus attributes); PCG does the instancing,
 partitioning and streaming (D-009). The node is not cacheable because it reads
 `Data/` files PCG cannot track; the field is cached in `ForestFieldCache`.
 
+**D-025 — Path network generated in the forest field** · Accepted · 2026-11-18
+Paths are a stage of `FForestField` (after the parcels), so the terrain bake,
+the vegetation and later the mushrooms all see the same network. Roads: A* on
+the 4 m grid (cost `1 + k × grade²`, ponds with a 4 m margin forbidden,
+streams costly), minimum spanning tree of entrances/base/hubs plus the loop
+that saves the longest detour, discount on existing roads so they merge.
+Rides: exact Voronoi edges of the parcel sites (straight *lignes* and star
+crossroads, as in French state forests), not routed. Footpaths: noisy-cost
+Dijkstra to the network. Grid routes are simplified (8 m tolerance) and
+Chaikin-smoothed: plain A* routes looked like staircases. The terrain is graded
+to a smoothed profile per path (roads: camber and ditches) and two weightmaps
+(Gravel, Dirt) are baked; the landscape is re-imported in place with the
+editor's Import tool. No splines yet: M1e-2 adds them only if signposts,
+bridges or PCG dressing need them.
+
 ## Open questions (to the developer)
 
 - None at the moment.

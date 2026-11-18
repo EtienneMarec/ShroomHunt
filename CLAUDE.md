@@ -209,7 +209,8 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   random-access function of (forest seed, climate, time) + debug overrides.
   Rain history is computed, not stored.
 - **Forest field** (`FForestField`, from `Data/Forests/<Id>.json`): terrain
-  (1 m), hydrology/moisture/soil/pH/parcels/stands/canopy (4 m cells).
+  (1 m), hydrology/moisture/soil/pH/parcels/stands/canopy (4 m cells), path
+  network (roads, rides, footpaths; graded into the terrain, D-025).
   `sh.Forest.Bake` writes heightmap + weightmaps + debug maps to
   `Saved/ForestBake/<Id>/` (landscape imported by hand, `Docs/Milestones/M1d.md`).
   Check `debug_maps.png` visually after any change to the field.

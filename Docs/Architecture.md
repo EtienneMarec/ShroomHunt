@@ -125,6 +125,8 @@ flowchart LR
   age class, distance to path/water}. Some layers are rasterized once at load
   (hydrology, distances) into `FFieldRaster` grids (4 m cells → 250×250 floats
   per layer for 1 km², ≈ 250 KB each).
+  *Implemented (M1e-1):* path network stage (`ForestPaths`, D-025): roads,
+  rides, footpaths, nodes, graded terrain, `PathDistance`/`PathRank` rasters.
   *Implemented (M1d-1):* `FFieldRaster`, `FForestField::Generate/Sample`,
   `ForestBake` (heightmap, weightmaps, debug maps), `UForestGenerationLibrary`,
   `sh.Forest.Bake`; definition read from JSON by `ForestData::LoadForest`.
