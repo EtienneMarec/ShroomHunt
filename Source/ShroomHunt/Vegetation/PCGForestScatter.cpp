@@ -2,12 +2,10 @@
 
 #include "Core/ShroomLog.h"
 #include "Data/PCGBasePointData.h"
-#include "EngineUtils.h"
 #include "Forest/ForestField.h"
 #include "Forest/ForestFieldCache.h"
+#include "Forest/ForestWorld.h"
 #include "Helpers/PCGHelpers.h"
-#include "Landscape.h"
-#include "LandscapeProxy.h"
 #include "Metadata/PCGMetadata.h"
 #include "Metadata/PCGMetadataDomain.h"
 #include "PCGContext.h"
@@ -16,28 +14,6 @@
 #include "Vegetation/VegetationSettings.h"
 
 #define LOCTEXT_NAMESPACE "PCGForestScatterElement"
-
-namespace PCGForestScatterDetail
-{
-	/** The level's landscape (the main actor if loaded, else any streaming proxy: they share its transform). */
-	const ALandscapeProxy* FindLandscape(UWorld* World)
-	{
-		if (!World)
-		{
-			return nullptr;
-		}
-		const ALandscapeProxy* Found = nullptr;
-		for (TActorIterator<ALandscapeProxy> It(World); It; ++It)
-		{
-			if (It->IsA<ALandscape>())
-			{
-				return *It;
-			}
-			Found = Found ? Found : *It;
-		}
-		return Found;
-	}
-}
 
 #if WITH_EDITOR
 FText UPCGForestScatterSettings::GetDefaultNodeTitle() const
@@ -87,11 +63,9 @@ bool FPCGForestScatterElement::ExecuteInternal(FPCGContext* Context) const
 	FTransform FieldToWorld(FQuat::Identity, Settings->ForestOrigin, FVector(CmPerM));
 	if (Settings->bAlignToLandscape)
 	{
-		if (const ALandscapeProxy* Landscape = PCGForestScatterDetail::FindLandscape(Context->ExecutionSource->GetExecutionState().GetWorld()))
-		{
-			FieldToWorld = Landscape->LandscapeActorToWorld();
-		}
-		else
+		bool bFoundLandscape = false;
+		FieldToWorld = ForestWorld::GetFieldToWorld(Context->ExecutionSource->GetExecutionState().GetWorld(), Settings->ForestOrigin, &bFoundLandscape);
+		if (!bFoundLandscape)
 		{
 			PCGE_LOG(Warning, GraphAndLog, LOCTEXT("NoLandscape", "No Landscape in the level: using Forest Origin."));
 		}
