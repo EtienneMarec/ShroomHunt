@@ -210,7 +210,9 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   Rain history is computed, not stored.
 - **Forest field** (`FForestField`, from `Data/Forests/<Id>.json`): terrain
   (1 m), hydrology/moisture/soil/pH/parcels/stands/canopy (4 m cells), path
-  network (roads, rides, footpaths; graded into the terrain, D-025).
+  network (roads, rides, footpaths; graded into the terrain, D-025),
+  landmarks and water levels (D-026; built by the *Forest Landmarks* and
+  *Forest Water* actors, place names from `Data/Names/PlaceNames.json`).
   `sh.Forest.Bake` writes heightmap + weightmaps + debug maps to
   `Saved/ForestBake/<Id>/` (landscape imported by hand, `Docs/Milestones/M1d.md`).
   Check `debug_maps.png` visually after any change to the field.
@@ -291,5 +293,7 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   shaders recompile in the background: push only real changes and skip while
   `GShaderCompilingManager->IsCompiling()`. Prefer `MPC_Environment` (parameter
   collection) for values that change every frame.
+- The PowerShell tool keeps the last working directory: start UBT commands
+  with `Set-Location` to the project root (`$PWD` is used in `-Project=`).
 - Player-facing strings are `FText` (localization-ready, D-014); never build
   UI text from `FString` concatenation.

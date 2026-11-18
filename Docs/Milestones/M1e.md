@@ -4,7 +4,7 @@ M1e is split in two:
 - **M1e-1 (this part):** the path network — forest roads, rides along the
   parcel boundaries, footpaths — generated from the forest field, graded into
   the terrain, painted on the ground and kept clear of vegetation.
-- **M1e-2 (next):** landmarks and orientation — named crossroads, signposts,
+- **M1e-2 (part 2, end of this note):** landmarks and orientation — named crossroads, signposts,
   parcel stones, the forester's house at the base, a hunting hut, a bridge, a
   calvary — and water surfaces for the ponds and the stream.
 
@@ -113,3 +113,102 @@ If a field name differs, tell me what you see.
   new **paint layers / layer infos** on an existing landscape.
 - Path finding (A*) and graph algorithms (minimum spanning tree, Voronoi) in
   plain C++ feeding the terrain bake.
+
+---
+
+# Part 2 — M1e-2 Landmarks and water
+
+![Placeholder landmarks](../Media/placeholder_landmarks.png)
+
+*Bridge, calvary, forester's house, hunting hut, hunting tower (mirador), log
+pile, parcel stone, signpost arrow, signpost (offline preview, each at its
+own scale).*
+
+## What the code provides
+
+| Piece | Role |
+|---|---|
+| `FForestField::GenerateLandmarks` | places the landmarks after the paths; vegetation keeps clear of them |
+| `Data/Names/PlaceNames.json` + `ForestPlaceNames` | French place names chosen from the surroundings (pond, young parcel, tree genus), unique per forest |
+| `LandmarkMeshBuilder` | placeholder meshes with box collisions |
+| **Forest Landmarks** actor (`AForestLandmarkSet`) | builds every landmark, the signpost texts and arrows, the parcel numbers |
+| **Forest Water** actor (`AForestWater`) | one surface for the ponds (flat at their spill level) and the streams (just above their bed) |
+| `sh.Forest.ExportLandmarks` | OBJ export of the landmark meshes for the offline preview |
+
+Placement rules (all from the seed):
+- **Forester's house** beyond the end of the road from the first entrance,
+  door toward the road, in a 28 m clearing.
+- **Hunting hut** near the hub closest to a clear-cut or a regeneration, in a
+  small clearing; **2 hunting towers** at stand edges facing an open parcel.
+- **Calvary** at a road junction.
+- **Signposts** at the star crossroads, hubs, road junctions and entrances,
+  with the place name and arrow boards toward the neighboring named places
+  (name and distance along the path).
+- **Parcel stones** at the star crossroads, painted with the numbers of the
+  surrounding parcels (as in French state forests).
+- **Bridges** wherever a road, ride or footpath crosses a stream (stone for
+  roads, wooden plank bridges otherwise); **4 log piles** along the roads
+  next to mature stands.
+
+F01: 34 landmarks (14 signposts, 5 parcel stones, 2 towers, 6 bridges,
+4 log piles...) and 15 named places such as *Barrière du Vergne*.
+
+> **UE concept — Text Render component.** Draws text in the world (signs,
+> labels) with a size in centimeters; it faces its local +X axis.
+>
+> **UE concept — Is Spatially Loaded.** World Partition streams actors by
+> their position. Actors that span the whole map (water, landmark set) must
+> be *always loaded*, or they disappear when their cell unloads.
+
+## Editor steps
+
+The C++ is built. The bake in `Saved/ForestBake/F01_LowlandOakBeech/` is up to
+date (grass clearing around the house).
+
+### 1. Create the water material
+1. Content Browser: create `Content/ShroomHunt/Environment/Water`.
+2. In it: right-click > **Material**, name `M_Water`, open it.
+3. Right-click > `Constant3Vector` → **Base Color**: R 0.02, G 0.035, B 0.04
+   (dark water: the color comes from reflections).
+4. Right-click > `Constant`, value `0.05` → **Roughness** (mirror-like).
+5. **Apply**, **Save**.
+
+### 2. Re-import the ground layers
+The clearings around the house and the hut changed the weightmaps: repeat
+part 1 step 3 (*Landscape mode > Manage > Import*, heightmap + 6 weightmaps,
+**Import**).
+
+### 3. Place the water and the landmarks
+1. Open `Lvl_F01_LowlandOakBeech`.
+2. **Quick Add** (cube with +) > search `Forest Water` > add it. It moves
+   onto the landscape by itself and shows the ponds and the stream.
+3. **Quick Add** > search `Forest Landmarks` > add it. Buildings, signposts,
+   stones and bridges appear (a few seconds the first time).
+4. For **both** actors: *Details* > *World Partition* > untick **Is Spatially
+   Loaded**.
+5. If a material is missing (water or buildings show flat debug colors),
+   select the actor and set its **Water Material** / **Material** property.
+
+### 4. Clear the vegetation around the landmarks
+PCG Volume > PCG Component: **Cleanup**, then **Generate**. *File > Save All*,
+then **Play**.
+
+## Test checklist
+- [ ] The three ponds and the stream have a water surface; banks hide its
+      edges; no water floating above the ground or over the roads.
+- [ ] The forester's house stands in a grassy clearing at the end of the road
+      from the first entrance, its door facing the road, with
+      *Maison forestière* above the door.
+- [ ] Signposts at crossroads read e.g. *Carrefour du Gros Chêne*; their
+      arrows point along the paths to the next named places with distances.
+- [ ] Parcel stones at the star crossroads show the parcel numbers.
+- [ ] Bridges cross the stream where paths do, the player can walk on them.
+- [ ] The hunting hut, the two towers (facing open parcels), the calvary and
+      the log piles are there; the player collides with all of them.
+- [ ] No tree grows through a building.
+- [ ] Automation: 21 tests green (`ShroomHunt.Forest.Landmarks` included).
+
+## UE concepts learned
+- Building transient static meshes with collision at runtime (`UBodySetup`
+  boxes) and **construction script components** (rebuilt in the editor).
+- **Text Render** components; World Partition **always loaded** actors.

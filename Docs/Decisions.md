@@ -165,6 +165,19 @@ to a smoothed profile per path (roads: camber and ditches) and two weightmaps
 editor's Import tool. No splines yet: M1e-2 adds them only if signposts,
 bridges or PCG dressing need them.
 
+**D-026 — Landmarks, place names and water from the forest field** · Accepted · 2026-11-18
+Landmarks are a field stage (after the paths) so the vegetation can keep clear
+of them and later systems (mushrooms, map, quests) share them. They are built
+by two always-loaded actors (`AForestLandmarkSet`, `AForestWater`) as transient
+placeholder meshes, not saved assets: they are unique, few and cheap to
+rebuild, and nothing references them by path (unlike PCG meshes, D-024). Place
+names are French proper nouns from `Data/Names/PlaceNames.json`, chosen from
+the surroundings and not translated (the game text stays English, D-014).
+Water: the hydrology keeps a level raster (ponds at their spill height,
+streams just above their carved bed); the surface is a coarse grid mesh whose
+edges are hidden under the banks. UE's Water plugin was not used: experimental,
+heavy, and it would duplicate our own hydrology.
+
 ## Open questions (to the developer)
 
 - None at the moment.
