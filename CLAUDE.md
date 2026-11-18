@@ -288,11 +288,13 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   `Data/` JSON files, so nodes reading them return `IsCacheable() = false`.
 - A PCG Static Mesh Spawner references meshes by asset path: runtime-built
   transient meshes cannot be spawned by PCG, hence the baked vegetation assets.
-- Setting a **dynamic material instance** parameter every frame can crash the
-  editor (`UniformExpressionCache should be up to date`) when that material's
-  shaders recompile in the background: push only real changes and skip while
-  `GShaderCompilingManager->IsCompiling()`. Prefer `MPC_Environment` (parameter
-  collection) for values that change every frame.
+- A **dynamic material instance** of the engine's `m_SimpleVolumetricCloud`
+  crashed the editor (`UniformExpressionCache should be up to date`) even when
+  updated rarely and never during shader compiles: cloud coverage driving is off
+  (`bDriveCloudCoverage`). Drive materials through `MPC_Environment` (parameter
+  collection) with project-owned materials instead of MIDs of engine materials.
+- `TArray::Add/Insert(Array[i])` asserts ("container element which already
+  comes from the container being modified"): copy the element to a local first.
 - The PowerShell tool keeps the last working directory: start UBT commands
   with `Set-Location` to the project root (`$PWD` is used in `-Project=`).
 - Player-facing strings are `FText` (localization-ready, D-014); never build

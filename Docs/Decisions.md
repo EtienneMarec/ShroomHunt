@@ -90,6 +90,13 @@ hours, ~2.7 mm/day (~1 000 mm/year), rare natural heavy rain (≥ 3 mm/h,
 mostly storms). Debug HUD is an on-screen message list (no widget asset) so
 it works without editor setup.
 
+**D-018b — Cloud coverage not driven for now** · Accepted · 2026-11-18
+Driving the engine cloud material's coverage through a dynamic material
+instance crashed the editor twice (renderer assertion on a stale uniform
+expression cache). `AEnvironmentDirector::bDriveCloudCoverage` is off; light,
+fog and rain still follow the weather. To come back with a project cloud
+material reading `MPC_Environment.CloudCover` (rain polish milestone).
+
 **D-019 — Environment director preserves the authored level** · Accepted · 2026-11-11
 The director auto-finds sky actors and uses their authored intensities/fog as
 the "clear day" reference. The editor preview only rotates the sun and moon,
@@ -173,9 +180,12 @@ placeholder meshes, not saved assets: they are unique, few and cheap to
 rebuild, and nothing references them by path (unlike PCG meshes, D-024). Place
 names are French proper nouns from `Data/Names/PlaceNames.json`, chosen from
 the surroundings and not translated (the game text stays English, D-014).
-Water: the hydrology keeps a level raster (ponds at their spill height,
-streams just above their carved bed); the surface is a coarse grid mesh whose
-edges are hidden under the banks. UE's Water plugin was not used: experimental,
+Water: ponds are flat at their spill height over their whole basin plus two
+rings of banks; streams are ribbons along their D8 centerlines just above the
+carved bed, 3 m wider than the bed. Edge vertices standing above the ground are
+pulled just below it ("skirt"); a test checks that no edge of the surface shows.
+Paths do not grade within ~3 m of a stream (the bed stays open under bridges);
+bridges rest on the graded banks 6 m beyond the water. UE's Water plugin was not used: experimental,
 heavy, and it would duplicate our own hydrology.
 
 ## Open questions (to the developer)

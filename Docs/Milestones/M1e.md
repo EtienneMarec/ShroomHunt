@@ -173,10 +173,12 @@ date (grass clearing around the house).
 4. Right-click > `Constant`, value `0.05` → **Roughness** (mirror-like).
 5. **Apply**, **Save**.
 
-### 2. Re-import the ground layers
-The clearings around the house and the hut changed the weightmaps: repeat
-part 1 step 3 (*Landscape mode > Manage > Import*, heightmap + 6 weightmaps,
-**Import**).
+### 2. Re-import the terrain
+The clearings around the house and the hut changed the weightmaps, and the
+stream beds now stay open under the bridges (heights): repeat part 1 step 3
+(*Landscape mode > Manage > Import*, heightmap + 6 weightmaps, **Import**).
+After any later change, select **Forest Water** and **Forest Landmarks** and
+click **Rebuild** in their Details panel.
 
 ### 3. Place the water and the landmarks
 1. Open `Lvl_F01_LowlandOakBeech`.
@@ -195,14 +197,17 @@ then **Play**.
 
 ## Test checklist
 - [ ] The three ponds and the stream have a water surface; banks hide its
-      edges; no water floating above the ground or over the roads.
+      edges (no visible end of the surface); ponds are flat, the stream
+      follows its bed downhill; no water over the roads.
+- [ ] Bridges span an open stream bed and rest on both banks.
+- [ ] No log or tree in the stream.
 - [ ] The forester's house stands in a grassy clearing at the end of the road
       from the first entrance, its door facing the road, with
       *Maison forestière* above the door.
 - [ ] Signposts at crossroads read e.g. *Carrefour du Gros Chêne*; their
       arrows point along the paths to the next named places with distances.
 - [ ] Parcel stones at the star crossroads show the parcel numbers.
-- [ ] Bridges cross the stream where paths do, the player can walk on them.
+- [ ] The player can walk across the bridges.
 - [ ] The hunting hut, the two towers (facing open parcels), the calvary and
       the log piles are there; the player collides with all of them.
 - [ ] No tree grows through a building.
