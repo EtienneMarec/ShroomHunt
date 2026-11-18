@@ -17,9 +17,9 @@ namespace UE::Geometry
 namespace ForestWaterMesh
 {
 	/**
-	 * Water surface of a forest in field units (meters): one quad per 4 m cell whose four
-	 * corners carry a water level (ponds flat at their spill level, streams sloping just above
-	 * their bed). Edges extend under the banks; the landscape hides them.
+	 * Water surface of a forest in field units (meters): ponds as flat 4 m quads over their
+	 * basin and bank rings, streams as ribbons along their centerlines just above the carved
+	 * bed. Edges extend under the banks; the landscape hides them.
 	 */
 	SHROOMHUNT_API void Build(const FForestField& Field, UE::Geometry::FDynamicMesh3& OutMesh);
 }

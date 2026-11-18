@@ -435,13 +435,80 @@ void FForestField::GenerateHydrology()
 		}
 	}
 
-	// Water surface: ponds at their spill level (filled height, a little below the rim).
+	// Pond surfaces: one flat level per pond (its spill height, a little below the rim) over the
+	// whole basin (every connected cell lower than the level) plus two rings of bank cells at the
+	// same level, so that the edge of the surface mesh always lies under the ground.
 	WaterLevel.Init(W, W, CoarseCellM, NoWater);
-	for (int32 Index = 0; Index < Count; ++Index)
 	{
-		if (WaterCells[Index] == 2)
+		auto ForNeighbors = [W](int32 Cell, auto&& Visit)
 		{
-			WaterLevel.Values[Index] = Filled[Index] - 0.08f;
+			for (int32 N = 0; N < 8; ++N)
+			{
+				const int32 NX = Cell % W + NeighborDX[N];
+				const int32 NY = Cell / W + NeighborDY[N];
+				if (NX >= 0 && NY >= 0 && NX < W && NY < W)
+				{
+					Visit(NY * W + NX);
+				}
+			}
+		};
+		TArray<bool> Seen;
+		Seen.Init(false, Count);
+		for (int32 Start = 0; Start < Count; ++Start)
+		{
+			if (WaterCells[Start] != 2 || Seen[Start])
+			{
+				continue;
+			}
+			TArray<int32> Pond = { Start };
+			Seen[Start] = true;
+			float Level = Filled[Start];
+			for (int32 K = 0; K < Pond.Num(); ++K)
+			{
+				Level = FMath::Max(Level, Filled[Pond[K]]);
+				ForNeighbors(Pond[K], [&](int32 Next)
+				{
+					if (WaterCells[Next] == 2 && !Seen[Next])
+					{
+						Seen[Next] = true;
+						Pond.Add(Next);
+					}
+				});
+			}
+			Level -= 0.08f;
+			TArray<int32> Basin = Pond;
+			for (const int32 Cell : Pond)
+			{
+				WaterLevel.Values[Cell] = Level;
+			}
+			for (int32 K = 0; K < Basin.Num(); ++K)
+			{
+				ForNeighbors(Basin[K], [&](int32 Next)
+				{
+					if (WaterLevel.Values[Next] <= NoWater && WaterCells[Next] != 1 && CoarseHeights.Values[Next] < Level)
+					{
+						WaterLevel.Values[Next] = Level;
+						Basin.Add(Next);
+					}
+				});
+			}
+			TArray<int32> Ring = Basin;
+			for (int32 Pass = 0; Pass < 2; ++Pass)
+			{
+				TArray<int32> NextRing;
+				for (const int32 Cell : Ring)
+				{
+					ForNeighbors(Cell, [&](int32 Next)
+					{
+						if (WaterLevel.Values[Next] <= NoWater && CoarseHeights.Values[Next] >= Level - 0.02f)
+						{
+							WaterLevel.Values[Next] = Level;
+							NextRing.Add(Next);
+						}
+					});
+				}
+				Ring = MoveTemp(NextRing);
+			}
 		}
 	}
 
@@ -453,38 +520,58 @@ void FForestField::GenerateHydrology()
 	{
 		CarveStreams(StreamDepth, StreamDistance);
 	}
-	// Streams: a shallow flow above the carved bed.
-	for (int32 Index = 0; Index < Count; ++Index)
+
+	// Stream centerlines: chains of stream cells along the D8 directions, from each source or
+	// confluence down to the next confluence, a pond or the map border. The water ribbon follows
+	// them a little above the carved bed, never flowing uphill.
+	Streams.Reset();
 	{
-		if (WaterCells[Index] == 1)
-		{
-			WaterLevel.Values[Index] = CoarseHeights.Values[Index] + 0.25f;
-		}
-	}
-	// Extend the level one cell around the water so surface meshes reach under the banks.
-	{
-		const TArray<float> Source = WaterLevel.Values;
+		TArray<int32> Upstream;
+		Upstream.Init(0, Count);
 		for (int32 Index = 0; Index < Count; ++Index)
 		{
-			if (Source[Index] > NoWater)
+			if (WaterCells[Index] == 1 && Downstream[Index] != INDEX_NONE && WaterCells[Downstream[Index]] == 1)
 			{
-				continue;
+				++Upstream[Downstream[Index]];
 			}
-			float Sum = 0.0f;
-			int32 Neighbors = 0;
-			for (int32 N = 0; N < 8; ++N)
+		}
+		auto CellPosition = [W](int32 Cell) { return FVector2f((Cell % W) * CoarseCellM, (Cell / W) * CoarseCellM); };
+		for (int32 Start = 0; Start < Count; ++Start)
+		{
+			if (WaterCells[Start] != 1 || Upstream[Start] == 1)
 			{
-				const int32 NX = Index % W + NeighborDX[N];
-				const int32 NY = Index / W + NeighborDY[N];
-				if (NX >= 0 && NY >= 0 && NX < W && NY < W && Source[NY * W + NX] > NoWater)
+				continue; // chains start at sources (0 upstream) and confluences (2+)
+			}
+			FForestStream Stream;
+			int32 Cell = Start;
+			for (int32 Guard = 0; Guard < Count; ++Guard)
+			{
+				Stream.Points.Add(CellPosition(Cell));
+				Stream.Levels.Add(CoarseHeights.Values[Cell] + 0.25f);
+				Stream.HalfWidths.Add(1.0f + 0.6f * CarveDepthPayload[Cell]);
+				const int32 Next = Downstream[Cell];
+				if (Next == INDEX_NONE)
 				{
-					Sum += Source[NY * W + NX];
-					++Neighbors;
+					break;
 				}
+				if (WaterCells[Next] != 1 || Upstream[Next] != 1)
+				{
+					// Into a pond or a confluence: one more point to join it, then stop.
+					Stream.Points.Add(CellPosition(Next));
+					Stream.Levels.Add(WaterCells[Next] == 2 ? WaterLevel.Values[Next] : CoarseHeights.Values[Next] + 0.25f);
+					const float LastWidth = Stream.HalfWidths.Last();
+					Stream.HalfWidths.Add(LastWidth);
+					break;
+				}
+				Cell = Next;
 			}
-			if (Neighbors > 0)
+			for (int32 Index = 1; Index < Stream.Levels.Num(); ++Index)
 			{
-				WaterLevel.Values[Index] = Sum / Neighbors;
+				Stream.Levels[Index] = FMath::Min(Stream.Levels[Index], Stream.Levels[Index - 1]);
+			}
+			if (Stream.Points.Num() >= 2)
+			{
+				Streams.Add(MoveTemp(Stream));
 			}
 		}
 	}

@@ -124,6 +124,41 @@ bool FForestLandmarkTest::RunTest(const FString& Parameters)
 	}
 	TestTrue(TEXT("Water levels within the terrain heights"), WaterBounds.Min.Z > MinH - 1.0 && WaterBounds.Max.Z < MaxH);
 
+	// The open edges of the water surface must be hidden under the ground, otherwise the player
+	// sees where the mesh stops. Sample every boundary edge.
+	int32 EdgeSamples = 0;
+	int32 VisibleSamples = 0;
+	int32 VisiblePond = 0;
+	const FFieldRaster& PondLevel = Field->GetWaterLevel();
+	auto IsPondVertex = [&](const FVector3d& P)
+	{
+		const int32 X = FMath::Clamp(FMath::RoundToInt(P.X / FForestField::CoarseCellM), 0, PondLevel.Width - 1);
+		const int32 Y = FMath::Clamp(FMath::RoundToInt(P.Y / FForestField::CoarseCellM), 0, PondLevel.Height - 1);
+		return FMath::Abs(PondLevel.At(X, Y) - P.Z) < 1e-3;
+	};
+	for (const int32 Edge : Water.EdgeIndicesItr())
+	{
+		if (!Water.IsBoundaryEdge(Edge))
+		{
+			continue;
+		}
+		const UE::Geometry::FIndex2i Ends = Water.GetEdgeV(Edge);
+		const FVector3d A = Water.GetVertex(Ends.A);
+		const FVector3d B = Water.GetVertex(Ends.B);
+		for (const double T : { 0.0, 0.5, 1.0 })
+		{
+			const FVector3d P = FMath::Lerp(A, B, T);
+			++EdgeSamples;
+			const bool bVisible = Field->GetHeights().Sample(static_cast<float>(P.X), static_cast<float>(P.Y)) < P.Z - 0.05;
+			VisibleSamples += bVisible ? 1 : 0;
+			VisiblePond += bVisible && IsPondVertex(A) ? 1 : 0;
+		}
+	}
+	const float VisibleShare = EdgeSamples > 0 ? static_cast<float>(VisibleSamples) / EdgeSamples : 0.0f;
+	AddInfo(FString::Printf(TEXT("Water: %d triangles, %.1f %% of the edge samples above the ground (%d of %d on ponds)"),
+		Water.TriangleCount(), VisibleShare * 100.0f, VisiblePond, VisibleSamples));
+	TestTrue(TEXT("Water edges are hidden under the banks (at most 5 % visible)"), VisibleShare <= 0.05f);
+
 	// Trees keep out of the landmark clearances.
 	TArray<FVegetationInstance> Trees;
 	VegetationScatter::Scatter(*Field, *Vegetation, EVegetationLayer::Trees, FBox2d(FVector2d::ZeroVector, FVector2d(Field->GetSizeM(), Field->GetSizeM())), Trees);

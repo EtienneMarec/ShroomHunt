@@ -56,6 +56,14 @@ struct SHROOMHUNT_API FForestSample
 	TArray<float, TInlineAllocator<8>> StandWeights;
 };
 
+/** A stream centerline (cell centers along the flow) with its water level and bed half width. */
+struct SHROOMHUNT_API FForestStream
+{
+	TArray<FVector2f> Points;
+	TArray<float> Levels;
+	TArray<float> HalfWidths;
+};
+
 /** One forest management parcel (Voronoi cell). */
 struct FForestParcel
 {
@@ -118,10 +126,13 @@ public:
 	/** Fine (1 m) rank of the nearest path (EForestPathRank), 255 when none is near. */
 	const TArray<uint8>& GetPathRankCells() const { return PathRankCells; }
 
-	/** Coarse water surface height (m): ponds at their spill level, streams just above their bed;
-	 *  defined on water cells and their neighbors (NoWater elsewhere). */
+	/** Coarse pond surface height (m): flat per pond over its basin and two rings of banks
+	 *  (NoWater elsewhere). Streams are described by GetStreams(). */
 	const FFieldRaster& GetWaterLevel() const { return WaterLevel; }
 	static constexpr float NoWater = -10000.0f;
+
+	/** Stream centerlines with water levels, for the water surface. */
+	const TArray<FForestStream>& GetStreams() const { return Streams; }
 
 	/** Houses, huts, towers, calvary, signposts, parcel stones, bridges, log piles. */
 	const TArray<FForestLandmark>& GetLandmarks() const { return Landmarks; }
@@ -166,7 +177,8 @@ private:
 	FForestPathNetwork PathNetwork;
 	FFieldRaster PathDistance;     // fine, distance to the nearest path (m)
 	TArray<uint8> PathRankCells;   // fine, EForestPathRank of the nearest path, 255 = none
-	FFieldRaster WaterLevel;       // coarse, water surface height, NoWater where dry
+	FFieldRaster WaterLevel;       // coarse, pond surface height, NoWater elsewhere
+	TArray<FForestStream> Streams;
 	TArray<FForestLandmark> Landmarks;
 	TArray<uint8> LandmarkMask;    // coarse, 1 inside a landmark clearance
 
