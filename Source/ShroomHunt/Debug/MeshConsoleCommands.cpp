@@ -1,5 +1,6 @@
 // Mushroom mesh debug console commands: sh.Mesh.Stats / sh.Mesh.ClearCache.
 
+#include "Core/MeshAccumulator.h"
 #include "Core/ShroomLog.h"
 #include "Engine/Engine.h"
 #include "HAL/IConsoleManager.h"
@@ -33,31 +34,13 @@ namespace MeshConsoleCommandsDetail
 			}
 		}));
 
-	/** Writes one individual as an OBJ with per-vertex sRGB colors ("v x y z r g b"). */
+	/** Writes one individual as an OBJ with per-vertex sRGB colors. */
 	bool ExportObj(const FMushroomMorphology& Morphology, const FMushroomMeshDetail& Detail, const FString& Path)
 	{
 		UE::Geometry::FDynamicMesh3 Mesh;
 		MushroomMeshBuilder::Build(Morphology, Detail, Mesh);
-		const UE::Geometry::FDynamicMeshColorOverlay* Colors = Mesh.Attributes()->PrimaryColors();
-
-		TStringBuilder<1 << 20> Text;
-		Text.Appendf(TEXT("# %s stage %d seed %u - ShroomHunt procedural mushroom (cm, Z up)\n"),
-			*Morphology.SpeciesId.ToString(), static_cast<int32>(Morphology.Stage), Morphology.Seed);
-		TMap<int32, int32> ObjIndex;
-		int32 Next = 1;
-		for (const int32 VertexId : Mesh.VertexIndicesItr())
-		{
-			const FVector3d P = Mesh.GetVertex(VertexId);
-			const FVector4f C = Colors->GetElement(VertexId); // one color element per vertex (see FMeshAccumulator)
-			Text.Appendf(TEXT("v %.4f %.4f %.4f %.3f %.3f %.3f\n"), P.X, P.Y, P.Z, C.X, C.Y, C.Z);
-			ObjIndex.Add(VertexId, Next++);
-		}
-		for (const int32 TriangleId : Mesh.TriangleIndicesItr())
-		{
-			const UE::Geometry::FIndex3i T = Mesh.GetTriangle(TriangleId);
-			Text.Appendf(TEXT("f %d %d %d\n"), ObjIndex[T.A], ObjIndex[T.B], ObjIndex[T.C]);
-		}
-		return FFileHelper::SaveStringToFile(Text.ToView(), *Path);
+		return ShroomMesh::WriteObj(Mesh, Path, FString::Printf(TEXT("%s stage %d seed %u - ShroomHunt procedural mushroom (cm, Z up)"),
+			*Morphology.SpeciesId.ToString(), static_cast<int32>(Morphology.Stage), Morphology.Seed));
 	}
 
 	FAutoConsoleCommand CmdMeshExportObj(

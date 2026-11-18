@@ -1,11 +1,10 @@
 #include "Mushroom/MushroomMeshBuilder.h"
 
+#include "Core/MeshAccumulator.h"
 #include "Core/ShroomHash.h"
 #include "Core/ShroomMath.h"
 #include "DynamicMesh/DynamicMesh3.h"
 #include "DynamicMesh/DynamicMeshAttributeSet.h"
-#include "DynamicMesh/MeshNormals.h"
-#include "DynamicMesh/MeshTangents.h"
 #include "Math/RandomStream.h"
 #include "Mushroom/MushroomMorphology.h"
 
@@ -29,102 +28,6 @@ FMushroomMeshDetail FMushroomMeshDetail::Far()
 
 namespace MushroomMeshDetail
 {
-	/** Collects welded vertices and triangles with per-corner UVs, then emits an FDynamicMesh3. */
-	class FMeshAccumulator
-	{
-	public:
-		int32 AddVertex(const FVector3d& Position, const FLinearColor& Color)
-		{
-			Positions.Add(Position);
-			Colors.Add(Color);
-			return Positions.Num() - 1;
-		}
-
-		void AddTriangle(int32 A, int32 B, int32 C, const FVector2f& UvA, const FVector2f& UvB, const FVector2f& UvC, EMushroomSurface Surface)
-		{
-			if (A == B || B == C || A == C)
-			{
-				return;
-			}
-			// Callers describe triangles with the right-handed rule (B - A) x (C - A) = outward.
-			// Unreal is left-handed: GeometryCore computes normals as (C - A) x (B - A) and UE
-			// renders that side as the front face, so the stored order is A, C, B.
-			FTriangle& Tri = Triangles.AddDefaulted_GetRef();
-			Tri.Vertices = FIntVector(A, C, B);
-			Tri.UVs[0] = UvA;
-			Tri.UVs[1] = UvC;
-			Tri.UVs[2] = UvB;
-			Tri.Surface = Surface;
-		}
-
-		void Emit(FDynamicMesh3& Out) const
-		{
-			Out.Clear();
-			Out.EnableAttributes();
-			FDynamicMeshAttributeSet* Attributes = Out.Attributes();
-			Attributes->SetNumUVLayers(2);
-			Attributes->EnablePrimaryColors();
-			FDynamicMeshUVOverlay* UV0 = Attributes->GetUVLayer(0);
-			FDynamicMeshUVOverlay* UV1 = Attributes->GetUVLayer(1);
-			FDynamicMeshColorOverlay* ColorOverlay = Attributes->PrimaryColors();
-
-			for (int32 Index = 0; Index < Positions.Num(); ++Index)
-			{
-				Out.AppendVertex(Positions[Index]);
-				const FLinearColor& C = Colors[Index];
-				ColorOverlay->AppendElement(FVector4f(C.R, C.G, C.B, C.A));
-			}
-
-			int32 SurfaceElements[8];
-			for (int32 Surface = 0; Surface < 8; ++Surface)
-			{
-				SurfaceElements[Surface] = UV1->AppendElement(FVector2f((Surface + 0.5f) / 8.0f, 0.5f));
-			}
-
-			// UV0 elements are shared between triangles when (vertex, uv) match, split at seams.
-			TMap<FIntVector, int32> UvElements;
-			auto GetUvElement = [&](int32 Vertex, const FVector2f& Uv)
-			{
-				const FIntVector Key(Vertex, FMath::RoundToInt(Uv.X * 8192.0f), FMath::RoundToInt(Uv.Y * 8192.0f));
-				if (const int32* Found = UvElements.Find(Key))
-				{
-					return *Found;
-				}
-				const int32 Element = UV0->AppendElement(Uv);
-				UvElements.Add(Key, Element);
-				return Element;
-			};
-
-			for (const FTriangle& Tri : Triangles)
-			{
-				const int32 TriangleId = Out.AppendTriangle(Tri.Vertices.X, Tri.Vertices.Y, Tri.Vertices.Z);
-				if (TriangleId < 0)
-				{
-					continue; // rejected (should not happen: every part uses its own vertices)
-				}
-				UV0->SetTriangle(TriangleId, FIndex3i(GetUvElement(Tri.Vertices.X, Tri.UVs[0]), GetUvElement(Tri.Vertices.Y, Tri.UVs[1]), GetUvElement(Tri.Vertices.Z, Tri.UVs[2])));
-				const int32 SurfaceElement = SurfaceElements[static_cast<int32>(Tri.Surface)];
-				UV1->SetTriangle(TriangleId, FIndex3i(SurfaceElement, SurfaceElement, SurfaceElement));
-				ColorOverlay->SetTriangle(TriangleId, FIndex3i(Tri.Vertices.X, Tri.Vertices.Y, Tri.Vertices.Z));
-			}
-
-			FMeshNormals::InitializeOverlayToPerVertexNormals(Attributes->PrimaryNormals(), false);
-			FMeshTangentsf::ComputeDefaultOverlayTangents(Out);
-		}
-
-	private:
-		struct FTriangle
-		{
-			FIntVector Vertices;
-			FVector2f UVs[3];
-			EMushroomSurface Surface = EMushroomSurface::CapTop;
-		};
-
-		TArray<FVector3d> Positions;
-		TArray<FLinearColor> Colors;
-		TArray<FTriangle> Triangles;
-	};
-
 	/** One point of a 2D profile (R = distance to the axis, Z = height) revolved around Z. */
 	struct FProfilePoint
 	{
@@ -207,10 +110,7 @@ namespace MushroomMeshDetail
 		}
 	}
 
-	FLinearColor LerpSRGB(const FLinearColor& A, const FLinearColor& B, float Alpha)
-	{
-		return FLinearColor(FMath::Lerp(A.R, B.R, Alpha), FMath::Lerp(A.G, B.G, Alpha), FMath::Lerp(A.B, B.B, Alpha), FMath::Lerp(A.A, B.A, Alpha));
-	}
+	using ShroomMesh::LerpSRGB;
 
 	/** Height of the cap top above the cap origin at normalized radius U (0 center, 1 margin). */
 	double CapTopZ(ECapShape Shape, double U, double H)

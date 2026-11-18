@@ -1,36 +1,20 @@
 #include "Mushroom/MushroomMeshSubsystem.h"
 
+#include "Core/MeshAccumulator.h"
 #include "Core/ShroomHash.h"
 #include "Core/ShroomLog.h"
 #include "DynamicMesh/DynamicMesh3.h"
-#include "DynamicMeshToMeshDescription.h"
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInterface.h"
 #include "MeshDescription.h"
 #include "Mushroom/MushroomMeshBuilder.h"
 #include "Mushroom/MushroomMeshSettings.h"
 #include "Mushroom/MushroomMorphology.h"
-#include "StaticMeshAttributes.h"
 #include "UObject/Package.h"
 
 namespace MushroomMeshSubsystemDetail
 {
 	const FName MaterialSlot(TEXT("Mushroom"));
-
-	void ConvertLod(const UE::Geometry::FDynamicMesh3& Mesh, FMeshDescription& OutDescription)
-	{
-		FStaticMeshAttributes Attributes(OutDescription);
-		Attributes.Register();
-		FDynamicMeshToMeshDescription Converter;
-		Converter.Convert(&Mesh, OutDescription, true);
-
-		// Runtime builds match sections to materials by slot name.
-		TPolygonGroupAttributesRef<FName> SlotNames = Attributes.GetPolygonGroupMaterialSlotNames();
-		for (const FPolygonGroupID GroupId : OutDescription.PolygonGroups().GetElementIDs())
-		{
-			SlotNames[GroupId] = MaterialSlot;
-		}
-	}
 }
 
 uint32 UMushroomMeshSubsystem::GetVariantSeed(FName SpeciesId, EMushroomStage Stage, int32 Variant)
@@ -63,8 +47,8 @@ UStaticMesh* UMushroomMeshSubsystem::CreateMeshForMorphology(const FMushroomMorp
 
 	TArray<FMeshDescription> Descriptions;
 	Descriptions.SetNum(2);
-	ConvertLod(Near, Descriptions[0]);
-	ConvertLod(Far, Descriptions[1]);
+	ShroomMesh::ToMeshDescription(Near, MaterialSlot, Descriptions[0]);
+	ShroomMesh::ToMeshDescription(Far, MaterialSlot, Descriptions[1]);
 
 	UStaticMesh* Mesh = NewObject<UStaticMesh>(GetTransientPackage(), MakeUniqueObjectName(GetTransientPackage(), UStaticMesh::StaticClass(), MeshName), RF_Transient);
 	Mesh->GetStaticMaterials().Add(FStaticMaterial(GetMaterial(), MaterialSlot, MaterialSlot));
