@@ -300,15 +300,22 @@ void FForestField::GenerateLandmarks()
 			{
 				++Last;
 			}
-			const FVector2f A = Path.Points[Index - 1];
-			const FVector2f B = Path.Points[FMath::Min(Last + 1, Path.Points.Num() - 1)];
-			const float Span = FVector2f::Distance(A, B) + 3.0f;
+			// Abutments 6 m beyond the water, where the path is fully graded (the grading stops
+			// near streams to keep the bed open): the deck rests on both banks.
+			const int32 IA = FMath::Max(Index - 3, 0);
+			const int32 IB = FMath::Min(Last + 3, Path.Points.Num() - 1);
+			const FVector2f A = Path.Points[IA];
+			const FVector2f B = Path.Points[IB];
+			const float Span = FVector2f::Distance(A, B) + 1.0f;
 			const FVector2f Center = (A + B) * 0.5f;
+			const bool bDryEnds = WaterCells[CoarseIndexAt(A.X, A.Y)] == 0 && WaterCells[CoarseIndexAt(B.X, B.Y)] == 0;
 			const bool bDuplicate = Landmarks.ContainsByPredicate([&](const FForestLandmark& L) { return L.Kind == EForestLandmarkKind::Bridge && FVector2f::Distance(L.PositionM, Center) < 8.0f; });
-			if (Span <= 26.0f && !bDuplicate)
+			if (Span <= 18.0f && bDryEnds && !bDuplicate)
 			{
 				FForestLandmark& Bridge = Add(EForestLandmarkKind::Bridge, Center, YawTowards(A, B), INDEX_NONE, 0.0f);
-				Bridge.GroundM = FMath::Max(Heights.Sample(A.X, A.Y), Heights.Sample(B.X, B.Y)) + 0.05f;
+				const float Banks = FMath::Max(Path.Heights[IA], Path.Heights[IB]);
+				const float Bed = Heights.Sample(Center.X, Center.Y);
+				Bridge.GroundM = FMath::Max(Banks, Bed + 0.8f) + 0.05f;
 				Bridge.LengthM = Span;
 				Bridge.WidthM = Width;
 			}

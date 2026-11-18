@@ -969,6 +969,9 @@ void FForestField::RasterizePaths()
 			{
 				Weight *= 0.7f;
 			}
+			// Keep the stream beds open where a path crosses them: bridges span the gap
+			// (grading used to fill the bed with an embankment, leaving the bridge useless).
+			Weight *= SmoothStep01(2.5f, 6.0f, WaterDistance.Sample(static_cast<float>(X), static_cast<float>(Y)));
 			float H = FMath::Lerp(Heights.Values[Cell], Target[Cell], Weight);
 			if (Rank == EForestPathRank::Road)
 			{
