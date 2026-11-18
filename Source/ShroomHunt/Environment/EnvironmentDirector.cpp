@@ -15,6 +15,7 @@
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "ShaderCompiler.h"
 #include "Materials/MaterialParameterCollection.h"
 #include "Materials/MaterialParameterCollectionInstance.h"
 #include "NiagaraComponent.h"
@@ -338,7 +339,18 @@ void AEnvironmentDirector::ApplyEnvironment(const FGameDate& Date, double TotalG
 
 	if (CloudMaterial && bCloudCoverageFound)
 	{
-		CloudMaterial->SetScalarParameterValueByInfo(CloudCoverageInfo, FMath::Lerp(CloudCoverageClear, CloudCoverageOvercast, Overcast));
+		// Pushing a dynamic material instance parameter every frame while the engine (re)compiles
+		// that material's shaders in the background can trip a renderer assertion (stale uniform
+		// expression cache, seen with the volumetric cloud material). Weather changes slowly:
+		// only push real changes, and never while shaders are compiling.
+		const float Coverage = FMath::Lerp(CloudCoverageClear, CloudCoverageOvercast, Overcast);
+		float Current = 0.0f;
+		const bool bKnown = CloudMaterial->GetScalarParameterValue(FHashedMaterialParameterInfo(CloudCoverageInfo), Current);
+		const bool bShadersCompiling = GShaderCompilingManager && GShaderCompilingManager->IsCompiling();
+		if (!bShadersCompiling && (!bKnown || FMath::Abs(Current - Coverage) > 0.005f))
+		{
+			CloudMaterial->SetScalarParameterValueByInfo(CloudCoverageInfo, Coverage);
+		}
 	}
 
 	if (bInGame)
