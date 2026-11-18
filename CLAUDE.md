@@ -286,5 +286,10 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   `Data/` JSON files, so nodes reading them return `IsCacheable() = false`.
 - A PCG Static Mesh Spawner references meshes by asset path: runtime-built
   transient meshes cannot be spawned by PCG, hence the baked vegetation assets.
+- Setting a **dynamic material instance** parameter every frame can crash the
+  editor (`UniformExpressionCache should be up to date`) when that material's
+  shaders recompile in the background: push only real changes and skip while
+  `GShaderCompilingManager->IsCompiling()`. Prefer `MPC_Environment` (parameter
+  collection) for values that change every frame.
 - Player-facing strings are `FText` (localization-ready, D-014); never build
   UI text from `FString` concatenation.
