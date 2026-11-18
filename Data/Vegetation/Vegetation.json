@@ -35,8 +35,8 @@
     "PerHa": { "ClearCut": 4, "Regeneration": 14, "Pole": 600, "Mature": 220, "Old": 110 },
     "SpacingFactor": 0.55,
     "GapCanopy": [0.2, 0.65],
-    "WaterMarginM": 2.5,
-    "RiparianMarginM": 0.6,
+    "WaterMarginM": 4.0,
+    "RiparianMarginM": 2.8,
     "ScaleJitter": 0.12,
     "FormMix": {
       "ClearCut":     { "Pole": 0.0,  "Mature": 0.5,  "Old": 0.5 },
@@ -50,18 +50,18 @@
   "Understory": [
     { "Kind": "Sapling", "PerHa": { "ClearCut": 150, "Regeneration": 900, "Pole": 20, "Mature": 60, "Old": 120 },
       "Moisture": [0.0, 0.1, 0.8, 0.95], "PH": [3.5, 4.0, 8.0, 8.5], "Light": [0.05, 0.3, 1.0, 1.0],
-      "SpacingFactor": 0.5, "WaterMarginM": 1.5, "ScaleJitter": 0.3, "Variants": 2 },
+      "SpacingFactor": 0.5, "WaterMarginM": 2.5, "ScaleJitter": 0.3, "Variants": 2 },
     { "Kind": "Bracken", "PerHa": { "ClearCut": 500, "Regeneration": 350, "Pole": 40, "Mature": 250, "Old": 300 },
       "Moisture": [0.1, 0.25, 0.6, 0.8], "PH": [3.5, 3.8, 5.2, 6.2], "Light": [0.1, 0.35, 1.0, 1.0],
-      "SpacingFactor": 0.45, "WaterMarginM": 1.5, "ScaleJitter": 0.25, "Variants": 3 },
+      "SpacingFactor": 0.45, "WaterMarginM": 2.5, "ScaleJitter": 0.25, "Variants": 3 },
     { "Kind": "Bramble", "PerHa": { "ClearCut": 400, "Regeneration": 300, "Pole": 15, "Mature": 80, "Old": 120 },
       "Moisture": [0.1, 0.25, 0.7, 0.85], "PH": [4.2, 5.0, 7.8, 8.4], "Light": [0.15, 0.45, 1.0, 1.0],
-      "SpacingFactor": 0.5, "WaterMarginM": 1.0, "ScaleJitter": 0.3, "Variants": 3 },
+      "SpacingFactor": 0.5, "WaterMarginM": 2.5, "ScaleJitter": 0.3, "Variants": 3 },
     { "Kind": "Log", "PerHa": { "ClearCut": 3, "Regeneration": 2, "Pole": 3, "Mature": 6, "Old": 14 },
       "Moisture": [0.0, 0.0, 1.0, 1.0], "PH": [0.0, 0.0, 14.0, 14.0], "Light": [0.0, 0.0, 1.0, 1.0],
-      "SpacingFactor": 0.5, "WaterMarginM": 1.0, "ScaleJitter": 0.2, "Variants": 2 },
+      "SpacingFactor": 0.5, "WaterMarginM": 6.0, "ScaleJitter": 0.2, "Variants": 2 },
     { "Kind": "Stump", "PerHa": { "ClearCut": 60, "Regeneration": 30, "Pole": 25, "Mature": 8, "Old": 4 },
       "Moisture": [0.0, 0.0, 1.0, 1.0], "PH": [0.0, 0.0, 14.0, 14.0], "Light": [0.0, 0.0, 1.0, 1.0],
-      "SpacingFactor": 0.5, "WaterMarginM": 1.0, "ScaleJitter": 0.2, "Variants": 2 }
+      "SpacingFactor": 0.5, "WaterMarginM": 3.0, "ScaleJitter": 0.2, "Variants": 2 }
   ]
 }
