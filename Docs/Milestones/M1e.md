@@ -191,9 +191,20 @@ click **Rebuild** in their Details panel.
 5. If a material is missing (water or buildings show flat debug colors),
    select the actor and set its **Water Material** / **Material** property.
 
-### 4. Clear the vegetation around the landmarks
-PCG Volume > PCG Component: **Cleanup**, then **Generate**. *File > Save All*,
-then **Play**.
+### 4. Regenerate the vegetation on the whole map
+With World Partition, **Generate** only rebuilds the partitions that are loaded
+in the editor: far areas keep trees computed on an older terrain (they float or
+sink). Load everything first:
+1. *Window > World Partition > World Partition Editor*.
+2. In its map view, drag a rectangle around the whole forest, right-click >
+   **Load Region From Selection** (about 1 GB of RAM for F01).
+3. PCG Volume > PCG Component: **Cleanup**, then **Generate**.
+4. *File > Save All* (saves every partition), then you may unload the region
+   (right-click > **Unload Region**) and **Play**.
+
+To check that the landscape matches the generated forest: Output Log, **Cmd**,
+`sh.Forest.CheckGround` (traces the loaded landscape every 8 m; expected
+`mean |landscape - field| 0.00 m`).
 
 ## Test checklist
 - [ ] The three ponds and the stream have a water surface; banks hide its

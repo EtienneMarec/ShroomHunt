@@ -297,5 +297,9 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   comes from the container being modified"): copy the element to a local first.
 - The PowerShell tool keeps the last working directory: start UBT commands
   with `Set-Location` to the project root (`$PWD` is used in `-Project=`).
+- World Partition + partitioned PCG: **Generate** only regenerates the loaded
+  partitions. Load the whole region (World Partition Editor > Load Region From
+  Selection) before regenerating, or far areas keep stale instances.
+  `sh.Forest.CheckGround` compares the loaded landscape with the field.
 - Player-facing strings are `FText` (localization-ready, D-014); never build
   UI text from `FString` concatenation.

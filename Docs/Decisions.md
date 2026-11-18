@@ -184,6 +184,9 @@ Water: ponds are flat at their spill height over their whole basin plus two
 rings of banks; streams are ribbons along their D8 centerlines just above the
 carved bed, 3 m wider than the bed. Edge vertices standing above the ground are
 pulled just below it ("skirt"); a test checks that no edge of the surface shows.
+Ponds are rebuilt on the 1 m heightmap (8-connected flood below the level, then
+bank rings), streams as 5-vertex cross-sections following the real carved bed
+(the first versions on the 4 m grid showed steps, saw teeth and dry beds).
 Paths do not grade within ~3 m of a stream (the bed stays open under bridges);
 bridges rest on the graded banks 6 m beyond the water. UE's Water plugin was not used: experimental,
 heavy, and it would duplicate our own hydrology.
