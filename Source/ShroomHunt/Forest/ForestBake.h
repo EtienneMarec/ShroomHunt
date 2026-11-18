@@ -7,7 +7,7 @@ class FForestField;
 /**
  * Writes the files needed to build a forest map in the editor:
  *  - heightmap.png       16-bit grayscale, HeightmapResolution^2, for Landscape > Import from File
- *  - weight_<Layer>.png  8-bit weightmaps (Litter, Moss, Grass, Mud), same resolution
+ *  - weight_<Layer>.png  8-bit weightmaps (Litter, Moss, Grass, Mud, Gravel, Dirt), same resolution
  *  - debug_maps.png      contact sheet: terrain+water, moisture, soil, pH, stands+parcels, canopy
  *  - bake_report.txt     import settings and statistics
  * Default folder: Saved/ForestBake/<ForestName>/ (generated data, not versioned).

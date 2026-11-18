@@ -91,7 +91,7 @@ namespace ForestBake
 
 	const TArray<FName>& GetLayerNames()
 	{
-		static const TArray<FName> Names = { TEXT("Litter"), TEXT("Moss"), TEXT("Grass"), TEXT("Mud") };
+		static const TArray<FName> Names = { TEXT("Litter"), TEXT("Moss"), TEXT("Grass"), TEXT("Mud"), TEXT("Gravel"), TEXT("Dirt") };
 		return Names;
 	}
 
@@ -137,6 +137,9 @@ namespace ForestBake
 		const FFieldRaster& Moisture = Field.GetMoisture();
 		const FFieldRaster& Canopy = Field.GetCanopy();
 		const FFieldRaster& WaterDistance = Field.GetWaterDistance();
+		const FFieldRaster& PathDistance = Field.GetPathDistance();
+		const TArray<uint8>& PathRanks = Field.GetPathRankCells();
+		const FForestDefinition& Definition = Field.GetDefinition();
 		const int32 LayerCount = GetLayerNames().Num();
 		TArray<TArray<uint8>> Layers;
 		Layers.SetNum(LayerCount);
@@ -157,8 +160,47 @@ namespace ForestBake
 				const float Grass = (1.0f - Mud) * SmoothStep01(0.55f, 0.9f, 1.0f - C);
 				const float Moss = (1.0f - Mud) * (1.0f - Grass) * SmoothStep01(0.45f, 0.85f, M) * C;
 				const float Litter = FMath::Max(0.0f, 1.0f - Mud - Grass - Moss);
-				const float Values[4] = { Litter, Moss, Grass, Mud };
-				const float Sum = FMath::Max(Litter + Moss + Grass + Mud, KINDA_SMALL_NUMBER);
+				float Values[6] = { Litter, Moss, Grass, Mud, 0.0f, 0.0f };
+
+				// Paths: gravel roads with dirt shoulders, grassy rides with dirt wheel ruts, dirt footpaths.
+				const int32 Cell = Y * Resolution + X;
+				if (PathRanks.IsValidIndex(Cell) && PathRanks[Cell] != 255)
+				{
+					const EForestPathRank Rank = static_cast<EForestPathRank>(PathRanks[Cell]);
+					const float D = PathDistance.Values[Cell];
+					const float HalfWidth = ForestPaths::HalfWidthM(Rank, Definition);
+					float Gravel = 0.0f, Dirt = 0.0f, PathGrass = 0.0f;
+					const float Surface = 1.0f - SmoothStep01(HalfWidth - 0.4f, HalfWidth + 0.5f, D);
+					if (Rank == EForestPathRank::Road)
+					{
+						Gravel = Surface;
+						Dirt = (1.0f - Surface) * (1.0f - SmoothStep01(HalfWidth + 0.5f, HalfWidth + 2.0f, D)) * 0.7f;
+					}
+					else if (Rank == EForestPathRank::Ride)
+					{
+						const float Rut = 1.0f - SmoothStep01(0.15f, 0.4f, FMath::Abs(D - 0.75f));
+						Dirt = Surface * Rut;
+						PathGrass = Surface * (1.0f - Rut);
+					}
+					else
+					{
+						Dirt = Surface;
+					}
+					const float PathTotal = FMath::Min(Gravel + Dirt + PathGrass, 1.0f);
+					for (float& V : Values)
+					{
+						V *= 1.0f - PathTotal;
+					}
+					Values[2] += PathGrass;
+					Values[4] += Gravel;
+					Values[5] += Dirt;
+				}
+				float Sum = 0.0f;
+				for (const float V : Values)
+				{
+					Sum += V;
+				}
+				Sum = FMath::Max(Sum, KINDA_SMALL_NUMBER);
 				int32 Assigned = 0;
 				for (int32 L = 0; L < LayerCount; ++L)
 				{
@@ -205,6 +247,15 @@ namespace ForestBake
 				FColor Tiles[6];
 				const float HeightT = (Heights.Sample(XM, YM) - MinH) / HeightRange;
 				Tiles[0] = bWater ? Water : Scale(Lerp(FColor(110, 150, 80), FColor(185, 160, 110), HeightT), Shade);
+				{
+					const int32 Fine = Heights.Index(FMath::Min(FMath::RoundToInt(XM), Heights.Width - 1), FMath::Min(FMath::RoundToInt(YM), Heights.Height - 1));
+					const uint8 Rank = PathRanks[Fine];
+					if (Rank != 255 && PathDistance.Values[Fine] < ForestPaths::HalfWidthM(static_cast<EForestPathRank>(Rank), Definition) + 1.5f)
+					{
+						static const FColor PathColors[3] = { FColor(250, 245, 230), FColor(245, 215, 70), FColor(200, 70, 40) };
+						Tiles[0] = PathColors[FMath::Min<int32>(Rank, 2)];
+					}
+				}
 				Tiles[1] = Lerp(FColor(214, 196, 150), FColor(28, 70, 150), Moisture.Values[Cell]);
 				Tiles[2] = bWater ? Water : Scale(SoilColor(Soils[Cell]), 0.85f + 0.15f * Shade);
 				const float PH = Field.GetPH().Values[Cell];
@@ -253,11 +304,20 @@ namespace ForestBake
 		Lines.Add(FString::Printf(TEXT("Height %.1f .. %.1f m (altitude %.0f .. %.0f m)"), MinH, MaxH, Def.BaseAltitudeM + MinH, Def.BaseAltitudeM + MaxH));
 		Lines.Add(FString::Printf(TEXT("Landscape import: Location (0, 0, 0), Scale (100, 100, %.0f), Section Size 63x63, Sections Per Component 2x2, Components 8x8 (for 1009)"), LandscapeZScale));
 		Lines.Add(FString::Printf(TEXT("Parcels %d, stream cells %d, pond cells %d (4 m cells)"), Field.GetParcels().Num(), Field.GetStreamCellCount(), Field.GetPondCellCount()));
+		{
+			const FForestPathNetwork& Network = Field.GetPathNetwork();
+			Lines.Add(FString::Printf(TEXT("Paths: %d roads %.0f m, %d rides %.0f m, %d footpaths %.0f m; nodes: %d entrances, %d base, %d hubs, %d crossroads"),
+				Network.CountPaths(EForestPathRank::Road), Network.GetLengthM(EForestPathRank::Road),
+				Network.CountPaths(EForestPathRank::Ride), Network.GetLengthM(EForestPathRank::Ride),
+				Network.CountPaths(EForestPathRank::Footpath), Network.GetLengthM(EForestPathRank::Footpath),
+				Network.CountNodes(EForestPathNodeKind::Entrance), Network.CountNodes(EForestPathNodeKind::Base),
+				Network.CountNodes(EForestPathNodeKind::Hub), Network.CountNodes(EForestPathNodeKind::Crossroads)));
+		}
 		for (int32 L = 0; L < LayerCount; ++L)
 		{
 			Lines.Add(FString::Printf(TEXT("Layer %-6s %5.1f %%"), *GetLayerNames()[L].ToString(), 100.0 * Coverage[L] / Cells));
 		}
-		Lines.Add(TEXT("debug_maps.png tiles (north up): terrain+water | moisture | soil (sand, loam, clay, limestone, peat) / pH | dominant tree genus + parcels | canopy + parcels"));
+		Lines.Add(TEXT("debug_maps.png tiles (north up): terrain+water+paths (road white, ride yellow, footpath red) | moisture | soil (sand, loam, clay, limestone, peat) / pH | dominant tree genus + parcels | canopy + parcels"));
 		OutReport = FString::Join(Lines, TEXT("\n"));
 		bOk &= FFileHelper::SaveStringToFile(OutReport, *(OutputFolder / TEXT("bake_report.txt")));
 
