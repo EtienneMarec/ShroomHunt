@@ -1,0 +1,231 @@
+#include "DynamicMesh/DynamicMesh3.h"
+#include "Forest/ForestField.h"
+#include "Forest/ForestFieldCache.h"
+#include "Misc/AutomationTest.h"
+#include "Vegetation/VegetationDefinition.h"
+#include "Vegetation/VegetationMeshBuilder.h"
+#include "Vegetation/VegetationScatter.h"
+
+#if WITH_DEV_AUTOMATION_TESTS
+
+namespace VegetationTestsDetail
+{
+	const TCHAR* ForestName = TEXT("F01_LowlandOakBeech");
+
+	/** Signed volume with the engine's triangle normal convention (positive = outward faces). */
+	double SignedVolume(const UE::Geometry::FDynamicMesh3& Mesh)
+	{
+		double Volume = 0.0;
+		for (const int32 Tri : Mesh.TriangleIndicesItr())
+		{
+			FVector3d Normal, Centroid;
+			double Area = 0.0;
+			Mesh.GetTriInfo(Tri, Normal, Area, Centroid);
+			Volume += Area * FVector3d::DotProduct(Normal, Centroid) / 3.0;
+		}
+		return Volume;
+	}
+
+	uint32 HashMesh(const UE::Geometry::FDynamicMesh3& Mesh)
+	{
+		uint32 H = GetTypeHash(Mesh.TriangleCount());
+		for (const int32 V : Mesh.VertexIndicesItr())
+		{
+			const FVector3d P = Mesh.GetVertex(V);
+			H = HashCombineFast(H, GetTypeHash(FIntVector(FMath::RoundToInt(P.X * 10.0), FMath::RoundToInt(P.Y * 10.0), FMath::RoundToInt(P.Z * 10.0))));
+		}
+		return H;
+	}
+
+	/** Order-independent signature of a set of instances (position to the millimeter, kind, genus, variant). */
+	uint64 HashInstances(const TArray<FVegetationInstance>& Instances)
+	{
+		uint64 Sum = 0;
+		for (const FVegetationInstance& I : Instances)
+		{
+			uint32 H = GetTypeHash(FIntVector(FMath::RoundToInt(I.PositionM.X * 1000.0), FMath::RoundToInt(I.PositionM.Y * 1000.0), FMath::RoundToInt(I.PositionM.Z * 1000.0)));
+			H = HashCombineFast(H, HashCombineFast(GetTypeHash(static_cast<uint8>(I.Kind)), HashCombineFast(GetTypeHash(I.Genus), GetTypeHash(I.Variant))));
+			Sum += H;
+		}
+		return Sum;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVegetationDefinitionTest, "ShroomHunt.Vegetation.Definition",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FVegetationDefinitionTest::RunTest(const FString& Parameters)
+{
+	FVegetationDefinition Definition;
+	TArray<FString> Errors;
+	TestTrue(TEXT("Vegetation.json parses: ") + FString::Join(Errors, TEXT("; ")), VegetationData::LoadVegetation(Definition, Errors));
+	TestEqual(TEXT("Five tree genera"), Definition.Trees.Num(), 5);
+	TestNotNull(TEXT("Mature form"), Definition.FindForm(EVegetationKind::Mature));
+
+	const TArray<FVegetationMeshSpec> Specs = VegetationData::ListMeshes(Definition);
+	int32 Expected = 0;
+	for (const FTreeFormDefinition& Form : Definition.Forms)
+	{
+		Expected += Definition.Trees.Num() * Form.Variants;
+	}
+	for (const FUnderstoryRule& Rule : Definition.Understory)
+	{
+		Expected += Rule.Kind == EVegetationKind::Sapling ? 0 : Rule.Variants;
+	}
+	TestEqual(TEXT("One mesh per genus x form x variant plus understory variants"), Specs.Num(), Expected);
+	TSet<FString> Keys;
+	for (const FVegetationMeshSpec& Spec : Specs)
+	{
+		Keys.Add(Spec.GetKey());
+	}
+	TestEqual(TEXT("Mesh keys are unique"), Keys.Num(), Specs.Num());
+	TestTrue(TEXT("Key format"), Keys.Contains(TEXT("Fagus_Mature_0")) && Keys.Contains(TEXT("Bracken_0")));
+
+	FVegetationDefinition Bad;
+	TArray<FString> BadErrors;
+	TestFalse(TEXT("A definition without trees and forms is rejected"),
+		VegetationData::ParseVegetation(TEXT("{ \"Understory\": [ { \"Kind\": \"Mature\", \"Moisture\": [1, 0, 0, 0] } ] }"), TEXT("Test"), Bad, BadErrors));
+	TestTrue(TEXT("Several errors reported (trees, forms, density, understory kind, trapezoids)"), BadErrors.Num() >= 5);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVegetationMeshTest, "ShroomHunt.Vegetation.Meshes",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FVegetationMeshTest::RunTest(const FString& Parameters)
+{
+	using namespace VegetationTestsDetail;
+	FVegetationDefinition Definition;
+	TArray<FString> Errors;
+	if (!VegetationData::LoadVegetation(Definition, Errors))
+	{
+		AddError(FString::Join(Errors, TEXT("\n")));
+		return false;
+	}
+
+	for (const FVegetationMeshSpec& Spec : VegetationData::ListMeshes(Definition))
+	{
+		const FString Key = Spec.GetKey();
+		UE::Geometry::FDynamicMesh3 Mesh;
+		UE::Geometry::FDynamicMesh3 Again;
+		FVegetationCollision Collision;
+		if (!TestTrue(Key + TEXT(" builds"), VegetationMeshBuilder::Build(Definition, Spec, Mesh, &Collision)))
+		{
+			continue;
+		}
+		VegetationMeshBuilder::Build(Definition, Spec, Again);
+		TestEqual(Key + TEXT(" is deterministic"), HashMesh(Mesh), HashMesh(Again));
+		TestTrue(Key + TEXT(" stays under 40k triangles"), Mesh.TriangleCount() < 40000);
+
+		const UE::Geometry::FAxisAlignedBox3d Bounds = Mesh.GetBounds();
+		TestTrue(Key + TEXT(" stands on the ground"), Bounds.Min.Z < 5.0 && Bounds.Max.Z > 5.0);
+
+		const bool bTree = Spec.Kind == EVegetationKind::Pole || Spec.Kind == EVegetationKind::Mature || Spec.Kind == EVegetationKind::Old;
+		TestEqual(Key + TEXT(" collision: capsule for trees and dead wood only"), Collision.bHasCapsule,
+			bTree || Spec.Kind == EVegetationKind::Log || Spec.Kind == EVegetationKind::Stump);
+		if (Spec.Kind != EVegetationKind::Bracken)
+		{
+			// Every part is a closed or nearly closed surface facing outward (bracken is double-sided).
+			TestTrue(Key + TEXT(" faces outward (positive volume)"), SignedVolume(Mesh) > 0.0);
+		}
+		if (Spec.Kind == EVegetationKind::Mature)
+		{
+			const FTreeArchetype* Tree = Definition.FindTree(Spec.Genus);
+			const double HeightM = Bounds.Max.Z / 100.0;
+			TestTrue(FString::Printf(TEXT("%s height %.1f m close to the archetype's %.0f m"), *Key, HeightM, Tree->HeightM),
+				HeightM > Tree->HeightM * 0.8 && HeightM < Tree->HeightM * 1.2);
+		}
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVegetationScatterTest, "ShroomHunt.Vegetation.Scatter",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FVegetationScatterTest::RunTest(const FString& Parameters)
+{
+	using namespace VegetationTestsDetail;
+	TArray<FString> Errors;
+	const TSharedPtr<const FForestField> Field = ForestFieldCache::GetField(ForestName, Errors);
+	const TSharedPtr<const FVegetationDefinition> Definition = ForestFieldCache::GetVegetation(Errors);
+	if (!Field || !Definition)
+	{
+		AddError(FString::Join(Errors, TEXT("\n")));
+		return false;
+	}
+	const double SizeM = Field->GetSizeM();
+	const FBox2d Whole(FVector2d::ZeroVector, FVector2d(SizeM, SizeM));
+
+	for (const EVegetationLayer Layer : { EVegetationLayer::Trees, EVegetationLayer::Understory })
+	{
+		const FString Name = Layer == EVegetationLayer::Trees ? TEXT("Trees") : TEXT("Understory");
+		TArray<FVegetationInstance> All;
+		TArray<FVegetationInstance> AllAgain;
+		VegetationScatter::Scatter(*Field, *Definition, Layer, Whole, All);
+		VegetationScatter::Scatter(*Field, *Definition, Layer, Whole, AllAgain);
+		TestEqual(Name + TEXT(": deterministic"), HashInstances(All), HashInstances(AllAgain));
+
+		// Uneven split (PCG partitions do not align with the candidate grid): same instances.
+		TArray<FVegetationInstance> Parts;
+		const double SplitX = 300.37;
+		const double SplitY = 611.9;
+		const FBox2d Regions[4] = {
+			FBox2d(FVector2d(0, 0), FVector2d(SplitX, SplitY)),
+			FBox2d(FVector2d(SplitX, 0), FVector2d(SizeM, SplitY)),
+			FBox2d(FVector2d(0, SplitY), FVector2d(SplitX, SizeM)),
+			FBox2d(FVector2d(SplitX, SplitY), FVector2d(SizeM, SizeM)) };
+		for (const FBox2d& Region : Regions)
+		{
+			VegetationScatter::Scatter(*Field, *Definition, Layer, Region, Parts);
+		}
+		TestEqual(Name + TEXT(": partitions give the same count"), Parts.Num(), All.Num());
+		TestEqual(Name + TEXT(": partitions give the same instances"), HashInstances(Parts), HashInstances(All));
+
+		int32 InWater = 0;
+		for (const FVegetationInstance& I : All)
+		{
+			const FForestSample S = Field->Sample(static_cast<float>(I.PositionM.X), static_cast<float>(I.PositionM.Y));
+			InWater += S.bWater ? 1 : 0;
+		}
+		TestEqual(Name + TEXT(": nothing grows in the water"), InWater, 0);
+
+		if (Layer == EVegetationLayer::Trees)
+		{
+			AddInfo(FString::Printf(TEXT("%d trees"), All.Num()));
+			TestTrue(TEXT("Plausible number of trees for 1 km2 (5k - 60k)"), All.Num() > 5000 && All.Num() < 60000);
+
+			double AlderWater = 0.0, BeechWater = 0.0;
+			int32 Alders = 0, Beeches = 0;
+			for (const FVegetationInstance& I : All)
+			{
+				const float Distance = Field->Sample(static_cast<float>(I.PositionM.X), static_cast<float>(I.PositionM.Y)).WaterDistanceM;
+				if (I.Genus == FName(TEXT("Alnus"))) { AlderWater += Distance; ++Alders; }
+				if (I.Genus == FName(TEXT("Fagus"))) { BeechWater += Distance; ++Beeches; }
+			}
+			TestTrue(TEXT("Alders and beeches present"), Alders > 0 && Beeches > 0);
+			if (Alders > 0 && Beeches > 0)
+			{
+				TestTrue(FString::Printf(TEXT("Alders grow closer to water than beeches (%.0f m vs %.0f m)"), AlderWater / Alders, BeechWater / Beeches),
+					AlderWater / Alders < BeechWater / Beeches);
+			}
+		}
+		else
+		{
+			int32 BadBracken = 0, Bracken = 0;
+			for (const FVegetationInstance& I : All)
+			{
+				if (I.Kind == EVegetationKind::Bracken)
+				{
+					++Bracken;
+					BadBracken += Field->Sample(static_cast<float>(I.PositionM.X), static_cast<float>(I.PositionM.Y)).PH > 6.25f ? 1 : 0;
+				}
+			}
+			AddInfo(FString::Printf(TEXT("%d understory instances, %d bracken"), All.Num(), Bracken));
+			TestTrue(TEXT("Bracken present"), Bracken > 0);
+			TestEqual(TEXT("Bracken only on acidic soils (pH <= 6.2)"), BadBracken, 0);
+		}
+	}
+	return true;
+}
+
+#endif // WITH_DEV_AUTOMATION_TESTS
