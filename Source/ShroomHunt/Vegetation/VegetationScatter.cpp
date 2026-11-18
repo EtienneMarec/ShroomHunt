@@ -241,7 +241,7 @@ namespace VegetationScatter
 				[&](const FVector2d& P, uint32 Hash, float& OutDensity, FCandidate& C)
 				{
 					const FForestSample Sample = Field.Sample(static_cast<float>(P.X), static_cast<float>(P.Y));
-					if (Sample.bWater || IsOnPath(Field, Sample, 1.5f))
+					if (Sample.bWater || Sample.bNearLandmark || IsOnPath(Field, Sample, 1.5f))
 					{
 						return false;
 					}
@@ -283,7 +283,7 @@ namespace VegetationScatter
 				[&](const FVector2d& P, uint32 Hash, float& OutDensity, FCandidate& C)
 				{
 					const FForestSample Sample = Field.Sample(static_cast<float>(P.X), static_cast<float>(P.Y));
-					if (Sample.bWater || Sample.WaterDistanceM < Rule.WaterMarginM || IsOnPath(Field, Sample, PathClearance))
+					if (Sample.bWater || Sample.bNearLandmark || Sample.WaterDistanceM < Rule.WaterMarginM || IsOnPath(Field, Sample, PathClearance))
 					{
 						return false;
 					}

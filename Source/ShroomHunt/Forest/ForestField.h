@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Forest/ForestDefinition.h"
+#include "Forest/ForestLandmarks.h"
 #include "Forest/ForestPaths.h"
 
 /** A regular grid of floats covering the forest (meters). Node (i, j) sits at (i * CellSize, j * CellSize). */
@@ -47,6 +48,8 @@ struct SHROOMHUNT_API FForestSample
 	/** Distance to the nearest path centerline (m, capped at ~20) and that path's rank (-1: none near). */
 	float PathDistanceM = 1000.0f;
 	int32 PathRank = -1;
+	/** Inside the clearance of a landmark (house, hut, tower...): no vegetation. */
+	bool bNearLandmark = false;
 	int32 ParcelNumber = 0;
 	EStandAgeClass AgeClass = EStandAgeClass::Mature;
 	/** Fraction of each tree genus (same order as GetGenera()), sums to 1. */
@@ -115,6 +118,14 @@ public:
 	/** Fine (1 m) rank of the nearest path (EForestPathRank), 255 when none is near. */
 	const TArray<uint8>& GetPathRankCells() const { return PathRankCells; }
 
+	/** Coarse water surface height (m): ponds at their spill level, streams just above their bed;
+	 *  defined on water cells and their neighbors (NoWater elsewhere). */
+	const FFieldRaster& GetWaterLevel() const { return WaterLevel; }
+	static constexpr float NoWater = -10000.0f;
+
+	/** Houses, huts, towers, calvary, signposts, parcel stones, bridges, log piles. */
+	const TArray<FForestLandmark>& GetLandmarks() const { return Landmarks; }
+
 	int32 GetStreamCellCount() const { return StreamCellCount; }
 	int32 GetPondCellCount() const { return PondCellCount; }
 
@@ -129,6 +140,8 @@ private:
 	// Paths (ForestPaths.cpp): network, then grading of the terrain and the path rasters.
 	void GeneratePaths();
 	void RasterizePaths();
+	// Landmarks (ForestLandmarks.cpp), after the paths.
+	void GenerateLandmarks();
 	int32 CoarseIndexAt(float XM, float YM) const;
 
 	FForestDefinition Definition;
@@ -153,6 +166,9 @@ private:
 	FForestPathNetwork PathNetwork;
 	FFieldRaster PathDistance;     // fine, distance to the nearest path (m)
 	TArray<uint8> PathRankCells;   // fine, EForestPathRank of the nearest path, 255 = none
+	FFieldRaster WaterLevel;       // coarse, water surface height, NoWater where dry
+	TArray<FForestLandmark> Landmarks;
+	TArray<uint8> LandmarkMask;    // coarse, 1 inside a landmark clearance
 
 	int32 StreamCellCount = 0;
 	int32 PondCellCount = 0;

@@ -192,6 +192,7 @@ bool FForestField::Generate(const FForestDefinition& InDefinition)
 	GenerateMoistureAndSoil();
 	GenerateParcels();
 	GeneratePaths();
+	GenerateLandmarks();
 	GenerateCanopyAndEdges();
 	GenerateStands();
 
@@ -434,6 +435,16 @@ void FForestField::GenerateHydrology()
 		}
 	}
 
+	// Water surface: ponds at their spill level (filled height, a little below the rim).
+	WaterLevel.Init(W, W, CoarseCellM, NoWater);
+	for (int32 Index = 0; Index < Count; ++Index)
+	{
+		if (WaterCells[Index] == 2)
+		{
+			WaterLevel.Values[Index] = Filled[Index] - 0.08f;
+		}
+	}
+
 	const FFieldRaster StreamDistance = ChamferDistance(W, W, CoarseCellM, StreamSeeds, &CarveDepthPayload);
 	FFieldRaster StreamDepth;
 	StreamDepth.Init(W, W, CoarseCellM);
@@ -441,6 +452,41 @@ void FForestField::GenerateHydrology()
 	if (StreamCellCount > 0)
 	{
 		CarveStreams(StreamDepth, StreamDistance);
+	}
+	// Streams: a shallow flow above the carved bed.
+	for (int32 Index = 0; Index < Count; ++Index)
+	{
+		if (WaterCells[Index] == 1)
+		{
+			WaterLevel.Values[Index] = CoarseHeights.Values[Index] + 0.25f;
+		}
+	}
+	// Extend the level one cell around the water so surface meshes reach under the banks.
+	{
+		const TArray<float> Source = WaterLevel.Values;
+		for (int32 Index = 0; Index < Count; ++Index)
+		{
+			if (Source[Index] > NoWater)
+			{
+				continue;
+			}
+			float Sum = 0.0f;
+			int32 Neighbors = 0;
+			for (int32 N = 0; N < 8; ++N)
+			{
+				const int32 NX = Index % W + NeighborDX[N];
+				const int32 NY = Index / W + NeighborDY[N];
+				if (NX >= 0 && NY >= 0 && NX < W && NY < W && Source[NY * W + NX] > NoWater)
+				{
+					Sum += Source[NY * W + NX];
+					++Neighbors;
+				}
+			}
+			if (Neighbors > 0)
+			{
+				WaterLevel.Values[Index] = Sum / Neighbors;
+			}
+		}
 	}
 
 	// Distance to any water (streams and ponds), used by moisture, alders and mud.
@@ -705,6 +751,15 @@ void FForestField::GenerateCanopyAndEdges()
 		{
 			C = 0.0f;
 		}
+		// Clearings around the forester's house and the hunting hut.
+		for (const FForestLandmark& Landmark : Landmarks)
+		{
+			const float Radius = Landmark.Kind == EForestLandmarkKind::ForesterHouse ? 28.0f : (Landmark.Kind == EForestLandmarkKind::HuntingHut ? 12.0f : 0.0f);
+			if (Radius > 0.0f && FVector2f::Distance(FVector2f(FX, FY), Landmark.PositionM) < Radius)
+			{
+				C = FMath::Min(C, 0.1f);
+			}
+		}
 		// Roads and rides open a strip of sky (light, edge species along them).
 		if (PathDistance.IsValid())
 		{
@@ -815,6 +870,7 @@ FForestSample FForestField::Sample(float XM, float YM) const
 	Out.Edgeness = Edgeness.Sample(XM, YM);
 	Out.bWater = WaterCells[Cell] != 0;
 	Out.WaterDistanceM = Out.bWater ? 0.0f : WaterDistance.Sample(XM, YM);
+	Out.bNearLandmark = LandmarkMask.IsValidIndex(Cell) && LandmarkMask[Cell] != 0;
 	if (PathDistance.IsValid())
 	{
 		Out.PathDistanceM = PathDistance.Sample(XM, YM);
