@@ -41,6 +41,8 @@ struct SHROOMHUNT_API FForestSample
 	float Edgeness = 0.0f;
 	/** Water (stream or pond) at this point. */
 	bool bWater = false;
+	/** Distance to the nearest stream or pond cell (m, 0 on water). */
+	float WaterDistanceM = 0.0f;
 	int32 ParcelNumber = 0;
 	EStandAgeClass AgeClass = EStandAgeClass::Mature;
 	/** Fraction of each tree genus (same order as GetGenera()), sums to 1. */

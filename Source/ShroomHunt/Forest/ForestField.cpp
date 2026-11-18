@@ -801,6 +801,7 @@ FForestSample FForestField::Sample(float XM, float YM) const
 	Out.Canopy = Canopy.Sample(XM, YM);
 	Out.Edgeness = Edgeness.Sample(XM, YM);
 	Out.bWater = WaterCells[Cell] != 0;
+	Out.WaterDistanceM = Out.bWater ? 0.0f : WaterDistance.Sample(XM, YM);
 	const FForestParcel& Parcel = Parcels[ParcelCells[Cell]];
 	Out.ParcelNumber = Parcel.Number;
 	Out.AgeClass = Parcel.AgeClass;
