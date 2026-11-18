@@ -133,7 +133,23 @@ percentile thresholds. The bake writes PNG files and the landscape is imported
 by hand (one-time per forest; automating Landscape creation needs an editor
 module). Tree genera are names shared with species hosts (`Fagus`, `Quercus`…).
 
+**D-024 — Placeholder procedural vegetation, PCG scatter node** · Accepted · 2026-11-18
+Trees are procedural placeholders first (Megascans later, for the visual polish):
+stylized C++ meshes (tapered trunk, branches, lumpy foliage clumps in a
+per-genus crown envelope) for 5 genera x 4 forms (sapling, pole, mature, old)
+plus bracken, brambles, logs and stumps, from `Data/Vegetation/Vegetation.json`.
+They are **baked to Nanite static mesh assets** (`sh.Vegetation.BakeMeshes`,
+~16 MB in LFS) because PCG mesh spawners reference assets by path; transient
+runtime meshes cannot be. Real assets replace them later through
+`UVegetationSettings::MeshOverrides` without code change.
+Placement is our own pure C++ (`VegetationScatter`: global jittered candidate
+grid, keep probability = density x cell area, Matern hard-core thinning), not
+PCG samplers: it is unit-tested, identical for any partition split, and shares
+the forest field with mushroom spawning. The PCG node `Forest Scatter` only
+outputs those points (Mesh/Kind/Genus attributes); PCG does the instancing,
+partitioning and streaming (D-009). The node is not cacheable because it reads
+`Data/` files PCG cannot track; the field is cached in `ForestFieldCache`.
+
 ## Open questions (to the developer)
 
-- Tree assets for M1d-2: Fab/Megascans trees, UE's Procedural Vegetation
-  Editor, or procedural placeholder trees first?
+- None at the moment.

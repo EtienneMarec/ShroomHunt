@@ -53,7 +53,8 @@ ShroomHunt/
 ├─ Content/                UE assets (.uasset/.umap via Git LFS)
 │  ├─ ShroomHunt/          ALL project-owned assets live under here
 │  │  ├─ Core/             game mode, player BPs, input
-│  │  ├─ Environment/      sky, weather, seasons (MPC_Season), materials
+│  │  ├─ Environment/      sky, weather, seasons (MPC_Season), materials,
+│  │  │                    Vegetation/Generated (baked placeholder meshes, D-024)
 │  │  ├─ Forests/<ForestId>/   map, PCG graphs, landmarks for one forest
 │  │  ├─ Mushrooms/        mushroom materials, mesh cache settings
 │  │  ├─ Data/             DataTables / DataAssets generated from /Data
@@ -63,7 +64,8 @@ ShroomHunt/
 │  └─ (template folders)   FirstPerson, Characters, Input, LevelPrototyping (kept, D-016)
 ├─ Data/                   source-of-truth gameplay data (JSON), imported by Tools/
 │  ├─ Species/             one JSON file per species
-│  └─ Forests/             one JSON file per forest definition
+│  ├─ Forests/             one JSON file per forest definition
+│  └─ Vegetation/          tree archetypes, densities, understory rules
 ├─ Docs/                   design docs, decision log, milestone notes
 ├─ Source/ShroomHunt/      C++ runtime module (see §5)
 └─ Tools/Python/           Unreal editor Python scripts (data import, batch setup)
@@ -77,8 +79,8 @@ ShroomHunt/
 - **No global project prefix** on class names: domain names (`UCalendarSubsystem`,
   `FMushroomSpeciesRow`). Check for engine name collisions before adding a class.
 - Source folders by domain inside `Source/ShroomHunt/`:
-  `Core/ Time/ Weather/ Environment/ Forest/ Mycology/ Mushroom/ Player/
-  Knowledge/ Economy/ Save/ UI/ Debug/`, tests in `<Domain>/Tests/`. Template code stays where it is until cleaned up.
+  `Core/ Time/ Weather/ Environment/ Forest/ Vegetation/ Mycology/ Mushroom/
+  Player/ Knowledge/ Economy/ Save/ UI/ Debug/`, tests in `<Domain>/Tests/`. Template code stays where it is until cleaned up.
   New folders must be added to `PublicIncludePaths` in `ShroomHunt.Build.cs`
   only if needed; prefer includes relative to the module root
   (`#include "Weather/WeatherSubsystem.h"`).
@@ -86,7 +88,7 @@ ShroomHunt/
   references (`TSoftObjectPtr`) for assets referenced from data.
 - `UPROPERTY` categories: `"ShroomHunt|<Domain>"`.
 - One log category per domain: `LogShroomTime`, `LogShroomWeather`,
-  `LogShroomForest`, `LogShroomSpawn`, `LogShroomMesh`, `LogShroomKnowledge`,
+  `LogShroomForest`, `LogShroomVegetation`, `LogShroomSpawn`, `LogShroomMesh`, `LogShroomKnowledge`,
   `LogShroomSave` (declared in `Core/ShroomLog.h`).
 - **Pure logic in plain C++ (`F` structs / namespaces), UObject wrappers thin.**
   Weather model, forest field, suitability/spawn math and mesh builder are
@@ -162,7 +164,11 @@ Always check the log for `Result: Succeeded`, not only the exit code.
 - **Visual check without the editor**: `sh.Mesh.ExportObj` (headless, see
   `Docs/Milestones/M1c.md`) + `Tools/Python/render_mushroom_preview.py`
   (stdlib-only renderer) produce a PNG Claude can look at. Use it after any
-  change to the mesh builder or to morphology data.
+  change to the mesh builder or to morphology data. Vegetation:
+  `sh.Vegetation.ExportObj` + the same script with `--grid`.
+- Vegetation meshes are assets baked from data: after changing
+  `Data/Vegetation/Vegetation.json` or the builder, run `sh.Vegetation.BakeMeshes`
+  (editor or headless) and commit the regenerated `SM_*` as `content:`.
 
 ## 8. Asset naming (Content/)
 
@@ -215,6 +221,11 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   `UStaticMesh` cached per species x stage x variant in `UMushroomMeshSubsystem`
   (engine subsystem: works in the editor too); the inspected specimen gets a
   unique mesh. `AMushroomGarden` previews them.
+- **Vegetation** (D-024): `Data/Vegetation/Vegetation.json` →
+  `VegetationMeshBuilder` (placeholder trees/understory, baked to Nanite assets by
+  `sh.Vegetation.BakeMeshes`) and `VegetationScatter` (deterministic placement from
+  the field, partition-independent) → PCG node *Forest Scatter* → Static Mesh
+  Spawner. Field and vegetation data shared through `ForestFieldCache`.
 - **Knowledge**: per-species knowledge level; unknown specimens shown by
   observable criteria only.
 
@@ -269,5 +280,10 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
 - Landscape heightmaps are 16-bit PNG, big-endian in the file (ImageWrapper
   handles it): 32768 = height 0, 128 units per meter at Z scale 100. Verified by
   decoding the PNG.
+- **PCG** runs node elements on worker threads: only read immutable shared data
+  (`ForestFieldCache` returns `TSharedPtr<const ...>`). PCG cannot see our
+  `Data/` JSON files, so nodes reading them return `IsCacheable() = false`.
+- A PCG Static Mesh Spawner references meshes by asset path: runtime-built
+  transient meshes cannot be spawned by PCG, hence the baked vegetation assets.
 - Player-facing strings are `FText` (localization-ready, D-014); never build
   UI text from `FString` concatenation.

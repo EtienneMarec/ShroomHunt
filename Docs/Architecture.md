@@ -134,9 +134,23 @@ flowchart LR
 - `UForestGenerationLibrary : UBlueprintFunctionLibrary` — editor-callable
   entry points (from Python): `GenerateLayout`, `BakeHeightmap` (16-bit PNG),
   `BakeWeightmaps`, `ExportDebugMaps`.
-- `UPCGForestFieldSettings` — **custom PCG node** writing field attributes
-  (`Moisture`, `pH`, `Beech`, `Oak`, `Canopy`, `AgeClass`…) onto PCG points so
-  graphs built in the editor can filter/select by them.
+- `ForestFieldCache` — thread-safe cache of the generated field and of the
+  vegetation definition (regenerated when the JSON changes).
+
+**Vegetation** (`Vegetation/`, implemented in M1d-2, D-024)
+- `FVegetationDefinition` (`Data/Vegetation/Vegetation.json`) — tree
+  archetypes per genus, forms (sapling / pole / mature / old), tree density per
+  age class and form mix, understory rules (density x moisture/pH/light).
+- `VegetationMeshBuilder` (pure) — placeholder trees and understory as
+  `FDynamicMesh3` (shared `Core/FMeshAccumulator`), plus a capsule collision.
+- `VegetationScatter` (pure) — deterministic, partition-independent placement
+  from the field (`FVegetationInstance`: position, rotation, scale, kind,
+  genus, variant).
+- `UPCGForestScatterSettings` — **custom PCG node** "Forest Scatter" outputting
+  those points with `Mesh`, `Kind`, `Genus` attributes for a Static Mesh Spawner.
+- `UVegetationMeshLibrary` — `BakeVegetationMeshes` (Nanite assets, editor
+  only), `ScatterReport`; `UVegetationSettings` — mesh folder, material,
+  overrides for real assets.
 - `AForestPathNetwork` — spline components built from the layout (PCG reads
   them to clear vegetation and place path dressing).
 - `ALandmark` (Blueprintable) — base class for landmark actors; a
@@ -244,6 +258,10 @@ knowledge observation recorded.
   reusing the shared node set.
 
 ## 7. Threading & performance notes
+- PCG executes nodes on worker threads: `Forest Scatter` only reads immutable
+  shared data (`ForestFieldCache` hands out `TSharedPtr<const ...>` under a lock).
+- Vegetation: ~20k trees + ~27k understory instances per km², Nanite meshes
+  (5–12k triangles per tree), understory culled at 150 m.
 - Patch generation and layout generation are pure → can run on a worker thread
   (`UE::Tasks`) during map load later; synchronous first.
 - Mushrooms: ISM per (species, stage, variant), cull distance 60–80 m, no

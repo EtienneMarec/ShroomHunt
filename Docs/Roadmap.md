@@ -15,7 +15,7 @@ world generation, progression, roadmap, decisions).
 | M1b Species data ✅ (`Docs/Milestones/M1b.md`) | `FMushroomSpeciesRow`, `import_data.py`, `DT_Species` with 3 species, `USpeciesDatabaseSubsystem` | DataTable visible in editor, reimport after a JSON edit |
 | M1c Procedural mushrooms ✅ (`Docs/Milestones/M1c.md`) | `FMushroomMorphology`, `FMushroomMeshBuilder`, `UMushroomMeshCache`, debug "specimen garden" actor | grid of 3 species × stages × variants |
 | M1d-1 Forest field & terrain ✅ (`Docs/Milestones/M1d.md`) | `FForestField`, heightmap/weightmap bake, debug maps, landscape import steps, landscape material | walk on the 1 km² terrain |
-| M1d-2 Forest vegetation | PCG trees (oak, beech, hornbeam, birch, alder) + understory with a custom field node | walk in a 1 km² forest |
+| M1d-2 Forest vegetation ✅ (`Docs/Milestones/M1d.md`, part 2) | placeholder procedural trees (beech, oak, hornbeam, birch, alder) + understory baked to Nanite meshes, PCG `Forest Scatter` node | walk in a 1 km² forest |
 | M1e Paths & landmarks | parcels, roads/rides/footpaths, splines, 3 landmarks (hunting hut, pond with bridge, calvary/crossroads) | follow a ride to a named crossroads |
 | M1f Spawning | suitability, patches, daily flushes, ISM streaming, debug maps | rain → mushrooms 2–3 days later in predictable spots |
 | M1g Interaction & knowledge | interaction/inspection components, basket, poster + torn page, minimal encyclopedia, observable criteria | find, examine, identify, pick |
