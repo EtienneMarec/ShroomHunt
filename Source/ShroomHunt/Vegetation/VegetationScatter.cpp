@@ -4,6 +4,7 @@
 #include "Core/ShroomHash.h"
 #include "Core/ShroomMath.h"
 #include "Forest/ForestField.h"
+#include "Forest/ForestPaths.h"
 
 FVegetationMeshSpec FVegetationInstance::GetMeshSpec() const
 {
@@ -49,6 +50,13 @@ namespace VegetationScatterDetail
 			}
 		}
 		return Weights.Num() - 1;
+	}
+
+	/** True when a plant at this point would stand on a path (its surface plus Clearance). */
+	bool IsOnPath(const FForestField& Field, const FForestSample& Sample, float Clearance)
+	{
+		return Sample.PathRank >= 0
+			&& Sample.PathDistanceM < ForestPaths::HalfWidthM(static_cast<EForestPathRank>(Sample.PathRank), Field.GetDefinition()) + Clearance;
 	}
 
 	/** Candidate cell size so that the keep probability stays below ~0.5 at the highest density. */
@@ -233,7 +241,7 @@ namespace VegetationScatter
 				[&](const FVector2d& P, uint32 Hash, float& OutDensity, FCandidate& C)
 				{
 					const FForestSample Sample = Field.Sample(static_cast<float>(P.X), static_cast<float>(P.Y));
-					if (Sample.bWater)
+					if (Sample.bWater || IsOnPath(Field, Sample, 1.5f))
 					{
 						return false;
 					}
@@ -269,12 +277,13 @@ namespace VegetationScatter
 		for (const FUnderstoryRule& Rule : Definition.Understory)
 		{
 			const bool bSapling = Rule.Kind == EVegetationKind::Sapling;
+			const float PathClearance = (Rule.Kind == EVegetationKind::Log || bSapling) ? 1.0f : 0.3f;
 			TArray<FCandidate> Kept;
 			RunProcess(Field, ShroomHash::Hash(ForestSeed, 0x0DE5u, static_cast<uint32>(Rule.Kind)), CellSizeFor(Rule.PerHa.GetMax()), Rule.SpacingFactor, BoundsM,
 				[&](const FVector2d& P, uint32 Hash, float& OutDensity, FCandidate& C)
 				{
 					const FForestSample Sample = Field.Sample(static_cast<float>(P.X), static_cast<float>(P.Y));
-					if (Sample.bWater || Sample.WaterDistanceM < Rule.WaterMarginM)
+					if (Sample.bWater || Sample.WaterDistanceM < Rule.WaterMarginM || IsOnPath(Field, Sample, PathClearance))
 					{
 						return false;
 					}
