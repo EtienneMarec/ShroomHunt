@@ -103,6 +103,8 @@ editing the JSON): *Window > Output Log*, command box in **Cmd** mode, type
      (normal)*, save it in `Content/ShroomHunt/Forests/F01/LayerInfo`;
    - in its file field pick the matching `weight_<Layer>.png`.
 6. Transform: **Location** 0, 0, 0 — **Rotation** 0 — **Scale** 100, 100, 100.
+   (UE centers a new landscape on this location: the Landscape actor ends up
+   at -50400, -50400, its corner.)
 7. Size (usually auto-filled from the file): **Section Size** *63x63 Quads*,
    **Sections Per Component** *2x2*, **Number of Components** 8 x 8,
    **Overall Resolution** 1009 x 1009.
@@ -232,7 +234,8 @@ assets in place (levels and graphs keep their references).
    **PCG Graph** (empty graph). Name `PCG_ForestVegetation`, open it.
 2. Right-click the graph, search **Forest Scatter**, add it. *Details*:
    **Layer** = *Trees*. Leave **Forest Name** = `F01_LowlandOakBeech` and
-   **Forest Origin** = 0, 0, 0 (the landscape's location).
+   **Align To Landscape** checked: the node places the forest on the level's
+   Landscape, wherever it is.
 3. Add a second **Forest Scatter** below it with **Layer** = *Understory*.
 4. Right-click > **Static Mesh Spawner**, twice. Wire each Forest Scatter's
    **Out** pin to the **In** pin of one spawner.
@@ -250,9 +253,9 @@ assets in place (levels and graphs keep their references).
 ### 4. Place it in the forest
 1. Open `Lvl_F01_LowlandOakBeech`.
 2. **Quick Add** (cube with +) > search `PCG Volume` > add it.
-3. *Details* > *Transform*: **Location** `50400, 50400, 0`, **Scale**
-   `504, 504, 40` (a PCG Volume is 200 units wide at scale 1, so it now
-   covers the whole 1008 m forest and ±40 m of height).
+3. *Details* > *Transform*: **Location** `0, 0, 0` (the landscape's
+   center), **Scale** `504, 504, 40` (a PCG Volume is 200 units wide at
+   scale 1, so it now covers the whole 1008 m forest and ±40 m of height).
 4. Select its **PCG Component** (component list at the top of Details):
    - **Graph** = `PCG_ForestVegetation`;
    - **Is Partitioned** = ✔;
@@ -262,8 +265,12 @@ assets in place (levels and graphs keep their references).
    actors `PCGPartitionActor_...` appear in the Outliner.
 6. *File > Save All*, then **Play**.
 
-If the trees float or are sunk, the landscape is not at 0, 0, 0: copy its
-Location into **Forest Origin** of both Forest Scatter nodes.
+If trees float or are sunk, check that both Forest Scatter nodes have
+**Align To Landscape** checked and that the landscape was imported with
+Scale 100, 100, 100.
+
+**Regenerating after a change** (moved volume, new graph settings, edited
+`Vegetation.json`): PCG Component > **Cleanup**, then **Generate**.
 
 ## Test checklist
 - [ ] `sh.Vegetation.BakeMeshes` reports 55 meshes with `M_Vegetation`.
