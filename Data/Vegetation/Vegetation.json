@@ -1,0 +1,67 @@
+{
+  "_comment": "Vegetation palette (placeholder procedural trees, D-024). Sizes are for the Mature form; colors are sRGB. Densities per hectare. See Docs/Milestones/M1d.md (part 2).",
+
+  "Trees": [
+    { "Genus": "Fagus",    "HeightM": 30, "TrunkRadiusM": 0.25, "ClearBole": 0.5, "CrownRadiusM": 7.5, "CrownPeak": 0.45, "CrownExponent": 2.2,
+      "ClumpScale": 1.00, "Lumpiness": 0.22, "Droop": 0.0, "BranchAngleDeg": 50,
+      "Bark": [0.52, 0.52, 0.49], "BarkContrast": 0.06, "BarkRidges": 0.0, "Fluting": 0.0,
+      "Foliage": [0.24, 0.38, 0.11], "FoliageVariation": 0.08 },
+    { "Genus": "Quercus",  "HeightM": 28, "TrunkRadiusM": 0.30, "ClearBole": 0.45, "CrownRadiusM": 9.0, "CrownPeak": 0.35, "CrownExponent": 1.8,
+      "ClumpScale": 1.05, "Lumpiness": 0.35, "Droop": 0.0, "BranchAngleDeg": 30,
+      "Bark": [0.36, 0.33, 0.29], "BarkContrast": 0.18, "BarkRidges": 0.06, "Fluting": 0.0,
+      "Foliage": [0.19, 0.30, 0.09], "FoliageVariation": 0.12 },
+    { "Genus": "Carpinus", "HeightM": 18, "TrunkRadiusM": 0.17, "ClearBole": 0.36, "CrownRadiusM": 5.5, "CrownPeak": 0.45, "CrownExponent": 2.0,
+      "ClumpScale": 0.90, "Lumpiness": 0.20, "Droop": 0.0, "BranchAngleDeg": 55,
+      "Bark": [0.50, 0.50, 0.47], "BarkContrast": 0.07, "BarkRidges": 0.0, "Fluting": 0.10,
+      "Foliage": [0.22, 0.36, 0.10], "FoliageVariation": 0.08 },
+    { "Genus": "Betula",   "HeightM": 20, "TrunkRadiusM": 0.13, "ClearBole": 0.4, "CrownRadiusM": 4.0, "CrownPeak": 0.45, "CrownExponent": 1.6,
+      "ClumpScale": 0.80, "Lumpiness": 0.30, "Droop": 0.35, "BranchAngleDeg": 55,
+      "Bark": [0.86, 0.85, 0.80], "BarkContrast": 0.06, "BarkPatch": [0.12, 0.11, 0.10], "BarkPatchShare": 0.22, "BarkRidges": 0.0, "Fluting": 0.0,
+      "Foliage": [0.33, 0.45, 0.13], "FoliageVariation": 0.10 },
+    { "Genus": "Alnus",    "HeightM": 20, "TrunkRadiusM": 0.17, "ClearBole": 0.3, "CrownRadiusM": 4.5, "CrownPeak": 0.30, "CrownExponent": 1.4,
+      "ClumpScale": 0.85, "Lumpiness": 0.25, "Droop": 0.0, "BranchAngleDeg": 45,
+      "Bark": [0.27, 0.26, 0.24], "BarkContrast": 0.12, "BarkRidges": 0.03, "Fluting": 0.0,
+      "Foliage": [0.14, 0.25, 0.08], "FoliageVariation": 0.08 }
+  ],
+
+  "Forms": [
+    { "Kind": "Sapling", "Height": 0.12, "TrunkRadius": 0.08, "Crown": 0.22, "ClearBole": 0.50, "Clumps": 4,  "Variants": 2 },
+    { "Kind": "Pole",    "Height": 0.62, "TrunkRadius": 0.45, "Crown": 0.50, "ClearBole": 1.25, "Clumps": 9,  "Variants": 2 },
+    { "Kind": "Mature",  "Height": 1.00, "TrunkRadius": 1.00, "Crown": 1.00, "ClearBole": 1.00, "Clumps": 16, "Variants": 3 },
+    { "Kind": "Old",     "Height": 1.10, "TrunkRadius": 1.70, "Crown": 1.30, "ClearBole": 0.85, "Clumps": 22, "Variants": 2 }
+  ],
+
+  "TreeDensity": {
+    "PerHa": { "ClearCut": 4, "Regeneration": 14, "Pole": 600, "Mature": 220, "Old": 110 },
+    "SpacingFactor": 0.55,
+    "GapCanopy": [0.2, 0.65],
+    "WaterMarginM": 2.5,
+    "RiparianMarginM": 0.6,
+    "ScaleJitter": 0.12,
+    "FormMix": {
+      "ClearCut":     { "Pole": 0.0,  "Mature": 0.5,  "Old": 0.5 },
+      "Regeneration": { "Pole": 0.0,  "Mature": 0.6,  "Old": 0.4 },
+      "Pole":         { "Pole": 0.9,  "Mature": 0.1,  "Old": 0.0 },
+      "Mature":       { "Pole": 0.15, "Mature": 0.8,  "Old": 0.05 },
+      "Old":          { "Pole": 0.0,  "Mature": 0.35, "Old": 0.65 }
+    }
+  },
+
+  "Understory": [
+    { "Kind": "Sapling", "PerHa": { "ClearCut": 150, "Regeneration": 900, "Pole": 20, "Mature": 60, "Old": 120 },
+      "Moisture": [0.0, 0.1, 0.8, 0.95], "PH": [3.5, 4.0, 8.0, 8.5], "Light": [0.05, 0.3, 1.0, 1.0],
+      "SpacingFactor": 0.5, "WaterMarginM": 1.5, "ScaleJitter": 0.3, "Variants": 2 },
+    { "Kind": "Bracken", "PerHa": { "ClearCut": 500, "Regeneration": 350, "Pole": 40, "Mature": 250, "Old": 300 },
+      "Moisture": [0.1, 0.25, 0.6, 0.8], "PH": [3.5, 3.8, 5.2, 6.2], "Light": [0.1, 0.35, 1.0, 1.0],
+      "SpacingFactor": 0.45, "WaterMarginM": 1.5, "ScaleJitter": 0.25, "Variants": 3 },
+    { "Kind": "Bramble", "PerHa": { "ClearCut": 400, "Regeneration": 300, "Pole": 15, "Mature": 80, "Old": 120 },
+      "Moisture": [0.1, 0.25, 0.7, 0.85], "PH": [4.2, 5.0, 7.8, 8.4], "Light": [0.15, 0.45, 1.0, 1.0],
+      "SpacingFactor": 0.5, "WaterMarginM": 1.0, "ScaleJitter": 0.3, "Variants": 3 },
+    { "Kind": "Log", "PerHa": { "ClearCut": 3, "Regeneration": 2, "Pole": 3, "Mature": 6, "Old": 14 },
+      "Moisture": [0.0, 0.0, 1.0, 1.0], "PH": [0.0, 0.0, 14.0, 14.0], "Light": [0.0, 0.0, 1.0, 1.0],
+      "SpacingFactor": 0.5, "WaterMarginM": 1.0, "ScaleJitter": 0.2, "Variants": 2 },
+    { "Kind": "Stump", "PerHa": { "ClearCut": 60, "Regeneration": 30, "Pole": 25, "Mature": 8, "Old": 4 },
+      "Moisture": [0.0, 0.0, 1.0, 1.0], "PH": [0.0, 0.0, 14.0, 14.0], "Light": [0.0, 0.0, 1.0, 1.0],
+      "SpacingFactor": 0.5, "WaterMarginM": 1.0, "ScaleJitter": 0.2, "Variants": 2 }
+  ]
+}

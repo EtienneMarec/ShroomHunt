@@ -1,0 +1,264 @@
+#include "Vegetation/VegetationDefinition.h"
+
+#include "Core/ShroomHash.h"
+#include "JsonObjectConverter.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
+
+float FAgeClassValues::Get(EStandAgeClass AgeClass) const
+{
+	switch (AgeClass)
+	{
+	case EStandAgeClass::ClearCut: return ClearCut;
+	case EStandAgeClass::Regeneration: return Regeneration;
+	case EStandAgeClass::Pole: return Pole;
+	case EStandAgeClass::Mature: return Mature;
+	case EStandAgeClass::Old: return Old;
+	}
+	return 0.0f;
+}
+
+const FTreeFormMix& FAgeClassFormMix::Get(EStandAgeClass AgeClass) const
+{
+	switch (AgeClass)
+	{
+	case EStandAgeClass::ClearCut: return ClearCut;
+	case EStandAgeClass::Regeneration: return Regeneration;
+	case EStandAgeClass::Pole: return Pole;
+	case EStandAgeClass::Old: return Old;
+	default: return Mature;
+	}
+}
+
+int32 FVegetationDefinition::GetVariantCount(EVegetationKind Kind) const
+{
+	if (VegetationData::IsTreeKind(Kind))
+	{
+		const FTreeFormDefinition* Form = FindForm(Kind);
+		return Form ? FMath::Max(1, Form->Variants) : 0;
+	}
+	const FUnderstoryRule* Rule = Understory.FindByPredicate([Kind](const FUnderstoryRule& R) { return R.Kind == Kind; });
+	return Rule ? FMath::Max(1, Rule->Variants) : 0;
+}
+
+FString FVegetationMeshSpec::GetKey() const
+{
+	if (Genus.IsNone())
+	{
+		return FString::Printf(TEXT("%s_%d"), VegetationData::KindName(Kind), Variant);
+	}
+	return FString::Printf(TEXT("%s_%s_%d"), *Genus.ToString(), VegetationData::KindName(Kind), Variant);
+}
+
+uint32 FVegetationMeshSpec::GetSeed() const
+{
+	return ShroomHash::Hash(ShroomHash::HashString(GetKey()), 0x7EE5u);
+}
+
+namespace VegetationData
+{
+	bool IsTreeKind(EVegetationKind Kind)
+	{
+		return Kind <= EVegetationKind::Old;
+	}
+
+	EVegetationLayer GetLayer(EVegetationKind Kind)
+	{
+		return (Kind == EVegetationKind::Pole || Kind == EVegetationKind::Mature || Kind == EVegetationKind::Old)
+			? EVegetationLayer::Trees : EVegetationLayer::Understory;
+	}
+
+	const TCHAR* KindName(EVegetationKind Kind)
+	{
+		switch (Kind)
+		{
+		case EVegetationKind::Sapling: return TEXT("Sapling");
+		case EVegetationKind::Pole: return TEXT("Pole");
+		case EVegetationKind::Mature: return TEXT("Mature");
+		case EVegetationKind::Old: return TEXT("Old");
+		case EVegetationKind::Bracken: return TEXT("Bracken");
+		case EVegetationKind::Bramble: return TEXT("Bramble");
+		case EVegetationKind::Log: return TEXT("Log");
+		case EVegetationKind::Stump: return TEXT("Stump");
+		}
+		return TEXT("Unknown");
+	}
+
+	FLinearColor ToColor(const TArray<float>& Values, const FLinearColor& Fallback)
+	{
+		if (Values.Num() != 3)
+		{
+			return Fallback;
+		}
+		return FLinearColor(FMath::Clamp(Values[0], 0.0f, 1.0f), FMath::Clamp(Values[1], 0.0f, 1.0f), FMath::Clamp(Values[2], 0.0f, 1.0f), 1.0f);
+	}
+
+	bool ParseVegetation(const FString& JsonText, const FString& SourceName, FVegetationDefinition& Out, TArray<FString>& OutErrors)
+	{
+		const int32 ErrorsBefore = OutErrors.Num();
+		auto Error = [&OutErrors, &SourceName](const FString& Field, const FString& Message)
+		{
+			OutErrors.Add(FString::Printf(TEXT("%s: %s: %s"), *SourceName, *Field, *Message));
+		};
+		auto CheckTrapezoid = [&Error](const FString& Field, const TArray<float>& Values)
+		{
+			if (Values.Num() != 4 || !ForestData::ToTrapezoid(Values).IsOrdered())
+			{
+				Error(Field, TEXT("expected [min, optLow, optHigh, max] in increasing order"));
+			}
+		};
+		auto CheckColor = [&Error](const FString& Field, const TArray<float>& Values, bool bOptional)
+		{
+			if ((Values.Num() == 0 && bOptional) || Values.Num() == 3)
+			{
+				return;
+			}
+			Error(Field, TEXT("expected an sRGB color [r, g, b]"));
+		};
+
+		Out = FVegetationDefinition();
+		FText FailReason;
+		if (!FJsonObjectConverter::JsonObjectStringToUStruct(JsonText, &Out, 0, 0, false, &FailReason))
+		{
+			Error(TEXT("(file)"), FString::Printf(TEXT("invalid JSON: %s"), *FailReason.ToString()));
+			return false;
+		}
+
+		if (Out.Trees.Num() == 0)
+		{
+			Error(TEXT("Trees"), TEXT("needs at least one genus"));
+		}
+		for (int32 Index = 0; Index < Out.Trees.Num(); ++Index)
+		{
+			const FTreeArchetype& Tree = Out.Trees[Index];
+			const FString Field = FString::Printf(TEXT("Trees[%d]"), Index);
+			if (Tree.Genus.IsNone())
+			{
+				Error(Field + TEXT(".Genus"), TEXT("missing"));
+			}
+			if (Tree.HeightM <= 1.0f || Tree.TrunkRadiusM <= 0.0f || Tree.CrownRadiusM <= 0.0f)
+			{
+				Error(Field, TEXT("HeightM > 1, TrunkRadiusM > 0 and CrownRadiusM > 0 required"));
+			}
+			if (Tree.ClearBole < 0.0f || Tree.ClearBole > 0.9f || Tree.CrownPeak < 0.0f || Tree.CrownPeak > 1.0f)
+			{
+				Error(Field, TEXT("ClearBole must be in [0, 0.9] and CrownPeak in [0, 1]"));
+			}
+			if (Tree.CrownExponent < 0.5f)
+			{
+				Error(Field + TEXT(".CrownExponent"), TEXT("must be >= 0.5"));
+			}
+			CheckColor(Field + TEXT(".Bark"), Tree.Bark, false);
+			CheckColor(Field + TEXT(".BarkPatch"), Tree.BarkPatch, true);
+			CheckColor(Field + TEXT(".Foliage"), Tree.Foliage, false);
+		}
+
+		for (const EVegetationKind Kind : { EVegetationKind::Sapling, EVegetationKind::Pole, EVegetationKind::Mature, EVegetationKind::Old })
+		{
+			const FTreeFormDefinition* Form = Out.FindForm(Kind);
+			if (!Form)
+			{
+				Error(TEXT("Forms"), FString::Printf(TEXT("missing form %s"), KindName(Kind)));
+			}
+			else if (Form->Height <= 0.0f || Form->TrunkRadius <= 0.0f || Form->Crown <= 0.0f || Form->Clumps < 1 || Form->Variants < 1)
+			{
+				Error(FString::Printf(TEXT("Forms.%s"), KindName(Kind)), TEXT("Height, TrunkRadius, Crown > 0 and Clumps, Variants >= 1 required"));
+			}
+		}
+		for (const FTreeFormDefinition& Form : Out.Forms)
+		{
+			if (!IsTreeKind(Form.Kind))
+			{
+				Error(TEXT("Forms"), FString::Printf(TEXT("%s is not a tree form"), KindName(Form.Kind)));
+			}
+		}
+
+		const FTreeDensityDefinition& Density = Out.TreeDensity;
+		if (Density.PerHa.GetMax() <= 0.0f)
+		{
+			Error(TEXT("TreeDensity.PerHa"), TEXT("needs a density > 0"));
+		}
+		if (Density.SpacingFactor < 0.0f || Density.SpacingFactor > 1.0f)
+		{
+			Error(TEXT("TreeDensity.SpacingFactor"), TEXT("must be in [0, 1]"));
+		}
+		if (Density.GapCanopy.Num() != 2 || Density.GapCanopy[0] > Density.GapCanopy[1])
+		{
+			Error(TEXT("TreeDensity.GapCanopy"), TEXT("expected [low, high]"));
+		}
+
+		for (int32 Index = 0; Index < Out.Understory.Num(); ++Index)
+		{
+			const FUnderstoryRule& Rule = Out.Understory[Index];
+			const FString Field = FString::Printf(TEXT("Understory[%d] (%s)"), Index, KindName(Rule.Kind));
+			if (GetLayer(Rule.Kind) != EVegetationLayer::Understory)
+			{
+				Error(Field + TEXT(".Kind"), TEXT("must be Sapling, Bracken, Bramble, Log or Stump"));
+			}
+			CheckTrapezoid(Field + TEXT(".Moisture"), Rule.Moisture);
+			CheckTrapezoid(Field + TEXT(".PH"), Rule.PH);
+			CheckTrapezoid(Field + TEXT(".Light"), Rule.Light);
+			if (Rule.SpacingFactor < 0.0f || Rule.SpacingFactor > 1.0f || Rule.Variants < 1)
+			{
+				Error(Field, TEXT("SpacingFactor in [0, 1] and Variants >= 1 required"));
+			}
+			for (int32 Other = 0; Other < Index; ++Other)
+			{
+				if (Out.Understory[Other].Kind == Rule.Kind)
+				{
+					Error(Field + TEXT(".Kind"), TEXT("duplicate"));
+				}
+			}
+		}
+		return OutErrors.Num() == ErrorsBefore;
+	}
+
+	FString GetDefaultPath()
+	{
+		return FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(), TEXT("Data"), TEXT("Vegetation"), TEXT("Vegetation.json")));
+	}
+
+	bool LoadVegetation(FVegetationDefinition& Out, TArray<FString>& OutErrors)
+	{
+		const FString Path = GetDefaultPath();
+		FString Text;
+		if (!FFileHelper::LoadFileToString(Text, *Path))
+		{
+			OutErrors.Add(FString::Printf(TEXT("%s: cannot read file"), *Path));
+			return false;
+		}
+		return ParseVegetation(Text, FPaths::GetCleanFilename(Path), Out, OutErrors);
+	}
+
+	TArray<FVegetationMeshSpec> ListMeshes(const FVegetationDefinition& Definition)
+	{
+		TArray<FVegetationMeshSpec> Specs;
+		for (const FTreeArchetype& Tree : Definition.Trees)
+		{
+			for (const FTreeFormDefinition& Form : Definition.Forms)
+			{
+				for (int32 Variant = 0; Variant < Form.Variants; ++Variant)
+				{
+					FVegetationMeshSpec& Spec = Specs.AddDefaulted_GetRef();
+					Spec.Kind = Form.Kind;
+					Spec.Genus = Tree.Genus;
+					Spec.Variant = Variant;
+				}
+			}
+		}
+		for (const FUnderstoryRule& Rule : Definition.Understory)
+		{
+			if (Rule.Kind == EVegetationKind::Sapling)
+			{
+				continue; // tree form, listed above
+			}
+			for (int32 Variant = 0; Variant < Rule.Variants; ++Variant)
+			{
+				FVegetationMeshSpec& Spec = Specs.AddDefaulted_GetRef();
+				Spec.Kind = Rule.Kind;
+				Spec.Variant = Variant;
+			}
+		}
+		return Specs;
+	}
+}
