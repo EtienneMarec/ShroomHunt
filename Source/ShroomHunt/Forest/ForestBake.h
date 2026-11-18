@@ -25,6 +25,9 @@ namespace ForestBake
 	/** Default output folder for a forest. */
 	SHROOMHUNT_API FString GetDefaultOutputFolder(const FString& ForestName);
 
+	/** Writes an 8-bit RGBA PNG (debug maps). */
+	SHROOMHUNT_API bool WriteColorPng(const FString& Path, const TArray<FColor>& Pixels, int32 Width, int32 Height);
+
 	/** Encodes a height (m, relative) as a landscape 16-bit value for LandscapeZScale. */
 	SHROOMHUNT_API uint16 EncodeHeight(float HeightM);
 }

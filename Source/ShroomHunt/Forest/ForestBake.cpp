@@ -100,6 +100,21 @@ namespace ForestBake
 		return FPaths::ConvertRelativePathToFull(FPaths::ProjectSavedDir() / TEXT("ForestBake") / ForestName);
 	}
 
+	bool WriteColorPng(const FString& Path, const TArray<FColor>& Pixels, int32 Width, int32 Height)
+	{
+		TArray<uint8> Bytes;
+		Bytes.Reserve(Pixels.Num() * 4);
+		for (const FColor& Pixel : Pixels)
+		{
+			Bytes.Add(Pixel.R);
+			Bytes.Add(Pixel.G);
+			Bytes.Add(Pixel.B);
+			Bytes.Add(255);
+		}
+		IFileManager::Get().MakeDirectory(*FPaths::GetPath(Path), true);
+		return WritePng(Path, Bytes.GetData(), Bytes.Num(), Width, Height, ERGBFormat::RGBA, 8);
+	}
+
 	uint16 EncodeHeight(float HeightM)
 	{
 		// Landscape: 32768 = Z 0; one unit = ZScale / 128 cm.
