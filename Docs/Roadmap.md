@@ -20,7 +20,7 @@ world generation, progression, roadmap, decisions).
 | M1e-2 Landmarks & water ✅ | named crossroads and signposts, parcel stones, base house, hunting hut, bridge, calvary, pond and stream water surfaces | follow a ride to a named crossroads |
 | M1f Spawning ✅ (`Docs/Milestones/M1f.md`) | suitability, patches, daily flushes, ISM streaming, debug maps | rain → mushrooms 2–3 days later in predictable spots |
 | M1g-1 Foraging ✅ (`Docs/Milestones/M1g.md`) | aim, examine with observable criteria, pick, basket, patch exhaustion | find, examine, pick |
-| M1g-2 Knowledge | poster + torn page, names of known species, minimal encyclopedia | identify |
+| M1g-2 Knowledge ✅ (`Docs/Milestones/M1g.md`, part 2) | poster + torn page, names of known species, minimal encyclopedia | identify |
 
 **After M1d — rain polish** (needs the real forest): wind-driven slant
 (wind speed from the weather), streak texture, ground splashes via particle

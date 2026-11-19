@@ -223,6 +223,18 @@ Picks are the only foraging state: picked fruit seeds (filtered out of the
 stateless spawn model) and pick times per patch (exhaustion), held by a game
 instance subsystem until the save system (M4).
 
+**D-030 — Identification in M1: source + one examined specimen** · Accepted · 2026-11-19
+A species is *Identified* (real name on its specimens, full encyclopedia page)
+once the player owns a source teaching it (poster, guide page, later books)
+**and** has examined one specimen, in either order: examining is the
+comparison with the source. The dichotomous keys of Docs/Progression.md
+replace that comparison when the books arrive (M3); *Mastered* comes with
+quality grading. Sources are data (`Data/Knowledge/Sources.json`: id, kind,
+host landmark kind, title, intro, species); they hang on the first landmark of
+their kind as placeholder sheets built by the *Forest Landmarks* actor and are
+found by a visibility trace, so walls hide them. A *Page* is taken when read,
+a *Poster* stays.
+
 ## Open questions (to the developer)
 
 - None at the moment.

@@ -236,8 +236,12 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   spawner: aim, examine, pick; runtime Enhanced Input; `UI/UForagingWidget` built
   in C++), `UForagingSubsystem` (basket, picked seeds, patch exhaustion),
   `Mycology/ObservableCriteria` (what an unknown specimen looks like).
-- **Knowledge**: per-species knowledge level; unknown specimens shown by
-  observable criteria only.
+- **Knowledge** (`Knowledge/`, D-030): `FKnowledgeState` (pure: owned sources,
+  observations, level Unknown / Observed / Identified) wrapped by
+  `UKnowledgeSubsystem`; sources in `Data/Knowledge/Sources.json` hang on
+  landmarks (`AForestLandmarkSet`, component tag `ShroomReadable` + id);
+  `KnowledgeText` builds labels and encyclopedia pages; `UI/UEncyclopediaWidget`.
+  Unknown specimens are shown by observable criteria only.
 
 ## 11. UE pitfalls met so far (keep this list growing)
 

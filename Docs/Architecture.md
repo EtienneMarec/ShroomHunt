@@ -220,6 +220,8 @@ scale) keeps memory tiny (≈ 3 species × 24 meshes × ~30 KB).
 ### Knowledge & encyclopedia
 - `UKnowledgeSubsystem` — per species: `Unknown → Observed → Identified →
   Mastered`, observation counters, unlocked sources (poster, books, kits).
+  Implemented in M1g (D-030): logic in the pure `FKnowledgeState`, sources in
+  `Data/Knowledge/Sources.json`, *Mastered* later.
 - `FObservableCriteria` — what the player can see of a specimen given its
   knowledge level; builds vague designations ("Bolete?", "White-gilled
   mushroom").
