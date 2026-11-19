@@ -5,6 +5,7 @@
 #include "Core/ShroomMath.h"
 #include "Forest/ForestField.h"
 #include "Forest/ForestPaths.h"
+#include "Vegetation/VegetationObstacles.h"
 
 FVegetationMeshSpec FVegetationInstance::GetMeshSpec() const
 {
@@ -291,6 +292,16 @@ namespace VegetationScatter
 			return;
 		}
 
+		// Trunks of the trees around the region: nothing grows inside them. The trees are a
+		// global function of the forest, so a slightly larger region gives the same answer in
+		// every PCG partition.
+		FVegetationObstacleGrid Trunks;
+		{
+			TArray<FVegetationInstance> Trees;
+			Scatter(Field, Definition, EVegetationLayer::Trees, FBox2d(BoundsM.Min - FVector2d(6.0), BoundsM.Max + FVector2d(6.0)), Trees);
+			Trunks.AddInstances(Definition, Trees);
+		}
+
 		for (const FUnderstoryRule& Rule : Definition.Understory)
 		{
 			const bool bSapling = Rule.Kind == EVegetationKind::Sapling;
@@ -325,7 +336,15 @@ namespace VegetationScatter
 			for (const FCandidate& C : Kept)
 			{
 				const float SlopeSink = Rule.Kind == EVegetationKind::Log ? 3.0f : (Rule.Kind == EVegetationKind::Stump ? 0.4f : 0.0f);
-				Out.Add(MakeInstance(Field, Definition, C, Rule.ScaleJitter, 0.05f, MaxTilt, SlopeSink));
+				const FVegetationInstance Instance = MakeInstance(Field, Definition, C, Rule.ScaleJitter, 0.05f, MaxTilt, SlopeSink);
+				FVegetationObstacle Footprint;
+				const bool bBlocked = FVegetationObstacleGrid::MakeObstacle(Definition, Instance, Footprint)
+					? Trunks.OverlapsCapsule(FVegetationObstacle{ Footprint.A, Footprint.B, Footprint.RadiusM + 0.1f })
+					: Trunks.Overlaps(FVector2f(static_cast<float>(Instance.PositionM.X), static_cast<float>(Instance.PositionM.Y)), 0.3f);
+				if (!bBlocked)
+				{
+					Out.Add(Instance);
+				}
 			}
 		}
 	}

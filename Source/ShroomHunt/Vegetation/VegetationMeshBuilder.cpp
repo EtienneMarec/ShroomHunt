@@ -669,6 +669,21 @@ FTreeShape FTreeShape::Sample(const FTreeArchetype& Archetype, const FTreeFormDe
 
 namespace VegetationMeshBuilder
 {
+	// Keep these draws in the order of BuildLog / BuildStump (a test compares them with the meshes).
+	void GetLogSize(uint32 Seed, float& OutLengthM, float& OutRadiusM)
+	{
+		FRandomStream Rng(static_cast<int32>(Seed));
+		OutLengthM = Rng.FRandRange(3.5f, 7.0f);
+		OutRadiusM = Rng.FRandRange(0.15f, 0.3f);
+	}
+
+	float GetStumpRadius(uint32 Seed)
+	{
+		FRandomStream Rng(static_cast<int32>(Seed));
+		Rng.FRandRange(0.25f, 0.6f); // height
+		return Rng.FRandRange(0.2f, 0.38f) * 1.4f;
+	}
+
 	bool Build(const FVegetationDefinition& Definition, const FVegetationMeshSpec& Spec, FDynamicMesh3& OutMesh, FVegetationCollision* OutCollision)
 	{
 		using namespace VegetationMeshDetail;

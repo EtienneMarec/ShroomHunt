@@ -60,4 +60,10 @@ namespace VegetationMeshBuilder
 {
 	/** Returns false when the spec refers to a genus or form missing from the definition. */
 	SHROOMHUNT_API bool Build(const FVegetationDefinition& Definition, const FVegetationMeshSpec& Spec, UE::Geometry::FDynamicMesh3& OutMesh, FVegetationCollision* OutCollision = nullptr);
+
+	/** Size of the log mesh built from Seed (same random draws as the builder): length and radius (m). */
+	SHROOMHUNT_API void GetLogSize(uint32 Seed, float& OutLengthM, float& OutRadiusM);
+
+	/** Radius of the stump mesh built from Seed at the ground, root flare included (m). */
+	SHROOMHUNT_API float GetStumpRadius(uint32 Seed);
 }
