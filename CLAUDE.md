@@ -318,5 +318,8 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
 - Vertex colors of our runtime meshes did not show through instanced static
   mesh components (white mushrooms): mushrooms use one component each.
   An ISM material also needs the *Used with Instanced Static Meshes* flag.
+- An Enhanced Input action **consumes** its keys by default (`bConsumeInput`):
+  a higher-priority mapping context that maps the mouse silently disabled the
+  template's look action. Runtime actions sharing keys set `bConsumeInput = false`.
 - Player-facing strings are `FText` (localization-ready, D-014); never build
   UI text from `FString` concatenation.

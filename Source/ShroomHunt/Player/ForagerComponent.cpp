@@ -90,6 +90,11 @@ void UForagerComponent::SetupInput()
 	PickAction->ValueType = EInputActionValueType::Boolean;
 	TurnAction = NewObject<UInputAction>(this, TEXT("IA_TurnSpecimen"));
 	TurnAction->ValueType = EInputActionValueType::Axis2D;
+	// Enhanced Input actions swallow their keys by default: let the template's
+	// look/move actions (lower priority) still receive the mouse, E and F.
+	ExamineAction->bConsumeInput = false;
+	PickAction->bConsumeInput = false;
+	TurnAction->bConsumeInput = false;
 	Mapping = NewObject<UInputMappingContext>(this, TEXT("IMC_Foraging"));
 	Mapping->MapKey(ExamineAction, Settings->ExamineKey);
 	Mapping->MapKey(PickAction, Settings->PickKey);
