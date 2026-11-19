@@ -308,6 +308,61 @@ namespace LandmarkMeshBuilder
 		return OutMesh.TriangleCount() > 0;
 	}
 
+	bool GetPaperMount(EForestLandmarkKind Kind, FTransform& OutLocal, FVector2D& OutSizeCm)
+	{
+		switch (Kind)
+		{
+		case EForestLandmarkKind::ForesterHouse:
+			// Front wall (plaster face at X = 3.0 m), between the door and the right window.
+			OutLocal = FTransform(FVector(301.0, 92.0, 178.0));
+			OutSizeCm = FVector2D(52.0, 72.0);
+			return true;
+		case EForestLandmarkKind::HuntingHut:
+			// Front planks (X = 2.02 m), between the door and the window, slightly askew.
+			OutLocal = FTransform(FRotator(0.0, 0.0, 4.0), FVector(203.0, 8.0, 138.0));
+			OutSizeCm = FVector2D(24.0, 32.0);
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	void BuildPaper(const FVector2D& SizeCm, TConstArrayView<FLinearColor> Swatches, bool bTorn, FDynamicMesh3& OutMesh, FLandmarkCollision* OutCollision)
+	{
+		using namespace LandmarkMeshDetail;
+		FMeshAccumulator Acc;
+		const double W = SizeCm.X / Cm;
+		const double H = SizeCm.Y / Cm;
+		const FLinearColor Paper = bTorn ? Srgb(0.80, 0.74, 0.58) : Srgb(0.90, 0.87, 0.76);
+		// The sheet; a torn one is made of strips with a ragged bottom.
+		const double Ragged[6] = { 0.0, 0.07, 0.02, 0.11, 0.04, 0.14 };
+		const int32 Strips = bTorn ? 6 : 1;
+		for (int32 Strip = 0; Strip < Strips; ++Strip)
+		{
+			const double Y0 = -0.5 * W + W * Strip / Strips;
+			const double Y1 = -0.5 * W + W * (Strip + 1) / Strips;
+			const double Bottom = -0.5 * H + (bTorn ? Ragged[Strip] * H : 0.0);
+			AddBox(Acc, FVector3d(0, 0.5 * (Y0 + Y1), 0.5 * (Bottom + 0.5 * H)), FVector3d(0.003, 0.5 * (Y1 - Y0), 0.5 * (0.5 * H - Bottom)), Paper, ESurface::Paint);
+		}
+		// Title band.
+		AddBox(Acc, FVector3d(0.0035, 0, 0.5 * H - 0.11 * H), FVector3d(0.001, 0.44 * W, 0.07 * H), Srgb(0.20, 0.30, 0.20), ESurface::Paint);
+		// One stylized mushroom (cap over a pale stem) per species.
+		const int32 Count = FMath::Max(1, Swatches.Num());
+		for (int32 Index = 0; Index < Swatches.Num(); ++Index)
+		{
+			const double ColumnW = 0.9 * W / Count;
+			const double Y = -0.45 * W + ColumnW * (Index + 0.5);
+			AddBox(Acc, FVector3d(0.0035, Y, -0.06 * H), FVector3d(0.001, 0.08 * ColumnW, 0.11 * H), Srgb(0.92, 0.90, 0.84), ESurface::Paint);
+			AddBox(Acc, FVector3d(0.0045, Y, 0.07 * H), FVector3d(0.001, 0.32 * ColumnW, 0.06 * H), Swatches[Index], ESurface::Paint);
+		}
+		Acc.Emit(OutMesh);
+		if (OutCollision)
+		{
+			OutCollision->Boxes.Reset();
+			OutCollision->Boxes.Add(FBox(FVector(-1.0, -0.5 * SizeCm.X, -0.5 * SizeCm.Y), FVector(1.0, 0.5 * SizeCm.X, 0.5 * SizeCm.Y)));
+		}
+	}
+
 	void BuildSignBoard(FDynamicMesh3& OutMesh)
 	{
 		using namespace LandmarkMeshDetail;

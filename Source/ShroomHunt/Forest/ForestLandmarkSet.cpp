@@ -12,6 +12,9 @@
 #include "Forest/ForestPlaceNames.h"
 #include "Forest/ForestWorld.h"
 #include "Forest/LandmarkMeshBuilder.h"
+#include "Knowledge/KnowledgeSubsystem.h"
+#include "Knowledge/KnowledgeText.h"
+#include "Mycology/SpeciesDatabaseSubsystem.h"
 #include "Materials/MaterialInterface.h"
 
 namespace ForestLandmarkSetDetail
@@ -24,6 +27,13 @@ namespace ForestLandmarkSetDetail
 	{
 		return FMath::Min(MaxSize, Length / FMath::Max(1.0f, 0.55f * Text.Len()));
 	}
+}
+
+const FName AForestLandmarkSet::ReadableTag(TEXT("ShroomReadable"));
+
+FName AForestLandmarkSet::GetReadableSource(const UPrimitiveComponent* Component)
+{
+	return Component && Component->ComponentTags.Num() >= 2 && Component->ComponentTags[0] == ReadableTag ? Component->ComponentTags[1] : NAME_None;
 }
 
 AForestLandmarkSet::AForestLandmarkSet()
@@ -56,6 +66,44 @@ void AForestLandmarkSet::BeginPlay()
 			Child->DestroyComponent();
 		}
 		Build();
+	}
+	if (UKnowledgeSubsystem* Knowledge = GetGameInstance() ? GetGameInstance()->GetSubsystem<UKnowledgeSubsystem>() : nullptr)
+	{
+		KnowledgeChangedHandle = Knowledge->OnKnowledgeChanged.AddUObject(this, &AForestLandmarkSet::RefreshReadables);
+	}
+	RefreshReadables();
+}
+
+void AForestLandmarkSet::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (UKnowledgeSubsystem* Knowledge = GetGameInstance() ? GetGameInstance()->GetSubsystem<UKnowledgeSubsystem>() : nullptr)
+	{
+		Knowledge->OnKnowledgeChanged.Remove(KnowledgeChangedHandle);
+	}
+	Super::EndPlay(EndPlayReason);
+}
+
+void AForestLandmarkSet::RefreshReadables()
+{
+	const UKnowledgeSubsystem* Knowledge = GetGameInstance() ? GetGameInstance()->GetSubsystem<UKnowledgeSubsystem>() : nullptr;
+	if (!Knowledge)
+	{
+		return;
+	}
+	TArray<UStaticMeshComponent*> Components;
+	GetComponents<UStaticMeshComponent>(Components);
+	for (UStaticMeshComponent* Component : Components)
+	{
+		const FName SourceId = GetReadableSource(Component);
+		const FKnowledgeSource* Source = Knowledge->FindSource(SourceId);
+		if (!Source)
+		{
+			continue;
+		}
+		// A page is taken when read; a poster stays on its wall.
+		const bool bPresent = Source->Kind != EKnowledgeSourceKind::Page || !Knowledge->HasSource(SourceId);
+		Component->SetVisibility(bPresent, true);
+		Component->SetCollisionEnabled(bPresent ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
 	}
 }
 
@@ -100,7 +148,7 @@ UStaticMeshComponent* AForestLandmarkSet::AddMesh(UStaticMesh* Mesh, const FTran
 	return Component;
 }
 
-void AForestLandmarkSet::AddText(USceneComponent* Parent, const FString& Text, const FVector& RelativeLocation, float RelativeYaw, float WorldSize)
+void AForestLandmarkSet::AddText(USceneComponent* Parent, const FString& Text, const FVector& RelativeLocation, float RelativeYaw, float WorldSize, FColor Color)
 {
 	UTextRenderComponent* Label = NewObject<UTextRenderComponent>(this);
 	Label->CreationMethod = EComponentCreationMethod::UserConstructionScript;
@@ -111,7 +159,7 @@ void AForestLandmarkSet::AddText(USceneComponent* Parent, const FString& Text, c
 	Label->SetWorldSize(WorldSize);
 	Label->SetHorizontalAlignment(EHTA_Center);
 	Label->SetVerticalAlignment(EVRTA_TextCenter);
-	Label->SetTextRenderColor(FColor(45, 28, 22));
+	Label->SetTextRenderColor(Color);
 	Label->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Label->RegisterComponent();
 }
@@ -249,5 +297,63 @@ void AForestLandmarkSet::Build()
 			break;
 		}
 	}
-	UE_LOG(LogShroomForest, Log, TEXT("Forest Landmarks: %d landmarks built for %s"), Built, *ForestName);
+	// Knowledge sources hanging on their landmark (the first one of its kind).
+	FKnowledgeSourceData Sources;
+	TMap<FName, FMushroomSpeciesRow> Species;
+	FString SpeciesSource;
+	int32 Readables = 0;
+	if (KnowledgeText::LoadSources(Sources, Errors) && USpeciesDatabaseSubsystem::LoadSpeciesForTools(Species, SpeciesSource))
+	{
+		for (const FKnowledgeSource& Source : Sources.Sources)
+		{
+			const FForestLandmark* Host = Field->GetLandmarks().FindByPredicate([&Source](const FForestLandmark& L) { return Source.Landmark == ForestLandmarks::KindName(L.Kind); });
+			FTransform Mount;
+			FVector2D Size;
+			if (!Host || !LandmarkMeshBuilder::GetPaperMount(Host->Kind, Mount, Size))
+			{
+				UE_LOG(LogShroomForest, Warning, TEXT("Forest Landmarks: no %s to hang %s on"), *Source.Landmark, *Source.Id.ToString());
+				continue;
+			}
+			TArray<FLinearColor> Swatches;
+			TArray<FText> SpeciesNames;
+			for (const FName Id : Source.Species)
+			{
+				if (const FMushroomSpeciesRow* Row = Species.Find(Id))
+				{
+					const FColor A = Row->Cap.Colors.A, B = Row->Cap.Colors.B;
+					Swatches.Add(FLinearColor((A.R + B.R) / 510.0f, (A.G + B.G) / 510.0f, (A.B + B.B) / 510.0f));
+					SpeciesNames.Add(Row->CommonName);
+				}
+			}
+			const bool bTorn = Source.Kind == EKnowledgeSourceKind::Page;
+			UStaticMesh* PaperMesh = GetMesh(TEXT("Paper_") + Source.Id.ToString(), [&]()
+			{
+				UE::Geometry::FDynamicMesh3 Mesh;
+				FLandmarkCollision Collision;
+				LandmarkMeshBuilder::BuildPaper(Size, Swatches, bTorn, Mesh, &Collision);
+				return ShroomMesh::CreateTransientStaticMesh(Mesh, MeshMaterial, *(TEXT("SM_Paper_") + Source.Id.ToString()), &Collision.Boxes);
+			});
+			if (!PaperMesh)
+			{
+				continue;
+			}
+			UStaticMeshComponent* Paper = AddMesh(PaperMesh, Mount * WorldAt(Host->PositionM, Host->GroundM, Host->YawDeg), true);
+			Paper->SetCastShadow(false);
+			Paper->ComponentTags = { ReadableTag, Source.Id };
+			++Readables;
+			if (!bShowTexts)
+			{
+				continue;
+			}
+			const FString Title = Source.Title.ToString();
+			AddText(Paper, Title, FVector(0.8, 0.0, 0.39 * Size.Y), 0.0f, FitSize(Title, 0.85f * Size.X, 4.0f), FColor(235, 228, 205));
+			for (int32 Index = 0; Index < SpeciesNames.Num(); ++Index)
+			{
+				const float ColumnW = 0.9f * Size.X / SpeciesNames.Num();
+				const FString Name = SpeciesNames[Index].ToString();
+				AddText(Paper, Name, FVector(0.8, -0.45 * Size.X + ColumnW * (Index + 0.5), -0.3 * Size.Y), 0.0f, FitSize(Name, 0.95f * ColumnW, 3.2f));
+			}
+		}
+	}
+	UE_LOG(LogShroomForest, Log, TEXT("Forest Landmarks: %d landmarks and %d knowledge sources built for %s"), Built, Readables, *ForestName);
 }
