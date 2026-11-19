@@ -95,6 +95,29 @@ understory instances are tested against the trunks around them, mushrooms
 against trunks, logs and stumps (`FVegetationObstacleGrid`, test
 `ShroomHunt.Vegetation.Obstacles`).
 
+### 5. Continuous growth and fixes (second play test)
+![Mushroom growth](../Media/mushroom_growth.png)
+
+*One individual per species from button to rot (fly agaric, cep, chanterelle).*
+
+- **Growth.** A mushroom is now one individual for its whole life: its seed
+  fixes its final size, proportions, tint and the cap shapes it goes through;
+  its age (0–1) moves it continuously from a closed button through the young,
+  mature and old shapes of the species data to a rotting cap (sagging margin,
+  browned colors, leaning stem). Meshes are cached at 10 age steps per variant
+  (*Project Settings > ShroomHunt > Mushroom Meshes > Age Steps*) and the size
+  grows continuously between steps. `sh.Mesh.ExportGrowth` exports the growth
+  for the offline preview.
+- **White / grey mushrooms.** Mushrooms are drawn by one static mesh component
+  each instead of instanced meshes: the vertex colors (their albedo) did not
+  show on instanced meshes. Untick *Used with Instanced Static Meshes* on
+  `M_Mushroom` again if you ticked it (not needed).
+- **Frozen sun after `sh.Spawn.Goto`.** A long teleport made World Partition
+  unload the cell of the Environment Director. The director, *Forest Water*,
+  *Forest Landmarks* and the *Mushroom Spawner* are now always loaded (set in
+  C++; check *World Partition > Is Spatially Loaded* is unticked on the
+  director in the level).
+
 ## Test checklist
 - [ ] `sh.Spawn.Stats` lists the three species with their patch counts.
 - [ ] After rain and 3 skipped days, ceps / chanterelles / fly agarics stand in
@@ -106,7 +129,10 @@ against trunks, logs and stumps (`FVegetationObstacleGrid`, test
 - [ ] Mushrooms disappear beyond ~90 m (culling), no frame-rate drop.
 - [ ] The forest floor is lit (shade, not darkness) at midday; nights stay dark.
 - [ ] No mushroom, stump, log or sapling inside a tree trunk.
-- [ ] Automation: 24 tests green (`ShroomHunt.Mycology.Spawn.*` and
+- [ ] Mushrooms show their colors; watching one spot with `sh.Time.Scale 20`,
+      they grow from small buttons, open, then fade and collapse.
+- [ ] The sun keeps moving after `sh.Spawn.Goto`.
+- [ ] Automation: 25 tests green (`ShroomHunt.Mycology.Spawn.*` and
       `ShroomHunt.Vegetation.Obstacles` included).
 
 ## UE concepts learned

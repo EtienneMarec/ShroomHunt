@@ -223,7 +223,8 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   Tuning: `sh.Spawn.Simulate` (offline years), `sh.Spawn.Map`, `sh.Spawn.Stats`.
 - **Mushroom mesh**: species ranges + seed → `FMushroomMorphology` →
   `MushroomMeshBuilder` (`FDynamicMesh3`, revolve + deform, 2 LODs) →
-  `UStaticMesh` cached per species x stage x variant in `UMushroomMeshSubsystem`
+  `UStaticMesh` cached per species x variant x age step (continuous growth from
+  button to rot, D-028) in `UMushroomMeshSubsystem`
   (engine subsystem: works in the editor too); the inspected specimen gets a
   unique mesh. `AMushroomGarden` previews them.
 - **Vegetation** (D-024): `Data/Vegetation/Vegetation.json` →
@@ -306,5 +307,12 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
 - Seasons are compressed (autumn = 8 game days for 3 months, ~0.4 month per
   day): a 2–3 game day lag moves a month. Test scenarios must pick their date
   by `CalendarMath::MonthAt`, not by a fixed season day.
+- Actors that drive or span the whole forest (Environment Director, Forest
+  Water/Landmarks, Mushroom Spawner) must not be spatially loaded: a long
+  teleport unloads their cell (the sun stopped). Set `bIsSpatiallyLoaded = false`
+  in the constructor.
+- Vertex colors of our runtime meshes did not show through instanced static
+  mesh components (white mushrooms): mushrooms use one component each.
+  An ISM material also needs the *Used with Instanced Static Meshes* flag.
 - Player-facing strings are `FText` (localization-ready, D-014); never build
   UI text from `FString` concatenation.

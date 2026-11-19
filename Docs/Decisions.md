@@ -203,6 +203,16 @@ The fly agaric got more presence under beech and oak (affinity 0.5, 1.6
 patches/ha): it is on the starting poster (D-015) and birches are rare in F01.
 Play-test tuning knobs: `PatchDensityPerHa`, `FlushRate`, `FruitsPerFlush`.
 
+**D-028 — Continuous mushroom growth, one component per mushroom** · Accepted · 2026-11-19
+Morphology is a function of (species, seed, age in [0, 1]): the seed fixes the
+individual (its "genome": final size, proportions, tint, irregularities, the
+cap shapes it goes through), the age interpolates between five keyframes
+(button, young, mature, old, rotten) with blended cap profiles. The stage API
+remains as ages of the same individual. Meshes are cached at `AgeSteps` (10)
+per variant, scaled continuously between steps. Mushrooms are drawn by pooled
+static mesh components: vertex colors did not show on instanced meshes, and
+M1g needs one pickable object per mushroom.
+
 ## Open questions (to the developer)
 
 - None at the moment.
