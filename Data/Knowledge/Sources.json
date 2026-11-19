@@ -1,0 +1,20 @@
+{
+  "Sources": [
+    {
+      "Id": "PosterOurWoods",
+      "Kind": "Poster",
+      "Landmark": "ForesterHouse",
+      "Title": "Mushrooms of our woods",
+      "Intro": "A faded poster from the forestry office, pinned by the door. One prized edible, one you must never eat.",
+      "Species": ["CantharellusCibarius", "AmanitaMuscaria"]
+    },
+    {
+      "Id": "TornPageCep",
+      "Kind": "Page",
+      "Landmark": "HuntingHut",
+      "Title": "Torn guide page: Boletes",
+      "Intro": "A page torn from an old field guide, nailed to the hut wall. Someone has circled one species.",
+      "Species": ["BoletusEdulis"]
+    }
+  ]
+}
