@@ -8,7 +8,7 @@
 
 class FForestField;
 class FVegetationObstacleGrid;
-class UInstancedStaticMeshComponent;
+class UStaticMeshComponent;
 class USceneComponent;
 
 /**
@@ -17,7 +17,8 @@ class USceneComponent;
  * At play it builds the mycelium patches of every species from the forest field, then keeps
  * the live fruit bodies up to date as game time passes (re-evaluated every game hour and
  * after a time skip): the set is a pure function of the weather history, so nothing is saved.
- * Fruit bodies are drawn with one instanced mesh component per species x stage x variant.
+ * Each fruit body is drawn by its own static mesh component (a reused pool): the meshes are
+ * shared per species x stage x variant, and a mushroom will be a target for picking (M1g).
  */
 UCLASS(meta = (DisplayName = "Mushroom Spawner"))
 class SHROOMHUNT_API AMushroomSpawner : public AActor
@@ -79,6 +80,7 @@ private:
 	int32 LastOverrideCount = -1;
 	bool bInitialized = false;
 
+	/** One component per standing mushroom; extra ones are hidden and reused later. */
 	UPROPERTY(Transient)
-	TMap<FString, TObjectPtr<UInstancedStaticMeshComponent>> Instancers;
+	TArray<TObjectPtr<UStaticMeshComponent>> MushroomComponents;
 };

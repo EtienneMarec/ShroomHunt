@@ -1,6 +1,6 @@
 #include "Mycology/MushroomSpawner.h"
 
-#include "Components/InstancedStaticMeshComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Core/ShroomHash.h"
 #include "Core/ShroomLog.h"
 #include "Engine/GameInstance.h"
@@ -11,6 +11,7 @@
 #include "Forest/ForestWorld.h"
 #include "Mushroom/MushroomMeshSettings.h"
 #include "Mushroom/MushroomMeshSubsystem.h"
+#include "Mushroom/MushroomMorphology.h"
 #include "Mycology/SpeciesDatabaseSubsystem.h"
 #include "Time/CalendarSubsystem.h"
 #include "Vegetation/VegetationObstacles.h"
@@ -21,6 +22,8 @@ AMushroomSpawner::AMushroomSpawner()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.TickInterval = 0.5f;
+	// Spans the whole forest (or drives it): never unloaded by World Partition streaming.
+	bIsSpatiallyLoaded = false;
 	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	RootComponent = Root;
 }
@@ -180,7 +183,6 @@ void AMushroomSpawner::RebuildInstances(double NowGameSeconds)
 		return;
 	}
 	const int32 Variants = FMath::Max(1, GetDefault<UMushroomMeshSettings>()->VariantsPerStage);
-	static const TCHAR* StageNames[3] = { TEXT("Young"), TEXT("Mature"), TEXT("Old") };
 
 	TMap<FString, TArray<FTransform>> Groups;
 	TMap<FString, UStaticMesh*> GroupMeshes;
@@ -191,29 +193,27 @@ void AMushroomSpawner::RebuildInstances(double NowGameSeconds)
 		{
 			continue;
 		}
-		const EMushroomStage Stage = Fruit.StageAt(NowGameSeconds, *Row);
+		// Continuous growth: the mesh of the nearest growth step, scaled to the exact age.
+		const float Age = FMath::Clamp(Fruit.AgeFraction(NowGameSeconds), 0.0f, 1.0f);
+		const int32 Step = UMushroomMeshSubsystem::GetAgeStep(Age);
+		const float GrowthScale = MushroomMorphology::GrowthFraction(*Row, Age) / MushroomMorphology::GrowthFraction(*Row, UMushroomMeshSubsystem::GetStepAge(Step));
 		const int32 Variant = static_cast<int32>(Fruit.Seed % static_cast<uint32>(Variants));
-		const FString Key = FString::Printf(TEXT("%s_%s_%d"), *Fruit.SpeciesId.ToString(), StageNames[static_cast<int32>(Stage)], Variant);
+		const FString Key = FString::Printf(TEXT("%s_v%d_age%d"), *Fruit.SpeciesId.ToString(), Variant, Step);
 		if (!GroupMeshes.Contains(Key))
 		{
-			GroupMeshes.Add(Key, Meshes->GetVariantMesh(*Row, Fruit.SpeciesId, Stage, Variant));
+			GroupMeshes.Add(Key, Meshes->GetGrowthMesh(*Row, Fruit.SpeciesId, Variant, Step));
 		}
 		// A slight random lean, like real mushrooms pushing through the litter.
 		const float Pitch = 6.0f * ShroomHash::ToSignedFloat(ShroomHash::Hash(Fruit.Seed, 11u));
 		const float Roll = 6.0f * ShroomHash::ToSignedFloat(ShroomHash::Hash(Fruit.Seed, 12u));
 		const FQuat Rotation = FieldToWorld.GetRotation() * FRotator(Pitch, Fruit.YawDeg, Roll).Quaternion();
-		Groups.FindOrAdd(Key).Add(FTransform(Rotation, GetWorldLocation(Fruit), FVector(Fruit.Scale)));
+		Groups.FindOrAdd(Key).Add(FTransform(Rotation, GetWorldLocation(Fruit), FVector(Fruit.Scale * GrowthScale)));
 	}
 
-	// Empty the instancers that have nothing to draw now, fill or create the others.
-	for (TPair<FString, TObjectPtr<UInstancedStaticMeshComponent>>& Pair : Instancers)
-	{
-		if (Pair.Value && !Groups.Contains(Pair.Key))
-		{
-			Pair.Value->ClearInstances();
-		}
-	}
-	const int32 CullCm = FMath::RoundToInt(CullDistanceM * 100.0f);
+	// One component per mushroom, reused from update to update (a few hundred at most).
+	// Instanced meshes are not used: vertex colors (the mushroom albedo) did not show on them.
+	const float CullCm = CullDistanceM * 100.0f;
+	int32 Used = 0;
 	for (TPair<FString, TArray<FTransform>>& Group : Groups)
 	{
 		UStaticMesh* Mesh = GroupMeshes.FindRef(Group.Key);
@@ -221,21 +221,32 @@ void AMushroomSpawner::RebuildInstances(double NowGameSeconds)
 		{
 			continue;
 		}
-		TObjectPtr<UInstancedStaticMeshComponent>& Instancer = Instancers.FindOrAdd(Group.Key);
-		if (!Instancer)
+		for (const FTransform& Transform : Group.Value)
 		{
-			Instancer = NewObject<UInstancedStaticMeshComponent>(this, *(TEXT("ISM_") + Group.Key));
-			Instancer->SetupAttachment(Root);
-			Instancer->SetUsingAbsoluteLocation(true);
-			Instancer->SetUsingAbsoluteRotation(true);
-			Instancer->SetUsingAbsoluteScale(true);
-			Instancer->SetStaticMesh(Mesh);
-			Instancer->SetCollisionEnabled(ECollisionEnabled::NoCollision); // interaction comes with M1g
-			Instancer->SetCullDistances(CullCm * 3 / 4, CullCm);
-			Instancer->RegisterComponent();
+			if (!MushroomComponents.IsValidIndex(Used))
+			{
+				UStaticMeshComponent* Component = NewObject<UStaticMeshComponent>(this);
+				Component->SetupAttachment(Root);
+				Component->SetUsingAbsoluteLocation(true);
+				Component->SetUsingAbsoluteRotation(true);
+				Component->SetUsingAbsoluteScale(true);
+				Component->SetMobility(EComponentMobility::Movable);
+				Component->SetCollisionEnabled(ECollisionEnabled::NoCollision); // picking comes with M1g
+				Component->SetCastShadow(true);
+				Component->LDMaxDrawDistance = CullCm;
+				Component->SetCachedMaxDrawDistance(CullCm);
+				Component->RegisterComponent();
+				MushroomComponents.Add(Component);
+			}
+			UStaticMeshComponent* Component = MushroomComponents[Used++];
+			Component->SetStaticMesh(Mesh);
+			Component->SetWorldTransform(Transform);
+			Component->SetVisibility(true);
 		}
-		Instancer->ClearInstances();
-		Instancer->AddInstances(Group.Value, false, true);
+	}
+	for (int32 Index = Used; Index < MushroomComponents.Num(); ++Index)
+	{
+		MushroomComponents[Index]->SetVisibility(false);
 	}
 }
 
