@@ -12,7 +12,11 @@
 #include "Mushroom/MushroomMeshSettings.h"
 #include "Mushroom/MushroomMeshSubsystem.h"
 #include "Mushroom/MushroomMorphology.h"
+#include "Mycology/ObservableCriteria.h"
 #include "Mycology/SpeciesDatabaseSubsystem.h"
+#include "Kismet/GameplayStatics.h"
+#include "Player/ForagerComponent.h"
+#include "Player/ForagingSubsystem.h"
 #include "Time/CalendarSubsystem.h"
 #include "Vegetation/VegetationObstacles.h"
 #include "Vegetation/VegetationScatter.h"
@@ -96,6 +100,12 @@ FSpawnContext AMushroomSpawner::MakeContext()
 	FSpawnContext Context;
 	Context.Field = Field.Get();
 	Context.TriggerCache = &TriggerCache;
+	if (UForagingSubsystem* Foraging = GetGameInstance() ? GetGameInstance()->GetSubsystem<UForagingSubsystem>() : nullptr)
+	{
+		TWeakObjectPtr<UForagingSubsystem> WeakForaging = Foraging;
+		Context.Exhaustion = [WeakForaging](uint32 PatchId, double Time) { return WeakForaging.IsValid() ? WeakForaging->GetExhaustion(PatchId, Time) : 0.0f; };
+		Context.IsPicked = [WeakForaging](uint32 Seed) { return WeakForaging.IsValid() && WeakForaging->IsPicked(Seed); };
+	}
 	if (Obstacles.IsValid())
 	{
 		TSharedPtr<FVegetationObstacleGrid> Grid = Obstacles;
@@ -119,6 +129,14 @@ void AMushroomSpawner::Tick(float DeltaSeconds)
 	if (!bInitialized || !Calendar)
 	{
 		return;
+	}
+	// The player forages with a component added to their pawn (no Blueprint change needed).
+	APawn* Pawn = UGameplayStatics::GetPlayerPawn(this, 0);
+	if (Pawn && Pawn->IsLocallyControlled() && !Pawn->FindComponentByClass<UForagerComponent>())
+	{
+		UForagerComponent* Forager = NewObject<UForagerComponent>(Pawn, TEXT("Forager"));
+		Pawn->AddInstanceComponent(Forager);
+		Forager->RegisterComponent();
 	}
 	// Forced weather changes the triggers of the coming days: forget the cached ones.
 	const int32 Overrides = Weather ? Weather->GetOverrides().Num() : 0;
@@ -267,4 +285,85 @@ float AMushroomSpawner::GetTodayTrigger(FName SpeciesId)
 		Sum += SpawnModel::Trigger(*Row, Context, Tick, FMath::Lerp(Row->LagDays.Min, Row->LagDays.Max, Step / 4.0f));
 	}
 	return Sum / 5.0f;
+}
+
+double AMushroomSpawner::GetNowGameSeconds() const
+{
+	const UCalendarSubsystem* Calendar = GetGameInstance() ? GetGameInstance()->GetSubsystem<UCalendarSubsystem>() : nullptr;
+	return Calendar ? Calendar->GetTotalGameSeconds() : 0.0;
+}
+
+FMushroomMorphology AMushroomSpawner::GetMorphology(const FFruitBody& Fruit) const
+{
+	const FMushroomSpeciesRow* Row = Species.Find(Fruit.SpeciesId);
+	if (!Row)
+	{
+		return FMushroomMorphology();
+	}
+	const int32 Variants = FMath::Max(1, GetDefault<UMushroomMeshSettings>()->VariantsPerStage);
+	const int32 Variant = static_cast<int32>(Fruit.Seed % static_cast<uint32>(Variants));
+	const float Age = FMath::Clamp(Fruit.AgeFraction(GetNowGameSeconds()), 0.0f, 1.0f);
+	return MushroomMorphology::SampleAtAge(*Row, Fruit.SpeciesId, UMushroomMeshSubsystem::GetVariantSeed(Fruit.SpeciesId, Variant), Age);
+}
+
+int32 AMushroomSpawner::FindBySeed(uint32 Seed) const
+{
+	return FruitBodies.IndexOfByPredicate([Seed](const FFruitBody& Fruit) { return Fruit.Seed == Seed; });
+}
+
+int32 AMushroomSpawner::FindTarget(const FVector& Origin, const FVector& Direction, float MaxDistanceCm) const
+{
+	const double Now = GetNowGameSeconds();
+	int32 Best = INDEX_NONE;
+	double BestT = MaxDistanceCm;
+	for (int32 Index = 0; Index < FruitBodies.Num(); ++Index)
+	{
+		const FFruitBody& Fruit = FruitBodies[Index];
+		const FVector Ground = GetWorldLocation(Fruit);
+		if (FVector::DistSquared(Ground, Origin) > FMath::Square(MaxDistanceCm + 50.0))
+		{
+			continue;
+		}
+		const FMushroomSpeciesRow* Row = Species.Find(Fruit.SpeciesId);
+		if (!Row)
+		{
+			continue;
+		}
+		// A sphere around the whole mushroom, from its typical size and growth.
+		const float Growth = MushroomMorphology::GrowthFraction(*Row, FMath::Clamp(Fruit.AgeFraction(Now), 0.0f, 1.0f)) * Fruit.Scale;
+		const float Height = (Row->Stem.LengthCm.Lerp(0.6f) + 0.3f * Row->Cap.DiameterCm.Lerp(0.6f)) * Growth;
+		const float Radius = FMath::Max3(0.5f * Row->Cap.DiameterCm.Lerp(0.6f) * Growth, 0.5f * Height, 4.0f);
+		const FVector Center = Ground + FVector(0.0, 0.0, 0.5 * Height);
+		const FVector ToCenter = Center - Origin;
+		const double Along = FVector::DotProduct(ToCenter, Direction);
+		const double Miss = (ToCenter - Direction * Along).SizeSquared();
+		if (Along > 0.0 && Along < BestT && Miss < FMath::Square(Radius * 1.25))
+		{
+			BestT = Along;
+			Best = Index;
+		}
+	}
+	return Best;
+}
+
+bool AMushroomSpawner::PickFruit(uint32 Seed)
+{
+	const int32 Index = FindBySeed(Seed);
+	UForagingSubsystem* Foraging = GetGameInstance() ? GetGameInstance()->GetSubsystem<UForagingSubsystem>() : nullptr;
+	if (Index == INDEX_NONE || !Foraging)
+	{
+		return false;
+	}
+	const FFruitBody& Fruit = FruitBodies[Index];
+	const double Now = GetNowGameSeconds();
+	FBasketItem Item;
+	Item.SpeciesId = Fruit.SpeciesId;
+	Item.Seed = Fruit.Seed;
+	Item.PatchId = Fruit.PatchId;
+	Item.AgeAtPick = FMath::Clamp(Fruit.AgeFraction(Now), 0.0f, 1.0f);
+	Item.PickGameSeconds = Now;
+	Item.WeightGrams = ObservableCriteria::EstimateWeightGrams(GetMorphology(Fruit)) * Fruit.Scale * Fruit.Scale * Fruit.Scale;
+	Foraging->RecordPick(Item);
+	Recompute(Now);
+	return true;
 }

@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Mycology/MushroomSpeciesTypes.h"
+#include "Mushroom/MushroomMorphology.h"
 #include "Mycology/SpawnModel.h"
 #include "MushroomSpawner.generated.h"
 
@@ -46,6 +47,23 @@ public:
 
 	/** World location of a fruit body (on the ground). */
 	FVector GetWorldLocation(const FFruitBody& Fruit) const;
+
+	/**
+	 * The standing mushroom hit by a ray (camera), within MaxDistanceCm, or INDEX_NONE.
+	 * Each mushroom is a sphere around its cap and stem.
+	 */
+	int32 FindTarget(const FVector& Origin, const FVector& Direction, float MaxDistanceCm) const;
+
+	/** Index of the standing fruit body with this seed, or INDEX_NONE (indices change at each update). */
+	int32 FindBySeed(uint32 Seed) const;
+
+	/** Exact shape of a standing mushroom now (the drawn individual at its exact age). */
+	FMushroomMorphology GetMorphology(const FFruitBody& Fruit) const;
+
+	/** Picks a mushroom: into the basket, gone from the forest, its patch exhausted for a while. */
+	bool PickFruit(uint32 Seed);
+
+	double GetNowGameSeconds() const;
 
 	/** The spawner of a world, if any. */
 	static AMushroomSpawner* Find(const UWorld* World);

@@ -30,7 +30,8 @@ public class ShroomHunt : ModuleRules
 			"JsonUtilities",
 			"PCG",
 			"AssetRegistry",
-			"Landscape"
+			"Landscape",
+			"SlateCore"
 		});
 
 		PublicIncludePaths.AddRange(new string[] {
