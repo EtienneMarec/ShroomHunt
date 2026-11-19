@@ -57,6 +57,29 @@ bool FForestLandmarkTest::RunTest(const FString& Parameters)
 		TestTrue(What + TEXT(" keeps its clearance free of trees"), S.bNearLandmark);
 	}
 
+	// No two landmarks overlap: footprints apart (bridges as capsules).
+	int32 Overlaps = 0;
+	for (int32 I = 0; I < Landmarks.Num(); ++I)
+	{
+		for (int32 J = I + 1; J < Landmarks.Num(); ++J)
+		{
+			const FForestLandmark& A = Landmarks[I];
+			const FForestLandmark& B = Landmarks[J];
+			const bool bBridges = A.Kind == EForestLandmarkKind::Bridge && B.Kind == EForestLandmarkKind::Bridge;
+			const FForestLandmark& Shape = A.Kind == EForestLandmarkKind::Bridge ? A : B;
+			const FForestLandmark& Other = A.Kind == EForestLandmarkKind::Bridge ? B : A;
+			const float Gap = ForestLandmarks::FootprintDistance(Shape, Other.PositionM)
+				- (Other.Kind == EForestLandmarkKind::Bridge ? 0.5f * Other.WidthM : ForestLandmarks::FootprintRadius(Other.Kind));
+			if (!bBridges && Gap < 0.0f)
+			{
+				++Overlaps;
+				AddError(FString::Printf(TEXT("%s at (%.0f, %.0f) overlaps %s at (%.0f, %.0f)"), ForestLandmarks::KindName(A.Kind), A.PositionM.X, A.PositionM.Y,
+					ForestLandmarks::KindName(B.Kind), B.PositionM.X, B.PositionM.Y));
+			}
+		}
+	}
+	TestEqual(TEXT("No two landmarks overlap"), Overlaps, 0);
+
 	// Names: every signpost has one, all different; the base is the forester's house.
 	FPlaceNameData NameData;
 	if (!TestTrue(TEXT("PlaceNames.json loads"), ForestPlaceNames::Load(NameData, Errors)))
