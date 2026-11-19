@@ -26,11 +26,61 @@ namespace ForestLandmarks
 
 namespace ForestLandmarksDetail
 {
+	float FootprintRadius(EForestLandmarkKind Kind);
+	float FootprintDistance(const FForestLandmark& Landmark, const FVector2f& P);
+}
+
+namespace ForestLandmarks
+{
+	float FootprintDistance(const FForestLandmark& Landmark, const FVector2f& P)
+	{
+		return ForestLandmarksDetail::FootprintDistance(Landmark, P);
+	}
+
+	float FootprintRadius(EForestLandmarkKind Kind)
+	{
+		return ForestLandmarksDetail::FootprintRadius(Kind);
+	}
+}
+
+namespace ForestLandmarksDetail
+{
 	constexpr uint32 LandmarkChannel = 40;
 
 	float YawTowards(const FVector2f& From, const FVector2f& To)
 	{
 		return FMath::RadiansToDegrees(FMath::Atan2(To.Y - From.Y, To.X - From.X));
+	}
+
+	/** Radius of the ground footprint of a landmark mesh (m), signpost arrows included. */
+	float FootprintRadius(EForestLandmarkKind Kind)
+	{
+		switch (Kind)
+		{
+		case EForestLandmarkKind::ForesterHouse: return 5.6f;
+		case EForestLandmarkKind::HuntingHut: return 3.4f;
+		case EForestLandmarkKind::HuntingTower: return 1.9f;
+		case EForestLandmarkKind::Calvary: return 1.3f;
+		case EForestLandmarkKind::Signpost: return 1.4f;
+		case EForestLandmarkKind::ParcelStone: return 0.35f;
+		case EForestLandmarkKind::LogPile: return 2.4f;
+		default: return 1.0f;
+		}
+	}
+
+	/** Distance from P to the footprint of a placed landmark (negative inside); bridges are capsules. */
+	float FootprintDistance(const FForestLandmark& Landmark, const FVector2f& P)
+	{
+		if (Landmark.Kind == EForestLandmarkKind::Bridge)
+		{
+			const float Yaw = FMath::DegreesToRadians(Landmark.YawDeg);
+			const FVector2f Half = FVector2f(FMath::Cos(Yaw), FMath::Sin(Yaw)) * (0.5f * Landmark.LengthM);
+			const FVector2f A = Landmark.PositionM - Half;
+			const FVector2f AB = Half * 2.0f;
+			const float T = FMath::Clamp(FVector2f::DotProduct(P - A, AB) / FMath::Max(AB.SizeSquared(), 1e-4f), 0.0f, 1.0f);
+			return FVector2f::Distance(P, A + AB * T) - (0.5f * Landmark.WidthM + 0.3f);
+		}
+		return FVector2f::Distance(P, Landmark.PositionM) - FootprintRadius(Landmark.Kind);
 	}
 
 	bool IsOpenStand(EStandAgeClass Age)
@@ -62,11 +112,13 @@ void FForestField::GenerateLandmarks()
 		const uint8 Rank = PathRankCells[Fine];
 		return Rank == 255 || PathDistance.Values[Fine] >= ForestPaths::HalfWidthM(static_cast<EForestPathRank>(Rank), Definition) + Margin;
 	};
-	auto FarFromLandmarks = [&](const FVector2f& P, float Distance)
+	// Footprints at least Gap meters apart (every landmark kind, bridges included).
+	auto FarFromLandmarks = [&](const FVector2f& P, EForestLandmarkKind Kind, float Gap)
 	{
+		const float Radius = FootprintRadius(Kind);
 		for (const FForestLandmark& L : Landmarks)
 		{
-			if (L.Kind != EForestLandmarkKind::Bridge && FVector2f::Distance(L.PositionM, P) < Distance + L.ClearanceM)
+			if (FootprintDistance(L, P) - Radius < Gap)
 			{
 				return false;
 			}
@@ -74,7 +126,7 @@ void FForestField::GenerateLandmarks()
 		return true;
 	};
 	// A dry spot Distance meters around Center, off the paths and away from other landmarks.
-	auto FindSpot = [&](const FVector2f& Center, float Distance, float PathMargin, float OwnClearance, uint32 Salt, FVector2f& Out)
+	auto FindSpot = [&](const FVector2f& Center, float Distance, float PathMargin, EForestLandmarkKind Kind, float Gap, uint32 Salt, FVector2f& Out)
 	{
 		const float Start = ToUnitFloat(Hash(LandmarkSeed, Salt)) * UE_TWO_PI;
 		for (int32 Ring = 0; Ring < 3; ++Ring)
@@ -84,7 +136,7 @@ void FForestField::GenerateLandmarks()
 			{
 				const float Angle = Start + Step * UE_TWO_PI / 16.0f;
 				const FVector2f P = Center + FVector2f(FMath::Cos(Angle), FMath::Sin(Angle)) * Radius;
-				if (Inside(P, 4.0f) && !IsWet(P) && OffPath(P, PathMargin) && FarFromLandmarks(P, OwnClearance))
+				if (Inside(P, 4.0f) && !IsWet(P) && OffPath(P, PathMargin) && FarFromLandmarks(P, Kind, Gap))
 				{
 					Out = P;
 					return true;
@@ -114,6 +166,45 @@ void FForestField::GenerateLandmarks()
 	}
 	auto HasRoad = [&](int32 Node) { return Incident[Node].ContainsByPredicate([&](int32 P) { return Paths[P].Rank == EForestPathRank::Road; }); };
 
+	// 0. Bridges where a path crosses a stream (first: the other landmarks keep away from them).
+	for (const FForestPath& Path : Paths)
+	{
+		const float Width = Path.Rank == EForestPathRank::Road ? 4.6f : (Path.Rank == EForestPathRank::Ride ? 3.0f : 1.4f);
+		for (int32 Index = 1; Index < Path.Points.Num(); ++Index)
+		{
+			auto InStream = [&](int32 I) { return WaterCells[CoarseIndexAt(Path.Points[I].X, Path.Points[I].Y)] == 1; };
+			if (!InStream(Index) || InStream(Index - 1))
+			{
+				continue;
+			}
+			int32 Last = Index;
+			while (Last + 1 < Path.Points.Num() && InStream(Last + 1))
+			{
+				++Last;
+			}
+			// Abutments 6 m beyond the water, where the path is fully graded (the grading stops
+			// near streams to keep the bed open): the deck rests on both banks.
+			const int32 IA = FMath::Max(Index - 3, 0);
+			const int32 IB = FMath::Min(Last + 3, Path.Points.Num() - 1);
+			const FVector2f A = Path.Points[IA];
+			const FVector2f B = Path.Points[IB];
+			const float Span = FVector2f::Distance(A, B) + 1.0f;
+			const FVector2f Center = (A + B) * 0.5f;
+			const bool bDryEnds = WaterCells[CoarseIndexAt(A.X, A.Y)] == 0 && WaterCells[CoarseIndexAt(B.X, B.Y)] == 0;
+			const bool bDuplicate = Landmarks.ContainsByPredicate([&](const FForestLandmark& L) { return L.Kind == EForestLandmarkKind::Bridge && FVector2f::Distance(L.PositionM, Center) < 8.0f; });
+			if (Span <= 18.0f && bDryEnds && !bDuplicate)
+			{
+				FForestLandmark& Bridge = Add(EForestLandmarkKind::Bridge, Center, YawTowards(A, B), INDEX_NONE, 0.0f);
+				const float Banks = FMath::Max(Path.Heights[IA], Path.Heights[IB]);
+				const float Bed = Heights.Sample(Center.X, Center.Y);
+				Bridge.GroundM = FMath::Max(Banks, Bed + 0.8f) + 0.05f;
+				Bridge.LengthM = Span;
+				Bridge.WidthM = Width;
+			}
+			Index = Last;
+		}
+	}
+
 	// 1. Forester's house beyond the end of the base road, door toward the road.
 	for (int32 N = 0; N < Nodes.Num(); ++N)
 	{
@@ -129,7 +220,8 @@ void FForestField::GenerateLandmarks()
 			Away = (Nodes[N].PositionM - Next).GetSafeNormal();
 		}
 		FVector2f Spot = Nodes[N].PositionM + Away * 16.0f;
-		if (!(Inside(Spot, 10.0f) && !IsWet(Spot) && OffPath(Spot, 7.0f)) && !FindSpot(Nodes[N].PositionM, 16.0f, 7.0f, 14.0f, 1u, Spot))
+		if (!(Inside(Spot, 10.0f) && !IsWet(Spot) && OffPath(Spot, 7.0f) && FarFromLandmarks(Spot, EForestLandmarkKind::ForesterHouse, 3.0f))
+			&& !FindSpot(Nodes[N].PositionM, 16.0f, 7.0f, EForestLandmarkKind::ForesterHouse, 3.0f, 1u, Spot))
 		{
 			continue;
 		}
@@ -161,7 +253,7 @@ void FForestField::GenerateLandmarks()
 			}
 		}
 		FVector2f Spot;
-		if (BestHub != INDEX_NONE && FindSpot(Nodes[BestHub].PositionM, 14.0f, 4.0f, 7.0f, 2u, Spot))
+		if (BestHub != INDEX_NONE && FindSpot(Nodes[BestHub].PositionM, 14.0f, 4.0f, EForestLandmarkKind::HuntingHut, 3.0f, 2u, Spot))
 		{
 			Add(EForestLandmarkKind::HuntingHut, Spot, YawTowards(Spot, Nodes[BestHub].PositionM), BestHub, 7.0f);
 		}
@@ -184,7 +276,7 @@ void FForestField::GenerateLandmarks()
 			Chosen = Nodes.IndexOfByPredicate([](const FForestPathNode& Node) { return Node.Kind == EForestPathNodeKind::Hub; });
 		}
 		FVector2f Spot;
-		if (Chosen != INDEX_NONE && FindSpot(Nodes[Chosen].PositionM, 5.5f, 2.0f, 3.0f, 4u, Spot))
+		if (Chosen != INDEX_NONE && FindSpot(Nodes[Chosen].PositionM, 5.5f, 2.0f, EForestLandmarkKind::Calvary, 1.0f, 4u, Spot))
 		{
 			Add(EForestLandmarkKind::Calvary, Spot, YawTowards(Spot, Nodes[Chosen].PositionM), Chosen, 3.0f);
 		}
@@ -197,11 +289,11 @@ void FForestField::GenerateLandmarks()
 		const bool bNamed = Kind == EForestPathNodeKind::Crossroads || Kind == EForestPathNodeKind::Hub || Kind == EForestPathNodeKind::Entrance
 			|| (Kind == EForestPathNodeKind::Junction && HasRoad(N));
 		FVector2f Spot;
-		if (bNamed && FindSpot(Nodes[N].PositionM, 3.6f, 0.6f, 1.0f, 100u + N, Spot))
+		if (bNamed && FindSpot(Nodes[N].PositionM, 3.6f, 0.6f, EForestLandmarkKind::Signpost, 0.8f, 100u + N, Spot))
 		{
 			Add(EForestLandmarkKind::Signpost, Spot, YawTowards(Spot, Nodes[N].PositionM), N, 1.5f);
 		}
-		if (Kind == EForestPathNodeKind::Crossroads && FindSpot(Nodes[N].PositionM, 2.6f, 0.3f, 0.5f, 200u + N, Spot))
+		if (Kind == EForestPathNodeKind::Crossroads && FindSpot(Nodes[N].PositionM, 2.6f, 0.3f, EForestLandmarkKind::ParcelStone, 0.5f, 200u + N, Spot))
 		{
 			FForestLandmark& Stone = Add(EForestLandmarkKind::ParcelStone, Spot, YawTowards(Spot, Nodes[N].PositionM), N, 1.0f);
 			const int32 CX = FMath::RoundToInt(Nodes[N].PositionM.X / CoarseCellM);
@@ -259,7 +351,7 @@ void FForestField::GenerateLandmarks()
 			}
 			const FVector2f P = CellPos(C);
 			const bool bSpaced = !Landmarks.ContainsByPredicate([&](const FForestLandmark& L) { return L.Kind == EForestLandmarkKind::HuntingTower && FVector2f::Distance(L.PositionM, P) < 150.0f; });
-			if (!bSpaced || !FarFromLandmarks(P, 40.0f))
+			if (!bSpaced || !FarFromLandmarks(P, EForestLandmarkKind::HuntingTower, 40.0f))
 			{
 				continue;
 			}
@@ -281,45 +373,6 @@ void FForestField::GenerateLandmarks()
 			}
 			Add(EForestLandmarkKind::HuntingTower, P, YawTowards(P, Open / FMath::Max(OpenCount, 1)), INDEX_NONE, 3.0f);
 			++Towers;
-		}
-	}
-
-	// 7. Bridges where a path crosses a stream.
-	for (const FForestPath& Path : Paths)
-	{
-		const float Width = Path.Rank == EForestPathRank::Road ? 4.6f : (Path.Rank == EForestPathRank::Ride ? 3.0f : 1.4f);
-		for (int32 Index = 1; Index < Path.Points.Num(); ++Index)
-		{
-			auto InStream = [&](int32 I) { return WaterCells[CoarseIndexAt(Path.Points[I].X, Path.Points[I].Y)] == 1; };
-			if (!InStream(Index) || InStream(Index - 1))
-			{
-				continue;
-			}
-			int32 Last = Index;
-			while (Last + 1 < Path.Points.Num() && InStream(Last + 1))
-			{
-				++Last;
-			}
-			// Abutments 6 m beyond the water, where the path is fully graded (the grading stops
-			// near streams to keep the bed open): the deck rests on both banks.
-			const int32 IA = FMath::Max(Index - 3, 0);
-			const int32 IB = FMath::Min(Last + 3, Path.Points.Num() - 1);
-			const FVector2f A = Path.Points[IA];
-			const FVector2f B = Path.Points[IB];
-			const float Span = FVector2f::Distance(A, B) + 1.0f;
-			const FVector2f Center = (A + B) * 0.5f;
-			const bool bDryEnds = WaterCells[CoarseIndexAt(A.X, A.Y)] == 0 && WaterCells[CoarseIndexAt(B.X, B.Y)] == 0;
-			const bool bDuplicate = Landmarks.ContainsByPredicate([&](const FForestLandmark& L) { return L.Kind == EForestLandmarkKind::Bridge && FVector2f::Distance(L.PositionM, Center) < 8.0f; });
-			if (Span <= 18.0f && bDryEnds && !bDuplicate)
-			{
-				FForestLandmark& Bridge = Add(EForestLandmarkKind::Bridge, Center, YawTowards(A, B), INDEX_NONE, 0.0f);
-				const float Banks = FMath::Max(Path.Heights[IA], Path.Heights[IB]);
-				const float Bed = Heights.Sample(Center.X, Center.Y);
-				Bridge.GroundM = FMath::Max(Banks, Bed + 0.8f) + 0.05f;
-				Bridge.LengthM = Span;
-				Bridge.WidthM = Width;
-			}
-			Index = Last;
 		}
 	}
 
@@ -364,7 +417,7 @@ void FForestField::GenerateLandmarks()
 				break;
 			}
 			const bool bSpaced = !Landmarks.ContainsByPredicate([&](const FForestLandmark& L) { return L.Kind == EForestLandmarkKind::LogPile && FVector2f::Distance(L.PositionM, Candidate.Position) < 120.0f; });
-			if (bSpaced && FarFromLandmarks(Candidate.Position, 6.0f))
+			if (bSpaced && FarFromLandmarks(Candidate.Position, EForestLandmarkKind::LogPile, 3.0f))
 			{
 				FForestLandmark& Pile = Add(EForestLandmarkKind::LogPile, Candidate.Position, Candidate.Yaw, INDEX_NONE, 3.0f);
 				Pile.LengthM = 4.0f;

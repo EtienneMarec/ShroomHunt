@@ -45,4 +45,10 @@ struct SHROOMHUNT_API FForestLandmark
 namespace ForestLandmarks
 {
 	SHROOMHUNT_API const TCHAR* KindName(EForestLandmarkKind Kind);
+
+	/** Distance from P to the ground footprint of a landmark (m, negative inside); bridges are capsules. */
+	SHROOMHUNT_API float FootprintDistance(const FForestLandmark& Landmark, const FVector2f& P);
+
+	/** Radius of the ground footprint of a landmark kind (signpost arrows included). */
+	SHROOMHUNT_API float FootprintRadius(EForestLandmarkKind Kind);
 }
