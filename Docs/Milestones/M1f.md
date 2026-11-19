@@ -73,8 +73,10 @@ The placeholder crowns are opaque, and the sky light was set to 0.5 lux in
 M1a for the bare test level: the forest was too dark. The stands are now a
 little thinner (`Data/Vegetation/Vegetation.json`: pole 460, mature 175, old
 95 stems/ha). In `Lvl_F01_LowlandOakBeech`:
-1. Select the **Sky Light** (Outliner) > *Details* > *Light* > **Intensity**:
-   `1.5` (the Environment Director scales it for night and clouds from this value).
+1. Select the **Sky Light** (Outliner) > *Details* > *Light* > **Intensity
+   Scale**: `1.5` (the Environment Director scales it for night and clouds from
+   this value). Leave *Indirect Lighting Intensity* and *Volumetric Scattering
+   Intensity* at `1`.
 2. Select the **Post Process Volume** > *Details*, search `leaking`: tick
    **Skylight Leaking** and set it to `0.05` (Lumen lets a little sky light into
    occluded places, like light filtering through leaves).
