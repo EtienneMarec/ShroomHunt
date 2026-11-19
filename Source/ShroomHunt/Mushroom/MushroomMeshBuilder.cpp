@@ -130,6 +130,17 @@ namespace MushroomMeshDetail
 		}
 	}
 
+	/**
+	 * Cap top of an individual: its two current shapes blended by age (the cap opens
+	 * continuously), minus the sag of a rotting cap (the margin collapses first).
+	 */
+	double CapProfileZ(const FMushroomMorphology& M, double U, double H)
+	{
+		const double Blended = FMath::Lerp(CapTopZ(M.CapShape, U, H), CapTopZ(M.CapShapeB, U, H), static_cast<double>(M.CapShapeBlend));
+		const double Radius = H / FMath::Max(static_cast<double>(M.CapHeightRatio), 0.05);
+		return Blended - M.CapSag * 0.35 * Radius * FMath::Pow(U, 2.5);
+	}
+
 	/** Stem radius at normalized height T (0 base, 1 top) for a nominal radius R. */
 	double StemRadius(EStemShape Shape, double T, double R)
 	{
@@ -178,7 +189,7 @@ namespace MushroomMeshDetail
 
 		double UndersideZ(double U) const
 		{
-			return CapTopZ(M.CapShape, U, CapHeight) - Flesh(U);
+			return CapProfileZ(M, U, CapHeight) - Flesh(U);
 		}
 
 		/** Stem centerline offset at normalized height T (bend grows with T^2). */
@@ -333,11 +344,11 @@ namespace MushroomMeshDetail
 		for (int32 Index = 0; Index <= Segments; ++Index)
 		{
 			const double U = FMath::Sin(0.5 * UE_DOUBLE_PI * Index / Segments);
-			Profile.Add({ U * R, CapTopZ(M.CapShape, U, Ctx.CapHeight), static_cast<float>(0.5 * U), TopColor(U), EMushroomSurface::CapTop });
+			Profile.Add({ U * R, CapProfileZ(M, U, Ctx.CapHeight), static_cast<float>(0.5 * U), TopColor(U), EMushroomSurface::CapTop });
 		}
 
 		// Rim.
-		const double MarginZ = CapTopZ(M.CapShape, 1.0, Ctx.CapHeight);
+		const double MarginZ = CapProfileZ(M, 1.0, Ctx.CapHeight);
 		double UndersideStartU = 1.0;
 		if (M.Margin == EMarginType::Inrolled)
 		{
@@ -452,7 +463,7 @@ namespace MushroomMeshDetail
 			const double Dt = 0.01;
 			auto Surface = [&Ctx, R](double SampleU, double SampleTheta)
 			{
-				return Ctx.PlaceCap(SampleU * R, CapTopZ(Ctx.M.CapShape, SampleU, Ctx.CapHeight), SampleTheta);
+				return Ctx.PlaceCap(SampleU * R, CapProfileZ(Ctx.M, SampleU, Ctx.CapHeight), SampleTheta);
 			};
 			const FVector3d Center = Surface(U, Theta);
 			const FVector3d AlongU = Surface(FMath::Min(U + Du, 1.0), Theta) - Surface(FMath::Max(U - Du, 0.0), Theta);

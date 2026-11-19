@@ -17,20 +17,43 @@ namespace MushroomMeshSubsystemDetail
 	const FName MaterialSlot(TEXT("Mushroom"));
 }
 
-uint32 UMushroomMeshSubsystem::GetVariantSeed(FName SpeciesId, EMushroomStage Stage, int32 Variant)
+uint32 UMushroomMeshSubsystem::GetVariantSeed(FName SpeciesId, int32 Variant)
 {
-	return ShroomHash::Hash(ShroomHash::HashString(SpeciesId.ToString()), 0x5EEDu, static_cast<uint32>(Stage), static_cast<uint32>(Variant));
+	return ShroomHash::Hash(ShroomHash::HashString(SpeciesId.ToString()), 0x5EEDu, static_cast<uint32>(Variant));
+}
+
+int32 UMushroomMeshSubsystem::GetAgeStep(float Age)
+{
+	const int32 Steps = FMath::Max(2, GetDefault<UMushroomMeshSettings>()->AgeSteps);
+	return FMath::Clamp(FMath::FloorToInt(Age * Steps), 0, Steps - 1);
+}
+
+float UMushroomMeshSubsystem::GetStepAge(int32 AgeStep)
+{
+	const int32 Steps = FMath::Max(2, GetDefault<UMushroomMeshSettings>()->AgeSteps);
+	return (FMath::Clamp(AgeStep, 0, Steps - 1) + 0.5f) / Steps;
 }
 
 UStaticMesh* UMushroomMeshSubsystem::GetVariantMesh(const FMushroomSpeciesRow& Species, FName SpeciesId, EMushroomStage Stage, int32 Variant)
 {
-	const FName Key(*FString::Printf(TEXT("SM_%s_%d_%d"), *SpeciesId.ToString(), static_cast<int32>(Stage), Variant));
+	const FName Key(*FString::Printf(TEXT("SM_%s_v%d_stage%d"), *SpeciesId.ToString(), Variant, static_cast<int32>(Stage)));
 	if (const TObjectPtr<UStaticMesh>* Found = Cache.Find(Key))
 	{
 		return *Found;
 	}
-	const FMushroomMorphology Morphology = MushroomMorphology::Sample(Species, SpeciesId, GetVariantSeed(SpeciesId, Stage, Variant), Stage);
-	UStaticMesh* Mesh = CreateMeshForMorphology(Morphology, Key);
+	UStaticMesh* Mesh = CreateMeshForMorphology(MushroomMorphology::Sample(Species, SpeciesId, GetVariantSeed(SpeciesId, Variant), Stage), Key);
+	Cache.Add(Key, Mesh);
+	return Mesh;
+}
+
+UStaticMesh* UMushroomMeshSubsystem::GetGrowthMesh(const FMushroomSpeciesRow& Species, FName SpeciesId, int32 Variant, int32 AgeStep)
+{
+	const FName Key(*FString::Printf(TEXT("SM_%s_v%d_age%d"), *SpeciesId.ToString(), Variant, AgeStep));
+	if (const TObjectPtr<UStaticMesh>* Found = Cache.Find(Key))
+	{
+		return *Found;
+	}
+	UStaticMesh* Mesh = CreateMeshForMorphology(MushroomMorphology::SampleAtAge(Species, SpeciesId, GetVariantSeed(SpeciesId, Variant), GetStepAge(AgeStep)), Key);
 	Cache.Add(Key, Mesh);
 	return Mesh;
 }

@@ -4,8 +4,11 @@
 #include "Mycology/MushroomSpeciesTypes.h"
 
 /**
- * Exact shape and colors of ONE mushroom individual, drawn deterministically from the
- * species ranges (FMushroomSpeciesRow) with a seed and a growth stage.
+ * Exact shape and colors of ONE mushroom individual at one age, drawn deterministically from
+ * the species ranges (FMushroomSpeciesRow) and a seed.
+ *
+ * The seed fixes the individual (proportions, tint, irregularities, the shapes it goes
+ * through); the age in [0, 1] moves it continuously from a closed button to a rotting cap.
  * Units: centimeters (= Unreal units). Colors are sRGB in [0, 1].
  */
 struct SHROOMHUNT_API FMushroomMorphology
@@ -13,9 +16,16 @@ struct SHROOMHUNT_API FMushroomMorphology
 	FName SpeciesId;
 	uint32 Seed = 0;
 	EMushroomStage Stage = EMushroomStage::Mature;
+	/** 0 = button (just emerged), 1 = rotten. Stage is derived from it with the species thresholds. */
+	float Age = 0.5f;
 
 	// --- Cap ---------------------------------------------------------------------
 	ECapShape CapShape = ECapShape::Convex;
+	/** The cap profile is blended from CapShape (0) to CapShapeB (1) while the cap opens. */
+	ECapShape CapShapeB = ECapShape::Convex;
+	float CapShapeBlend = 0.0f;
+	/** Rotting: the cap margin sags (0 fresh - 1 collapsed). */
+	float CapSag = 0.0f;
 	float CapDiameter = 8.0f;
 	/** Cap height above the margin divided by the cap radius (shape-dependent). */
 	float CapHeightRatio = 0.5f;
@@ -77,10 +87,20 @@ struct SHROOMHUNT_API FMushroomMorphology
 namespace MushroomMorphology
 {
 	/**
-	 * Draws an individual. Same (row, seed, stage) => same morphology.
+	 * Draws an individual at a continuous age in [0, 1]. Same (row, seed) => the same individual
+	 * at every age, so a mushroom grows instead of changing shape.
 	 * @param Seed individual seed (e.g. hash of patch, flush day and index).
 	 */
+	SHROOMHUNT_API FMushroomMorphology SampleAtAge(const FMushroomSpeciesRow& Species, FName SpeciesId, uint32 Seed, float Age);
+
+	/** Draws an individual at the typical age of a stage (middle of the stage). */
 	SHROOMHUNT_API FMushroomMorphology Sample(const FMushroomSpeciesRow& Species, FName SpeciesId, uint32 Seed, EMushroomStage Stage);
+
+	/** Typical age of a stage for a species (middle of its age window). */
+	SHROOMHUNT_API float StageAge(const FMushroomSpeciesRow& Species, EMushroomStage Stage);
+
+	/** Size of an individual at Age relative to its final size (growth curve, ~0.12 at the button). */
+	SHROOMHUNT_API float GrowthFraction(const FMushroomSpeciesRow& Species, float Age);
 
 	/** Typical cap height ratio (height / radius) of a shape. */
 	SHROOMHUNT_API float GetShapeHeightRatio(ECapShape Shape);

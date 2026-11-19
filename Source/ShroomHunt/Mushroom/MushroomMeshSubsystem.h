@@ -22,11 +22,21 @@ class SHROOMHUNT_API UMushroomMeshSubsystem : public UEngineSubsystem
 	GENERATED_BODY()
 
 public:
-	/** Cached variant mesh (built on first request). */
+	/** Cached mesh of a variant at the typical age of a stage (specimen garden). */
 	UStaticMesh* GetVariantMesh(const FMushroomSpeciesRow& Species, FName SpeciesId, EMushroomStage Stage, int32 Variant);
 
-	/** Seed used for a cached variant (stable across sessions). */
-	static uint32 GetVariantSeed(FName SpeciesId, EMushroomStage Stage, int32 Variant);
+	/**
+	 * Cached mesh of a variant at one of the AgeSteps growth steps (forest mushrooms). The same
+	 * variant is the same individual at every step: it grows from button to rot.
+	 */
+	UStaticMesh* GetGrowthMesh(const FMushroomSpeciesRow& Species, FName SpeciesId, int32 Variant, int32 AgeStep);
+
+	/** Growth step of an age in [0, 1] and the age a step is built at (its middle). */
+	static int32 GetAgeStep(float Age);
+	static float GetStepAge(int32 AgeStep);
+
+	/** Seed of a cached variant individual (stable across sessions, same for every age). */
+	static uint32 GetVariantSeed(FName SpeciesId, int32 Variant);
 
 	/** Builds a new, uncached mesh for one exact individual (near + far LOD). */
 	UStaticMesh* CreateMeshForMorphology(const FMushroomMorphology& Morphology, FName MeshName);

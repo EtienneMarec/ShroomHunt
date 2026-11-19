@@ -25,6 +25,10 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Cache", meta = (ClampMin = "1", ClampMax = "32"))
 	int32 VariantsPerStage = 6;
 
+	/** Growth steps cached per variant, from button to rot (the size grows continuously between steps). */
+	UPROPERTY(Config, EditAnywhere, Category = "Cache", meta = (ClampMin = "2", ClampMax = "32"))
+	int32 AgeSteps = 10;
+
 	/** Screen size below which the far LOD (no gills, coarse) is used. */
 	UPROPERTY(Config, EditAnywhere, Category = "Rendering", meta = (ClampMin = "0.001", ClampMax = "1"))
 	float FarLodScreenSize = 0.05f;
