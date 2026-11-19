@@ -49,6 +49,8 @@ AEnvironmentDirector::AEnvironmentDirector()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.TickGroup = TG_PostUpdateWork;
+	// Spans the whole forest (or drives it): never unloaded by World Partition streaming.
+	bIsSpatiallyLoaded = false;
 
 	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	SetRootComponent(Root);

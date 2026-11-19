@@ -29,6 +29,8 @@ namespace ForestLandmarkSetDetail
 AForestLandmarkSet::AForestLandmarkSet()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	// Spans the whole forest (or drives it): never unloaded by World Partition streaming.
+	bIsSpatiallyLoaded = false;
 	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	RootComponent = Root;
 }

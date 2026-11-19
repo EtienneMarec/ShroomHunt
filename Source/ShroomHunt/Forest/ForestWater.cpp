@@ -253,6 +253,8 @@ namespace ForestWaterMesh
 AForestWater::AForestWater()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	// Spans the whole forest (or drives it): never unloaded by World Partition streaming.
+	bIsSpatiallyLoaded = false;
 	Surface = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Surface"));
 	RootComponent = Surface;
 	Surface->SetCollisionEnabled(ECollisionEnabled::NoCollision);
