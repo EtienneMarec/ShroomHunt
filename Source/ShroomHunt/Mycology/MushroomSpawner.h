@@ -7,6 +7,7 @@
 #include "MushroomSpawner.generated.h"
 
 class FForestField;
+class FVegetationObstacleGrid;
 class UInstancedStaticMeshComponent;
 class USceneComponent;
 
@@ -67,6 +68,8 @@ private:
 	void RebuildInstances(double NowGameSeconds);
 
 	TSharedPtr<const FForestField> Field;
+	/** Tree trunks, logs and stumps: no mushroom grows inside them. */
+	TSharedPtr<FVegetationObstacleGrid> Obstacles;
 	TMap<FName, FMushroomSpeciesRow> Species;
 	TArray<FMyceliumPatch> Patches;
 	TArray<FFruitBody> FruitBodies;

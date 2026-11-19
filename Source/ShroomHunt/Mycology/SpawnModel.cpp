@@ -342,7 +342,7 @@ namespace SpawnModel
 					continue;
 				}
 				Fruit.PositionM = Patch.PositionM + FruitOffset(Species, Patch, Day, Index, Roll.Fruits);
-				if (!CanGrowAt(*Context.Field, Fruit.PositionM))
+				if (!CanGrowAt(*Context.Field, Fruit.PositionM) || (Context.IsBlocked && Context.IsBlocked(Fruit.PositionM)))
 				{
 					continue;
 				}

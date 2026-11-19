@@ -56,6 +56,8 @@ struct SHROOMHUNT_API FSpawnContext
 	 * changes (debug overrides).
 	 */
 	TMap<uint64, float>* TriggerCache = nullptr;
+	/** Optional: true where something solid stands (tree trunk, log, stump); no mushroom there. */
+	TFunction<bool(const FVector2f& PositionM)> IsBlocked;
 };
 
 /** Diagnostics of one flush roll (debug HUD and tests). */

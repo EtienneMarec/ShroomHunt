@@ -13,6 +13,8 @@
 #include "Mushroom/MushroomMeshSubsystem.h"
 #include "Mycology/SpeciesDatabaseSubsystem.h"
 #include "Time/CalendarSubsystem.h"
+#include "Vegetation/VegetationObstacles.h"
+#include "Vegetation/VegetationScatter.h"
 #include "Weather/WeatherSubsystem.h"
 
 AMushroomSpawner::AMushroomSpawner()
@@ -63,8 +65,18 @@ bool AMushroomSpawner::Initialize()
 			SpawnModel::GeneratePatches(*Row, Id, *Field, Patches);
 		}
 	}
+	// The solid vegetation (same deterministic placement as the PCG vegetation).
+	Obstacles = MakeShared<FVegetationObstacleGrid>();
+	if (const TSharedPtr<const FVegetationDefinition> Vegetation = ForestFieldCache::GetVegetation(Errors))
+	{
+		const FBox2d Whole(FVector2d::ZeroVector, FVector2d(Field->GetSizeM(), Field->GetSizeM()));
+		TArray<FVegetationInstance> Instances;
+		VegetationScatter::Scatter(*Field, *Vegetation, EVegetationLayer::Trees, Whole, Instances);
+		VegetationScatter::Scatter(*Field, *Vegetation, EVegetationLayer::Understory, Whole, Instances);
+		Obstacles->AddInstances(*Vegetation, Instances);
+	}
 	FieldToWorld = ForestWorld::GetFieldToWorld(GetWorld(), FVector::ZeroVector);
-	UE_LOG(LogShroomSpawn, Log, TEXT("Mushroom Spawner: %d species, %d mycelium patches in %s"), Species.Num(), Patches.Num(), *ForestName);
+	UE_LOG(LogShroomSpawn, Log, TEXT("Mushroom Spawner: %d species, %d mycelium patches, %d solid obstacles in %s"), Species.Num(), Patches.Num(), Obstacles->Num(), *ForestName);
 	return true;
 }
 
@@ -81,6 +93,11 @@ FSpawnContext AMushroomSpawner::MakeContext()
 	FSpawnContext Context;
 	Context.Field = Field.Get();
 	Context.TriggerCache = &TriggerCache;
+	if (Obstacles.IsValid())
+	{
+		TSharedPtr<FVegetationObstacleGrid> Grid = Obstacles;
+		Context.IsBlocked = [Grid](const FVector2f& P) { return Grid->Overlaps(P, 0.1f); };
+	}
 	if (const UCalendarSubsystem* Calendar = GetGameInstance() ? GetGameInstance()->GetSubsystem<UCalendarSubsystem>() : nullptr)
 	{
 		Context.Calendar = Calendar->GetCalendarConfig();
