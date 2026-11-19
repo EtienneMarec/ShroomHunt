@@ -5,6 +5,7 @@
 #include "Engine/World.h"
 #include "HAL/IConsoleManager.h"
 #include "Time/CalendarSubsystem.h"
+#include "Environment/EnvironmentDirector.h"
 #include "Weather/WeatherSubsystem.h"
 
 namespace
@@ -101,9 +102,17 @@ void UShroomDebugSubsystem::Tick(float DeltaTime)
 			*StateText, ActiveOverrides > 0 ? TEXT(" (forced)") : TEXT(""),
 			Sample.CloudCover, Sample.PrecipitationMmPerHour, Sample.FogDensity, Sample.StormIntensity));
 
+	// Rain felt at the camera (canopy interception, drops from leaves).
+	FString LocalRainText;
+	if (const AEnvironmentDirector* Director = AEnvironmentDirector::Find(GetWorld()))
+	{
+		LocalRainText = FString::Printf(TEXT(" | here: rain %.2f  drips %.2f  canopy %.2f"),
+			Director->GetLocalRain().Direct, Director->GetLocalRain().Drip, Director->GetCanopyAtCamera());
+	}
 	GEngine->AddOnScreenDebugMessage(KeyBase + 2, Duration, Body,
-		FString::Printf(TEXT("Air %.1f C  RH %.0f%%  wind %.1f m/s  ground wetness %.2f"),
-			Sample.TemperatureC, Sample.Humidity * 100.0f, Sample.WindSpeed, Weather->GetWetness()));
+		FString::Printf(TEXT("Air %.1f C  RH %.0f%%  wind %.1f m/s toward %.0f deg  ground wetness %.2f%s"),
+			Sample.TemperatureC, Sample.Humidity * 100.0f, Sample.WindSpeed, Sample.WindHeadingDeg, Weather->GetWetness(),
+			*LocalRainText));
 
 	GEngine->AddOnScreenDebugMessage(KeyBase + 1, Duration, Body,
 		FString::Printf(TEXT("Rain last game day %.1f mm | last %.2f game days (=15 bio days) %.1f mm -> R_eq %.0f mm"),

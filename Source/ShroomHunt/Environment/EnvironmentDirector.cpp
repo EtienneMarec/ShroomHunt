@@ -1,6 +1,10 @@
 #include "Environment/EnvironmentDirector.h"
 
 #include "Camera/PlayerCameraManager.h"
+#include "Components/AudioComponent.h"
+#include "Forest/ForestField.h"
+#include "Forest/ForestFieldCache.h"
+#include "Forest/ForestWorld.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/SkyLightComponent.h"
@@ -60,6 +64,21 @@ AEnvironmentDirector::AEnvironmentDirector()
 	RainParticles->SetAutoActivate(false);
 	RainParticles->SetUsingAbsoluteLocation(true);
 	RainParticles->SetUsingAbsoluteRotation(true);
+
+	RainAudio = CreateDefaultSubobject<UAudioComponent>(TEXT("RainAudio"));
+	RainAudio->SetupAttachment(Root);
+	RainAudio->SetAutoActivate(false);
+	RainAudio->bAllowSpatialization = false; // the rain is all around the player
+}
+
+AEnvironmentDirector* AEnvironmentDirector::Find(const UWorld* World)
+{
+	if (!World)
+	{
+		return nullptr;
+	}
+	TActorIterator<AEnvironmentDirector> It(World);
+	return It ? *It : nullptr;
 }
 
 void AEnvironmentDirector::OnConstruction(const FTransform& Transform)
@@ -166,7 +185,7 @@ void AEnvironmentDirector::Tick(float DeltaSeconds)
 
 	ApplyEnvironment(Calendar->GetDate(), Calendar->GetTotalGameSeconds(), SmoothedWeather, Weather->GetWetness(),
 		Calendar->GetLatitudeDeg(), Calendar->GetLunarCycleGameDays(), true);
-	UpdateRain(SmoothedWeather);
+	UpdateRain(SmoothedWeather, Weather->GetWetness(), DeltaSeconds);
 
 	OnEnvironmentUpdated(SmoothedWeather, Weather->GetWetness(), Calendar->GetDate());
 }
@@ -375,15 +394,64 @@ void AEnvironmentDirector::ApplyEnvironment(const FGameDate& Date, double TotalG
 	}
 }
 
-void AEnvironmentDirector::UpdateRain(const FWeatherSample& Weather)
+float AEnvironmentDirector::SampleCanopy(const FVector& WorldLocation)
 {
+	if (!bFieldLoaded)
+	{
+		bFieldLoaded = true;
+		TArray<FString> Errors;
+		Field = ForestName.IsEmpty() ? nullptr : ForestFieldCache::GetField(ForestName, Errors);
+		bool bFoundLandscape = false;
+		FieldToWorld = ForestWorld::GetFieldToWorld(GetWorld(), FVector::ZeroVector, &bFoundLandscape);
+		if (!Field || !bFoundLandscape)
+		{
+			Field.Reset(); // not a forest map: open-sky rain
+		}
+	}
+	if (!Field)
+	{
+		return 0.0f;
+	}
+	const FVector FieldM = FieldToWorld.InverseTransformPosition(WorldLocation);
+	return FMath::Clamp(Field->Sample(static_cast<float>(FieldM.X), static_cast<float>(FieldM.Y)).Canopy, 0.0f, 1.0f);
+}
+
+void AEnvironmentDirector::UpdateRain(const FWeatherSample& Weather, float Wetness, float DeltaSeconds)
+{
+	const APlayerCameraManager* Camera = UGameplayStatics::GetPlayerCameraManager(this, 0);
+	const FVector CameraLocation = Camera ? Camera->GetCameraLocation() : FVector::ZeroVector;
+
+	// Canopy under the camera, smoothed over about a second while walking.
+	const float Canopy = SampleCanopy(CameraLocation);
+	CanopyAtCamera = bHasCanopy ? FMath::Lerp(CanopyAtCamera, Canopy, 1.0f - FMath::Exp(-1.5f * DeltaSeconds)) : Canopy;
+	bHasCanopy = true;
+
+	FLocalRainParams Params;
+	Params.CanopyInterception = CanopyInterception;
+	Params.CanopyWindReduction = CanopyWindReduction;
+	const float Intensity = FMath::Clamp(Weather.PrecipitationMmPerHour / RainRateForFullIntensity, 0.0f, 1.5f);
+	LocalRainNow = LocalRain::Compute(Intensity, Wetness, CanopyAtCamera, Params);
+
+	// Sound: rain on the leaves sounds louder under the trees.
+	if (RainAudio && RainAudio->Sound)
+	{
+		const float Volume = RainSoundVolume * FMath::Clamp(Intensity * (0.75f + 0.35f * CanopyAtCamera) + 0.25f * LocalRainNow.Drip, 0.0f, 1.5f);
+		if (Volume > 0.01f && !RainAudio->IsPlaying())
+		{
+			RainAudio->FadeIn(2.0f, Volume);
+		}
+		else if (Volume <= 0.01f && RainAudio->IsPlaying())
+		{
+			RainAudio->FadeOut(3.0f, 0.0f);
+		}
+		RainAudio->SetVolumeMultiplier(FMath::Max(Volume, 0.0f));
+	}
+
 	if (!RainParticles || !RainParticles->GetAsset())
 	{
 		return;
 	}
-
-	const float Intensity = FMath::Clamp(Weather.PrecipitationMmPerHour / RainRateForFullIntensity, 0.0f, 1.5f);
-	const bool bShouldRain = Intensity > 0.01f;
+	const bool bShouldRain = LocalRainNow.Direct > 0.01f || LocalRainNow.Drip > 0.01f;
 	if (bShouldRain != RainParticles->IsActive())
 	{
 		if (bShouldRain)
@@ -400,11 +468,16 @@ void AEnvironmentDirector::UpdateRain(const FWeatherSample& Weather)
 		return;
 	}
 
-	if (const APlayerCameraManager* Camera = UGameplayStatics::GetPlayerCameraManager(this, 0))
-	{
-		RainParticles->SetWorldLocation(Camera->GetCameraLocation() + RainOffsetFromCamera);
-	}
-	RainParticles->SetVariableFloat(RainIntensityParameter, Intensity);
+	// Wind drift in world space (the heading is in the forest field frame).
+	const FVector2D Heading = Weather.GetWindDirection();
+	const FVector WindDirection = FieldToWorld.GetRotation().RotateVector(FVector(Heading.X, Heading.Y, 0.0)).GetSafeNormal2D();
+	const FVector Wind = WindDirection * (Weather.WindSpeed * 100.0f * WindDrift * LocalRainNow.WindFactor);
+	// Drops spawned upwind land around the camera.
+	const float FallSeconds = FMath::Max(0.0f, static_cast<float>(RainOffsetFromCamera.Z)) / DropFallSpeed;
+	RainParticles->SetWorldLocation(CameraLocation + RainOffsetFromCamera - Wind * FallSeconds);
+	RainParticles->SetVariableFloat(RainIntensityParameter, LocalRainNow.Direct);
+	RainParticles->SetVariableFloat(DripIntensityParameter, LocalRainNow.Drip);
+	RainParticles->SetVariableVec3(WindParameter, Wind);
 }
 
 void AEnvironmentDirector::SetEnvironmentParameter(FName Name, float Value) const

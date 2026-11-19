@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Environment/LocalRain.h"
 #include "GameFramework/Actor.h"
 #include "Materials/MaterialParameters.h"
 #include "Time/TimeTypes.h"
@@ -8,6 +9,8 @@
 #include "EnvironmentDirector.generated.h"
 
 class ADirectionalLight;
+class FForestField;
+class UAudioComponent;
 class AExponentialHeightFog;
 class ASkyLight;
 class AVolumetricCloud;
@@ -18,7 +21,8 @@ class UNiagaraComponent;
 /**
  * Drives the sky from the calendar and the weather: sun and moon positions and
  * intensities, sky light, height fog, volumetric cloud coverage, rain particles
- * and a Material Parameter Collection read by materials (wetness, rain...).
+ * (slanted by the wind, thinner under the canopy, drops falling from wet leaves),
+ * the rain sound and a Material Parameter Collection read by materials (wetness, rain...).
  *
  * Place one per map (a Blueprint subclass, BP_EnvironmentDirector). Light, fog and
  * cloud actors are found automatically if not assigned. Their initial values in
@@ -45,6 +49,13 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category = "ShroomHunt|Environment")
 	void OnLightning(float Distance01);
 
+	/** Rain felt at the camera this frame (debug HUD). */
+	const FLocalRain& GetLocalRain() const { return LocalRainNow; }
+	float GetCanopyAtCamera() const { return CanopyAtCamera; }
+
+	/** The director of a world, if any. */
+	static AEnvironmentDirector* Find(const UWorld* World);
+
 protected:
 	// --- Components ---------------------------------------------------------
 
@@ -54,6 +65,10 @@ protected:
 	/** Rain particles, kept above the camera. Assign a Niagara System asset in the Blueprint. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment")
 	TObjectPtr<UNiagaraComponent> RainParticles;
+
+	/** Rain sound loop (optional): assign a looping Sound in the Blueprint; volume follows the rain. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment")
+	TObjectPtr<UAudioComponent> RainAudio;
 
 	// --- Scene references (auto-found when empty) ---------------------------
 
@@ -161,9 +176,40 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Rain", meta = (ClampMin = "0.1"))
 	float RainRateForFullIntensity = 6.0f;
 
-	/** Offset of the rain emitter relative to the camera (cm). */
+	/** Offset of the rain emitter relative to the camera (cm); it is also moved upwind. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Rain")
 	FVector RainOffsetFromCamera = FVector(0.0, 0.0, 800.0);
+
+	/** Niagara user parameter (float) receiving the drops falling from leaves in [0, 1]. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Rain")
+	FName DripIntensityParameter = TEXT("DripIntensity");
+
+	/** Niagara user parameter (vector, cm/s) receiving the horizontal wind drift of the drops. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Rain")
+	FName WindParameter = TEXT("Wind");
+
+	/** Speed at which the drops fall (cm/s), as set in the Niagara system (to move the emitter upwind). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Rain", meta = (ClampMin = "100"))
+	float DropFallSpeed = 1100.0f;
+
+	/** Horizontal drift of the drops relative to the wind speed (1 = drops move with the wind). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Rain", meta = (ClampMin = "0", ClampMax = "1.5"))
+	float WindDrift = 0.8f;
+
+	/** How the canopy changes the rain (interception, drops from leaves, wind shelter). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Rain", meta = (ClampMin = "0", ClampMax = "1"))
+	float CanopyInterception = 0.7f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Rain", meta = (ClampMin = "0", ClampMax = "1"))
+	float CanopyWindReduction = 0.6f;
+
+	/** Data/Forests/<ForestName>.json: canopy under the camera. Outside a forest map the rain is open-sky rain. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Rain")
+	FString ForestName = TEXT("F01_LowlandOakBeech");
+
+	/** Rain sound volume at full intensity. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Rain", meta = (ClampMin = "0"))
+	float RainSoundVolume = 1.0f;
 
 	// --- Editor preview -------------------------------------------------------------
 
@@ -194,7 +240,8 @@ private:
 	void SetupCloudMaterial();
 	void ApplyEnvironment(const FGameDate& Date, double TotalGameSeconds, const FWeatherSample& Weather, float Wetness,
 		float LatitudeDeg, float LunarCycleGameDays, bool bInGame);
-	void UpdateRain(const FWeatherSample& Weather);
+	void UpdateRain(const FWeatherSample& Weather, float Wetness, float DeltaSeconds);
+	float SampleCanopy(const FVector& WorldLocation);
 	void SetEnvironmentParameter(FName Name, float Value) const;
 
 	UFUNCTION()
@@ -210,4 +257,11 @@ private:
 
 	FMaterialParameterInfo CloudCoverageInfo;
 	bool bCloudCoverageFound = false;
+
+	TSharedPtr<const FForestField> Field;
+	FTransform FieldToWorld;
+	bool bFieldLoaded = false;
+	float CanopyAtCamera = 0.0f;
+	bool bHasCanopy = false;
+	FLocalRain LocalRainNow;
 };
