@@ -51,7 +51,8 @@ TSharedRef<SWidget> UForagingWidget::RebuildWidget()
 		ExaminePanel->SetContent(Column);
 		ExamineTitle = MakeText(20, FLinearColor(1.0f, 0.95f, 0.8f));
 		ExamineBody = MakeText(15, FLinearColor(0.92f, 0.92f, 0.9f));
-		ExamineBody->SetAutoWrapText(true);
+		ExamineTitle->SetWrapTextAt(460.0f);
+		ExamineBody->SetWrapTextAt(460.0f);
 		ExamineHint = MakeText(13, FLinearColor(0.7f, 0.7f, 0.66f));
 		Column->AddChildToVerticalBox(ExamineTitle)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 10.0f));
 		Column->AddChildToVerticalBox(ExamineBody)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 12.0f));
@@ -60,7 +61,7 @@ TSharedRef<SWidget> UForagingWidget::RebuildWidget()
 		PanelSlot->SetAnchors(FAnchors(1.0f, 0.5f));
 		PanelSlot->SetAlignment(FVector2D(1.0, 0.5));
 		PanelSlot->SetPosition(FVector2D(-40.0, 0.0));
-		PanelSlot->SetSize(FVector2D(460.0, 380.0));
+		PanelSlot->SetAutoSize(true);
 		ExaminePanel->SetVisibility(ESlateVisibility::Collapsed);
 	}
 	return Super::RebuildWidget();

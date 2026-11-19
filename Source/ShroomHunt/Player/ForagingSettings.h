@@ -26,6 +26,9 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Controls")
 	FKey PickKey = EKeys::F;
 
+	UPROPERTY(Config, EditAnywhere, Category = "Controls")
+	FKey EncyclopediaKey = EKeys::Tab;
+
 	/** Exhaustion added to a mycelium patch by each mushroom picked there (Docs/SpawnModel.md section 5). */
 	UPROPERTY(Config, EditAnywhere, Category = "Rules", meta = (ClampMin = "0", ClampMax = "1"))
 	float ExhaustionPerPick = 0.15f;
