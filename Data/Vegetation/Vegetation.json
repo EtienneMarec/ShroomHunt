@@ -32,7 +32,7 @@
   ],
 
   "TreeDensity": {
-    "PerHa": { "ClearCut": 4, "Regeneration": 14, "Pole": 600, "Mature": 220, "Old": 110 },
+    "PerHa": { "ClearCut": 4, "Regeneration": 14, "Pole": 460, "Mature": 175, "Old": 95 },
     "SpacingFactor": 0.55,
     "GapCanopy": [0.2, 0.65],
     "WaterMarginM": 4.0,
