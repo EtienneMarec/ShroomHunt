@@ -68,6 +68,31 @@ oak); `DT_Species` was re-imported (`content(data)` commit).
 - `sh.Spawn.Simulate 2` runs two years offline and prints the mushrooms per
   species and season.
 
+### 4. More light under the canopy (after the first play test)
+The placeholder crowns are opaque, and the sky light was set to 0.5 lux in
+M1a for the bare test level: the forest was too dark. The stands are now a
+little thinner (`Data/Vegetation/Vegetation.json`: pole 460, mature 175, old
+95 stems/ha). In `Lvl_F01_LowlandOakBeech`:
+1. Select the **Sky Light** (Outliner) > *Details* > *Light* > **Intensity**:
+   `1.5` (the Environment Director scales it for night and clouds from this value).
+2. Select the **Post Process Volume** > *Details*, search `leaking`: tick
+   **Skylight Leaking** and set it to `0.05` (Lumen lets a little sky light into
+   occluded places, like light filtering through leaves).
+3. Same volume, search `compensation`: tick **Exposure Compensation** and set
+   it to `0.5` (the camera adapts a little brighter in the woods).
+4. Regenerate the vegetation on the whole map (M1e part 2, step 4: load the
+   region, PCG **Cleanup** then **Generate**, *Save All*).
+
+> **UE concept — Lumen sky light leaking.** Lumen computes how much of the sky
+> each point sees; under dense crowns almost none, so it is nearly black.
+> *Skylight Leaking* adds back a fraction of the sky light everywhere, a cheap
+> way to fake light passing through foliage.
+
+Mushrooms, stumps, logs and saplings no longer grow inside tree trunks:
+understory instances are tested against the trunks around them, mushrooms
+against trunks, logs and stumps (`FVegetationObstacleGrid`, test
+`ShroomHunt.Vegetation.Obstacles`).
+
 ## Test checklist
 - [ ] `sh.Spawn.Stats` lists the three species with their patch counts.
 - [ ] After rain and 3 skipped days, ceps / chanterelles / fly agarics stand in
@@ -77,7 +102,10 @@ oak); `DT_Species` was re-imported (`content(data)` commit).
 - [ ] In dry weather no new mushrooms appear; after a forced rain they come 2–3
       game days later.
 - [ ] Mushrooms disappear beyond ~90 m (culling), no frame-rate drop.
-- [ ] Automation: 23 tests green (`ShroomHunt.Mycology.Spawn.*` included).
+- [ ] The forest floor is lit (shade, not darkness) at midday; nights stay dark.
+- [ ] No mushroom, stump, log or sapling inside a tree trunk.
+- [ ] Automation: 24 tests green (`ShroomHunt.Mycology.Spawn.*` and
+      `ShroomHunt.Vegetation.Obstacles` included).
 
 ## UE concepts learned
 - **Instanced Static Mesh** components; actor **Tick interval**.
