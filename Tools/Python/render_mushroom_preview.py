@@ -139,11 +139,14 @@ def write_png(path, image):
 
 
 def grid_key(name):
-    """'Fagus_Mature_0' -> ('Fagus', column order); 'Bracken_1' -> ('~Understory', ...)."""
+    """'Fagus_Mature_0' -> ('Fagus', column order); 'BoletusEdulis_Age_03' -> ('BoletusEdulis', 3);
+    'Bracken_1' -> ('~Understory', ...)."""
     parts = name.split("_")
     forms = {"Sapling": 0, "Pole": 1, "Mature": 2, "Old": 3}
     if len(parts) == 3 and parts[1] in forms:
         return parts[0], (forms[parts[1]], parts[1], int(parts[2]))
+    if len(parts) == 3 and parts[1] == "Age":
+        return parts[0], (int(parts[2]), "Age", 0)
     return "~Understory", (0, parts[0], int(parts[-1]) if parts[-1].isdigit() else 0)
 
 

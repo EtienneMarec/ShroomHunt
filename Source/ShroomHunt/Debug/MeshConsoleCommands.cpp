@@ -72,6 +72,34 @@ namespace MeshConsoleCommandsDetail
 			UE_LOG(LogShroomDebug, Display, TEXT("Exported %d OBJ files to %s"), Written, *Folder);
 		}));
 
+	FAutoConsoleCommand CmdMeshExportGrowth(
+		TEXT("sh.Mesh.ExportGrowth"),
+		TEXT("sh.Mesh.ExportGrowth [seed] [steps = 8]: writes one individual per species at evenly spaced ages (button to rot) to Saved/MushroomGrowth (preview: render_mushroom_preview.py --grid)."),
+		FConsoleCommandWithArgsDelegate::CreateLambda([](const TArray<FString>& Args)
+		{
+			TMap<FName, FMushroomSpeciesRow> Species;
+			FString Source;
+			if (!USpeciesDatabaseSubsystem::LoadSpeciesForTools(Species, Source))
+			{
+				UE_LOG(LogShroomDebug, Warning, TEXT("No species data"));
+				return;
+			}
+			const uint32 Seed = Args.Num() > 0 ? static_cast<uint32>(FCString::Atoi(*Args[0])) : 1u;
+			const int32 Steps = Args.Num() > 1 ? FMath::Clamp(FCString::Atoi(*Args[1]), 2, 20) : 8;
+			const FString Folder = FPaths::ConvertRelativePathToFull(FPaths::ProjectSavedDir() / TEXT("MushroomGrowth"));
+			int32 Written = 0;
+			for (const TPair<FName, FMushroomSpeciesRow>& Pair : Species)
+			{
+				for (int32 Step = 0; Step < Steps; ++Step)
+				{
+					const float Age = (Step + 0.5f) / Steps;
+					const FMushroomMorphology M = MushroomMorphology::SampleAtAge(Pair.Value, Pair.Key, Seed, Age);
+					Written += ExportObj(M, FMushroomMeshDetail::Near(), Folder / FString::Printf(TEXT("%s_Age_%02d.obj"), *Pair.Key.ToString(), Step)) ? 1 : 0;
+				}
+			}
+			UE_LOG(LogShroomDebug, Display, TEXT("Exported %d OBJ files to %s"), Written, *Folder);
+		}));
+
 	FAutoConsoleCommand CmdMeshClear(
 		TEXT("sh.Mesh.ClearCache"),
 		TEXT("sh.Mesh.ClearCache: drops cached mushroom meshes (they are rebuilt on demand, e.g. after sh.Species.Reload)."),
