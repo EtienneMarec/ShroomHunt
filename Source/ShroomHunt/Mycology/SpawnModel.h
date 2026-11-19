@@ -58,6 +58,10 @@ struct SHROOMHUNT_API FSpawnContext
 	TMap<uint64, float>* TriggerCache = nullptr;
 	/** Optional: true where something solid stands (tree trunk, log, stump); no mushroom there. */
 	TFunction<bool(const FVector2f& PositionM)> IsBlocked;
+	/** Optional: patch exhaustion E in [0, 1] at a game time, from the player's past picks. */
+	TFunction<float(uint32 PatchId, double GameSeconds)> Exhaustion;
+	/** Optional: true for a fruit body the player already picked (by its seed). */
+	TFunction<bool(uint32 FruitSeed)> IsPicked;
 };
 
 /** Diagnostics of one flush roll (debug HUD and tests). */

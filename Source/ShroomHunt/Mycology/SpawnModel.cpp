@@ -266,7 +266,10 @@ namespace SpawnModel
 		{
 			Roll.Trigger = Trigger(Species, Context, Tick, LagBucket / 4.0f);
 		}
-		Roll.Probability = FlushProbability(Species, Patch.Strength, Roll.Trigger, 0.0f);
+		// Picking exhausts a patch for a while; picks are in the past of the tick, so earlier
+		// rolls never change.
+		const float Exhaustion = Context.Exhaustion ? Context.Exhaustion(Patch.Id, Tick) : 0.0f;
+		Roll.Probability = FlushProbability(Species, Patch.Strength, Roll.Trigger, Exhaustion);
 		Roll.bFlush = Roll.Probability > 0.0f && ToUnitFloat(Hash(H, 2u)) < Roll.Probability;
 		if (Roll.bFlush)
 		{
@@ -337,7 +340,7 @@ namespace SpawnModel
 				// Not all at once: births spread over half a game day after the tick.
 				Fruit.BirthGameSeconds = Tick + 0.5 * GameSecondsPerDay * ToUnitFloat(Hash(Seed, 1u));
 				Fruit.LifetimeGameSeconds = Lifetime * (0.85 + 0.3 * ToUnitFloat(Hash(Seed, 2u)));
-				if (!Fruit.IsAlive(NowGameSeconds))
+				if (!Fruit.IsAlive(NowGameSeconds) || (Context.IsPicked && Context.IsPicked(Seed)))
 				{
 					continue;
 				}
