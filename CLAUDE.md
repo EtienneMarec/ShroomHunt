@@ -202,7 +202,9 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   (total game seconds) → time of day, day, season, year. Pure math in
   `CalendarMath` (also sun/moon positions).
 - **Environment** (`AEnvironmentDirector`, one `BP_` per map): applies time +
-  weather to lights, fog, clouds, rain FX and `MPC_Environment`.
+  weather to lights, fog, clouds, rain FX and `MPC_Environment`. Rain under the
+  canopy from the forest field (`LocalRain`, D-031) → Niagara user parameters
+  `RainIntensity`, `DripIntensity`, `Wind`; materials get wet through `MF_Wetness`.
 - **Debug**: `sh.*` console commands (`Debug/ShroomConsoleCommands.cpp`) and
   the on-screen HUD (`UShroomDebugSubsystem`, `sh.Debug.HUD`).
 - **Weather** (`FWeatherModel` pure + `UWeatherSubsystem`): deterministic,

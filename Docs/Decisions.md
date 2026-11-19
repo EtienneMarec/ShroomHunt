@@ -235,6 +235,15 @@ their kind as placeholder sheets built by the *Forest Landmarks* actor and are
 found by a visibility trace, so walls hide them. A *Page* is taken when read,
 a *Poster* stays.
 
+**D-031 — Rain under the canopy from the forest field** · Accepted · 2026-11-20
+The rain felt by the player depends on the canopy cover of the forest field
+under the camera (the same field that drives the tree density), not on traces
+against the tree meshes (they only have trunk collision, and traces per frame
+would cost more). A pure `LocalRain::Compute` turns intensity, wetness and
+canopy into direct rain, drops from leaves (lasting while the forest is wet)
+and a wind factor; Niagara draws them through user parameters. The wind
+heading is part of the deterministic weather model.
+
 ## Open questions (to the developer)
 
 - None at the moment.

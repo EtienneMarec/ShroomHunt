@@ -21,11 +21,7 @@ world generation, progression, roadmap, decisions).
 | M1f Spawning ✅ (`Docs/Milestones/M1f.md`) | suitability, patches, daily flushes, ISM streaming, debug maps | rain → mushrooms 2–3 days later in predictable spots |
 | M1g-1 Foraging ✅ (`Docs/Milestones/M1g.md`) | aim, examine with observable criteria, pick, basket, patch exhaustion | find, examine, pick |
 | M1g-2 Knowledge ✅ (`Docs/Milestones/M1g.md`, part 2) | poster + torn page, names of known species, minimal encyclopedia | identify |
-
-**After M1d — rain polish** (needs the real forest): wind-driven slant
-(wind speed from the weather), streak texture, ground splashes via particle
-depth-buffer collision, less direct rain and dripping leaves under dense
-canopy, rain sounds, wet materials through `MPC_Environment.Wetness`.
+| M1h Rain polish (`Docs/Milestones/M1h.md`) | wind heading, rain slanted by the wind, streak material, ground splashes (CPU collision events), less rain and dripping leaves under the canopy, rain sound, wet materials (`MF_Wetness`) | walk from a clearing into a dense stand in the rain |
 
 ## M2 — Seasons
 Season-driven temperature/weather, foliage color & leaf fall (`MPC_Season`),
