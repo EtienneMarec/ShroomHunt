@@ -40,6 +40,13 @@ struct FWeatherSample
 	UPROPERTY(BlueprintReadOnly, Category = "ShroomHunt|Weather")
 	float WindSpeed = 0.0f;
 
+	/**
+	 * Direction the wind blows toward, in degrees in the forest field frame
+	 * (0 = +X, 90 = +Y). Prevailing westerlies: mostly toward +X.
+	 */
+	UPROPERTY(BlueprintReadOnly, Category = "ShroomHunt|Weather")
+	float WindHeadingDeg = 0.0f;
+
 	/** Air temperature in degrees Celsius. */
 	UPROPERTY(BlueprintReadOnly, Category = "ShroomHunt|Weather")
 	float TemperatureC = 10.0f;
@@ -52,7 +59,10 @@ struct FWeatherSample
 	UPROPERTY(BlueprintReadOnly, Category = "ShroomHunt|Weather")
 	float StormIntensity = 0.0f;
 
-	/** Component-wise linear interpolation. */
+	/** Unit vector of WindHeadingDeg (field frame). */
+	FVector2D GetWindDirection() const;
+
+	/** Component-wise linear interpolation (the wind heading along the shortest arc). */
 	static FWeatherSample Lerp(const FWeatherSample& A, const FWeatherSample& B, float Alpha);
 };
 

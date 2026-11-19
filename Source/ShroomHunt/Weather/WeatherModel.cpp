@@ -19,6 +19,7 @@ namespace
 		constexpr uint32 FogDay = 6;
 		constexpr uint32 CloudDetail = 7;
 		constexpr uint32 FogDetail = 8;
+		constexpr uint32 WindHeading = 9;
 	}
 
 	/**
@@ -53,10 +54,18 @@ FWeatherSample FWeatherSample::Lerp(const FWeatherSample& A, const FWeatherSampl
 	Out.PrecipitationMmPerHour = FMath::Lerp(A.PrecipitationMmPerHour, B.PrecipitationMmPerHour, Alpha);
 	Out.FogDensity = FMath::Lerp(A.FogDensity, B.FogDensity, Alpha);
 	Out.WindSpeed = FMath::Lerp(A.WindSpeed, B.WindSpeed, Alpha);
+	const float Turn = FMath::UnwindDegrees(B.WindHeadingDeg - A.WindHeadingDeg);
+	Out.WindHeadingDeg = FMath::UnwindDegrees(A.WindHeadingDeg + Turn * Alpha);
 	Out.TemperatureC = FMath::Lerp(A.TemperatureC, B.TemperatureC, Alpha);
 	Out.Humidity = FMath::Lerp(A.Humidity, B.Humidity, Alpha);
 	Out.StormIntensity = FMath::Lerp(A.StormIntensity, B.StormIntensity, Alpha);
 	return Out;
+}
+
+FVector2D FWeatherSample::GetWindDirection() const
+{
+	const float Radians = FMath::DegreesToRadians(WindHeadingDeg);
+	return FVector2D(FMath::Cos(Radians), FMath::Sin(Radians));
 }
 
 FClimateProfile::FClimateProfile()
@@ -144,6 +153,8 @@ FWeatherSample FWeatherModel::SampleNatural(double GameSeconds) const
 	// --- Wind: calm under high pressure, windier with fronts and storms.
 	const float Gusts = FMath::Abs(Fbm1D(Hash(Seed, Channel::Wind), Hours / 2.0, 2));
 	const float WindSpeed = FMath::Clamp(1.0f + 6.0f * Gusts + 5.0f * RainRegime + 10.0f * Storm, 0.0f, 25.0f);
+	// Heading: westerlies (blowing toward +X, slightly north) veering slowly over a day or two.
+	const float WindHeading = FMath::UnwindDegrees(15.0f + 110.0f * Fbm1D(Hash(Seed, Channel::WindHeading), Hours / 30.0, 2));
 
 	// --- Humidity: higher with clouds, rain and at night.
 	const float Night = 0.5f + 0.5f * FMath::Cos(UE_TWO_PI * (Hour - 3.0f) / 24.0f);
@@ -169,6 +180,7 @@ FWeatherSample FWeatherModel::SampleNatural(double GameSeconds) const
 	Out.PrecipitationMmPerHour = FMath::Max(0.0f, Precipitation);
 	Out.FogDensity = Fog;
 	Out.WindSpeed = WindSpeed;
+	Out.WindHeadingDeg = WindHeading;
 	Out.TemperatureC = Temperature;
 	Out.Humidity = Humidity;
 	Out.StormIntensity = Storm;

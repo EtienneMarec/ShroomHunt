@@ -38,6 +38,26 @@ bool FWeatherDeterminismTest::RunTest(const FString& Parameters)
 	}
 	TestTrue(TEXT("Different seeds give different weather"), Differences > 50);
 
+	// Wind heading: in (-180, 180], mostly westerly, and turning slowly.
+	float MaxTurnPerHour = 0.0f;
+	int32 TowardEast = 0;
+	int32 Count = 0;
+	for (int32 Hour = 0; Hour < 24 * 120; ++Hour)
+	{
+		const FWeatherSample S0 = A.SampleNatural(Hour * 3600.0);
+		const FWeatherSample S1 = A.SampleNatural((Hour + 1) * 3600.0);
+		TestTrue(TEXT("Heading unwound"), S0.WindHeadingDeg > -180.001f && S0.WindHeadingDeg <= 180.001f);
+		MaxTurnPerHour = FMath::Max(MaxTurnPerHour, FMath::Abs(FMath::UnwindDegrees(S1.WindHeadingDeg - S0.WindHeadingDeg)));
+		TowardEast += S0.GetWindDirection().X > 0.0 ? 1 : 0;
+		++Count;
+	}
+	TestTrue(FString::Printf(TEXT("Wind turns slowly (max %.1f deg per game hour)"), MaxTurnPerHour), MaxTurnPerHour < 15.0f);
+	TestTrue(FString::Printf(TEXT("Prevailing westerlies (%d of %d hours blow toward +X)"), TowardEast, Count), TowardEast > Count * 0.6f);
+	FWeatherSample North, South;
+	North.WindHeadingDeg = 170.0f;
+	South.WindHeadingDeg = -170.0f;
+	TestTrue(TEXT("Heading interpolates along the shortest arc"), FMath::IsNearlyEqual(FMath::Abs(FWeatherSample::Lerp(North, South, 0.5f).WindHeadingDeg), 180.0f, 0.01f));
+
 	// Random access: sampling order does not matter.
 	const float Forward = A.SampleNatural(500000.0).TemperatureC;
 	A.SampleNatural(10.0);
