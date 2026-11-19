@@ -216,4 +216,71 @@ bool FMushroomMeshBuilderTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMushroomGrowthTest, "ShroomHunt.Mushroom.Growth",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FMushroomGrowthTest::RunTest(const FString& Parameters)
+{
+	using namespace MushroomMeshTestsDetail;
+	TMap<FName, FMushroomSpeciesRow> Species;
+	if (!LoadSpecies(*this, Species))
+	{
+		return false;
+	}
+	for (const TPair<FName, FMushroomSpeciesRow>& Pair : Species)
+	{
+		const FString Name = Pair.Key.ToString();
+		const FMushroomSpeciesRow& Row = Pair.Value;
+		for (uint32 Seed = 1; Seed <= 20; ++Seed)
+		{
+			// One individual, its whole life: it grows, opens, then rots; no jumps between ages.
+			const FMushroomMorphology Button = MushroomMorphology::SampleAtAge(Row, Pair.Key, Seed, 0.0f);
+			const FMushroomMorphology Grown = MushroomMorphology::SampleAtAge(Row, Pair.Key, Seed, Row.MatureUntil);
+			const FMushroomMorphology Rotten = MushroomMorphology::SampleAtAge(Row, Pair.Key, Seed, 1.0f);
+			if (!TestTrue(Name + TEXT(": the button is much smaller than the grown cap"), Button.CapDiameter < 0.25f * Grown.CapDiameter)
+				|| !TestTrue(Name + TEXT(": the button is a closed, tall cap"), Button.CapHeightRatio > Grown.CapHeightRatio * 0.9f)
+				|| !TestTrue(Name + TEXT(": the rotten cap sags"), Rotten.CapSag > 0.9f && Grown.CapSag < 0.05f))
+			{
+				return false;
+			}
+			float Previous = -1.0f;
+			FMushroomMorphology Last = Button;
+			for (int32 Step = 0; Step <= 100; ++Step)
+			{
+				const float Age = Step / 100.0f;
+				const FMushroomMorphology M = MushroomMorphology::SampleAtAge(Row, Pair.Key, Seed, Age);
+				if (Age <= Row.MatureUntil && M.CapDiameter < Previous - 1e-3f)
+				{
+					AddError(FString::Printf(TEXT("%s seed %u: the cap shrinks while growing at age %.2f"), *Name, Seed, Age));
+					return false;
+				}
+				const float Jump = FMath::Abs(M.CapDiameter - Last.CapDiameter) / FMath::Max(Grown.CapDiameter, 0.1f);
+				if (Step > 0 && (Jump > 0.08f || FMath::Abs(M.CapHeightRatio - Last.CapHeightRatio) > 0.12f || M.Seed != Last.Seed || M.CapTiltAzimuthDeg != Last.CapTiltAzimuthDeg))
+				{
+					AddError(FString::Printf(TEXT("%s seed %u: discontinuity at age %.2f"), *Name, Seed, Age));
+					return false;
+				}
+				Previous = M.CapDiameter;
+				Last = M;
+			}
+		}
+		// Deterministic, and the stage API is the same individual at its typical ages.
+		const FMushroomMorphology A = MushroomMorphology::SampleAtAge(Row, Pair.Key, 42u, 0.37f);
+		const FMushroomMorphology B = MushroomMorphology::SampleAtAge(Row, Pair.Key, 42u, 0.37f);
+		TestTrue(Name + TEXT(": deterministic"), A.CapDiameter == B.CapDiameter && A.CapShape == B.CapShape && A.CapShapeBlend == B.CapShapeBlend);
+		const FMushroomMorphology Young = MushroomMorphology::Sample(Row, Pair.Key, 42u, EMushroomStage::Young);
+		const FMushroomMorphology Old = MushroomMorphology::Sample(Row, Pair.Key, 42u, EMushroomStage::Old);
+		TestTrue(Name + TEXT(": stages are ages of one individual"), Young.CapTiltAzimuthDeg == Old.CapTiltAzimuthDeg && Young.Stage == EMushroomStage::Young && Old.Stage == EMushroomStage::Old);
+
+		// Every age builds a valid mesh.
+		for (const float Age : { 0.0f, 0.1f, 0.5f, 0.9f, 1.0f })
+		{
+			UE::Geometry::FDynamicMesh3 Mesh;
+			MushroomMeshBuilder::Build(MushroomMorphology::SampleAtAge(Row, Pair.Key, 7u, Age), FMushroomMeshDetail::Near(), Mesh);
+			TestTrue(FString::Printf(TEXT("%s builds at age %.1f"), *Name, Age), Mesh.TriangleCount() > 100);
+		}
+	}
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS
