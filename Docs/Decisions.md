@@ -213,6 +213,16 @@ per variant, scaled continuously between steps. Mushrooms are drawn by pooled
 static mesh components: vertex colors did not show on instanced meshes, and
 M1g needs one pickable object per mushroom.
 
+**D-029 — Foraging without editor assets** · Accepted · 2026-11-19
+The forager (aiming, examine, pick) is a component added at play to the
+player's pawn by the Mushroom Spawner; its input actions and mapping context
+are created in C++ and its HUD is a UMG widget built in C++. The template
+character Blueprint stays untouched and nothing must be authored to play;
+widget Blueprints can replace the C++ layout during the UI polish (M6).
+Picks are the only foraging state: picked fruit seeds (filtered out of the
+stateless spawn model) and pick times per patch (exhaustion), held by a game
+instance subsystem until the save system (M4).
+
 ## Open questions (to the developer)
 
 - None at the moment.
