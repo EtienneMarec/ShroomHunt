@@ -45,6 +45,10 @@ chanterelle, bitter bolete / cep), more landmarks.
 Mountain beech–fir forest (Vosges/Jura): second `ForestDefinition`, climate,
 altitude-driven biomes, forest unlock & travel, PCG runtime generation for
 bigger maps, HLOD.
+**Forest build automation**: an editor tool (`ShroomHuntEditor` module) builds a
+forest map from its JSON in one command — bake, Landscape creation with its
+material and layers, forest actors, PCG volume and generation — replacing the
+manual steps of M1d/M1e (D-023).
 
 ## M6 — Polish
 Audio ambience (birds by time/season, rain, wind, footsteps per surface),
