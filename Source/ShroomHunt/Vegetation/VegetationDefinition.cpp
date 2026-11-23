@@ -190,6 +190,20 @@ namespace VegetationData
 			{
 				Error(Field, TEXT("LeafSizeCm > 0 and LeafLobes >= 0 required"));
 			}
+			CheckColor(Field + TEXT(".AutumnFoliage"), Tree.AutumnFoliage, true);
+			auto CheckMonths = [&Error](const FString& MonthsField, const TArray<float>& Months)
+			{
+				if (Months.Num() != 0 && (Months.Num() != 2 || Months[0] < 1.0f || Months[1] < Months[0] || Months[1] > 14.0f))
+				{
+					Error(MonthsField, TEXT("expected [start, end] months in [1, 14] in increasing order"));
+				}
+			};
+			CheckMonths(Field + TEXT(".ColoringMonths"), Tree.ColoringMonths);
+			CheckMonths(Field + TEXT(".LeafFallMonths"), Tree.LeafFallMonths);
+			if (Tree.LeafOutMonth < 1.0f || Tree.LeafOutMonth > 7.0f || Tree.WinterLeaves < 0.0f || Tree.WinterLeaves > 1.0f)
+			{
+				Error(Field, TEXT("LeafOutMonth in [1, 7] and WinterLeaves in [0, 1] required"));
+			}
 		}
 
 		for (const EVegetationKind Kind : { EVegetationKind::Sapling, EVegetationKind::Pole, EVegetationKind::Mature, EVegetationKind::Old })

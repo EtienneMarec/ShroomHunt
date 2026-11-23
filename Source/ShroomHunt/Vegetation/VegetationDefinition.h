@@ -80,6 +80,19 @@ struct FTreeArchetype
 	/** Leaf length (cm) and number of lobes on each side (oak) for the leaf litter. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") float LeafSizeCm = 7.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") int32 LeafLobes = 0;
+
+	// --- Phenology (M2 seasons), in continuous real months (10.5 = mid October) ---------------
+
+	/** Budburst: the new leaves come out over the following ~3 weeks. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Seasons") float LeafOutMonth = 4.5f;
+	/** Autumn coloring [start, full]. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Seasons") TArray<float> ColoringMonths;
+	/** Leaf fall [start, end]. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Seasons") TArray<float> LeafFallMonths;
+	/** Fraction of dead leaves kept through the winter (marcescent young beeches and oaks). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Seasons") float WinterLeaves = 0.0f;
+	/** Foliage color at full autumn coloring (sRGB). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Seasons") TArray<float> AutumnFoliage;
 };
 
 /** Size of a tree form relative to the genus archetype, and its number of mesh variants. */
