@@ -153,15 +153,23 @@ protected:
 
 	/** Exposure compensation (EV) at full gloom; auto exposure would otherwise brighten a dark sky back. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Gloom", meta = (ClampMin = "-4", ClampMax = "0"))
-	float GloomExposureBiasEV = -1.3f;
+	float GloomExposureBiasEV = -0.7f;
 
 	/** Sky atmosphere luminance factor at full gloom (1 = unchanged). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Gloom", meta = (ClampMin = "0", ClampMax = "1"))
 	float GloomSkyLuminance = 0.3f;
 
-	/** Sky light intensity factor at full gloom. */
+	/** Sky light intensity factor at full gloom (it stays the main light under clouds). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Gloom", meta = (ClampMin = "0", ClampMax = "1"))
-	float GloomSkyLight = 0.45f;
+	float GloomSkyLight = 0.65f;
+
+	/** Sun shadow strength under a closed sky: the light becomes diffuse (no eclipse-like sharp shadows). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Gloom", meta = (ClampMin = "0", ClampMax = "1"))
+	float OvercastShadowAmount = 0.15f;
+
+	/** Sun source angle multiplier under a closed sky (softer, blurred shadows). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Gloom", meta = (ClampMin = "1", ClampMax = "40"))
+	float OvercastSourceAngleScale = 15.0f;
 
 	/** Color saturation at full gloom. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Gloom", meta = (ClampMin = "0", ClampMax = "1"))
@@ -265,6 +273,8 @@ private:
 	struct FInitialValues
 	{
 		float SunIntensity = 10.0f;
+		float SunSourceAngle = 0.5357f;
+		float SunShadowAmount = 1.0f;
 		float MoonIntensity = 0.3f;
 		float SkyLightIntensity = 1.0f;
 		float FogDensity = 0.02f;

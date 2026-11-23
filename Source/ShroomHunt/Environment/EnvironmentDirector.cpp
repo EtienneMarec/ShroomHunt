@@ -250,6 +250,11 @@ void AEnvironmentDirector::CaptureInitialValues()
 	if (SunLight && SunLight->GetLightComponent())
 	{
 		Initial.SunIntensity = SunLight->GetLightComponent()->Intensity;
+		if (const UDirectionalLightComponent* SunComponent = Cast<UDirectionalLightComponent>(SunLight->GetLightComponent()))
+		{
+			Initial.SunSourceAngle = SunComponent->LightSourceAngle;
+			Initial.SunShadowAmount = SunComponent->ShadowAmount;
+		}
 	}
 	if (MoonLight && MoonLight->GetLightComponent())
 	{
@@ -358,6 +363,8 @@ void AEnvironmentDirector::ApplyEnvironment(const FGameDate& Date, double TotalG
 	MoodParams.SkyLight = GloomSkyLight;
 	MoodParams.Saturation = GloomSaturation;
 	MoodParams.FogBrightness = GloomFogBrightness;
+	MoodParams.OvercastShadowAmount = OvercastShadowAmount;
+	MoodParams.OvercastSourceAngleScale = OvercastSourceAngleScale;
 	MoodNow = SkyMood::Compute(Overcast, Weather.PrecipitationMmPerHour / RainRateForFullIntensity, Weather.StormIntensity, MoodParams);
 
 	if (SunLight && SunLight->GetLightComponent())
@@ -365,6 +372,21 @@ void AEnvironmentDirector::ApplyEnvironment(const FGameDate& Date, double TotalG
 		SunLight->SetActorRotation(LightRotationFor(Sun, NorthYawDeg));
 		const float Direct = Daylight * MoodNow.SunFactor * (1.0f - 0.5f * Fog);
 		SunLight->GetLightComponent()->SetIntensity(Initial.SunIntensity * Direct);
+		// Under clouds the sun is a blurred bright patch at most: soft, faint shadows.
+		UDirectionalLightComponent* SunComponent = Cast<UDirectionalLightComponent>(SunLight->GetLightComponent());
+		if (bInGame && SunComponent)
+		{
+			const float Angle = Initial.SunSourceAngle * MoodNow.SourceAngleScale;
+			const float Shadows = Initial.SunShadowAmount * MoodNow.ShadowAmount;
+			if (!FMath::IsNearlyEqual(SunComponent->LightSourceAngle, Angle, 0.01f))
+			{
+				SunComponent->SetLightSourceAngle(Angle);
+			}
+			if (!FMath::IsNearlyEqual(SunComponent->ShadowAmount, Shadows, 0.005f))
+			{
+				SunComponent->SetShadowAmount(Shadows);
+			}
+		}
 	}
 
 	if (MoonLight && MoonLight->GetLightComponent())
