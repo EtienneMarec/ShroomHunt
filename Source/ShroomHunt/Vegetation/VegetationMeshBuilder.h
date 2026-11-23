@@ -16,6 +16,8 @@ enum class EVegetationSurface : uint8
 	Foliage = 2,
 	Frond = 3,
 	Cane = 4,
+	/** Fallen leaves on the ground (kept apart from the living Foliage for the seasons, M2). */
+	Litter = 5,
 };
 
 /** Simple collision of a vegetation mesh: one capsule (centimeters, mesh space). */

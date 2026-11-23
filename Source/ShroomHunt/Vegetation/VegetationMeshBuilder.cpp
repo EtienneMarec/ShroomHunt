@@ -721,11 +721,11 @@ namespace VegetationMeshDetail
 					// The rim runs counter-clockwise seen from above: (center, k, k+1) faces up.
 					if (bBack)
 					{
-						Acc.AddTriangle(Middle, Ids[K1], Ids[K], UvC, Uv1, Uv0, static_cast<uint8>(EVegetationSurface::Foliage));
+						Acc.AddTriangle(Middle, Ids[K1], Ids[K], UvC, Uv1, Uv0, static_cast<uint8>(EVegetationSurface::Litter));
 					}
 					else
 					{
-						Acc.AddTriangle(Middle, Ids[K], Ids[K1], UvC, Uv0, Uv1, static_cast<uint8>(EVegetationSurface::Foliage));
+						Acc.AddTriangle(Middle, Ids[K], Ids[K1], UvC, Uv0, Uv1, static_cast<uint8>(EVegetationSurface::Litter));
 					}
 				}
 			}
