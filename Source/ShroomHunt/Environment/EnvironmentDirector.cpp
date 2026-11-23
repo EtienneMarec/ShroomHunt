@@ -2,6 +2,9 @@
 
 #include "Camera/PlayerCameraManager.h"
 #include "Components/AudioComponent.h"
+#include "Components/PostProcessComponent.h"
+#include "Components/SkyAtmosphereComponent.h"
+#include "Engine/PostProcessVolume.h"
 #include "Forest/ForestField.h"
 #include "Forest/ForestFieldCache.h"
 #include "Forest/ForestWorld.h"
@@ -64,6 +67,11 @@ AEnvironmentDirector::AEnvironmentDirector()
 	RainParticles->SetAutoActivate(false);
 	RainParticles->SetUsingAbsoluteLocation(true);
 	RainParticles->SetUsingAbsoluteRotation(true);
+
+	WeatherPostProcess = CreateDefaultSubobject<UPostProcessComponent>(TEXT("WeatherPostProcess"));
+	WeatherPostProcess->SetupAttachment(Root);
+	WeatherPostProcess->bUnbound = true;
+	WeatherPostProcess->Priority = 100.0f; // above the level's volumes; only overrides exposure bias and saturation
 
 	RainAudio = CreateDefaultSubobject<UAudioComponent>(TEXT("RainAudio"));
 	RainAudio->SetupAttachment(Root);
@@ -225,6 +233,11 @@ void AEnvironmentDirector::AutoFindActors()
 		TActorIterator<AExponentialHeightFog> It(World);
 		HeightFog = It ? *It : nullptr;
 	}
+	if (!SkyAtmosphere)
+	{
+		TActorIterator<ASkyAtmosphere> It(World);
+		SkyAtmosphere = It ? *It : nullptr;
+	}
 	if (!VolumetricCloud)
 	{
 		TActorIterator<AVolumetricCloud> It(World);
@@ -249,6 +262,23 @@ void AEnvironmentDirector::CaptureInitialValues()
 	if (HeightFog && HeightFog->GetComponent())
 	{
 		Initial.FogDensity = HeightFog->GetComponent()->FogDensity;
+		Initial.FogInscattering = HeightFog->GetComponent()->FogInscatteringLuminance;
+		Initial.FogDirectionalInscattering = HeightFog->GetComponent()->DirectionalInscatteringLuminance;
+	}
+	if (SkyAtmosphere && SkyAtmosphere->GetComponent())
+	{
+		Initial.SkyLuminance = SkyAtmosphere->GetComponent()->SkyLuminanceFactor;
+	}
+	// The level's exposure compensation (highest-priority volume that sets it) stays the reference.
+	float BestPriority = -MAX_flt;
+	for (TActorIterator<APostProcessVolume> It(GetWorld()); It; ++It)
+	{
+		const APostProcessVolume* Volume = *It;
+		if (Volume->bEnabled && Volume->Settings.bOverride_AutoExposureBias && Volume->Priority > BestPriority)
+		{
+			BestPriority = Volume->Priority;
+			Initial.ExposureBias = Volume->Settings.AutoExposureBias;
+		}
 	}
 	if (SunClearIntensity >= 0.0f)
 	{
@@ -321,10 +351,19 @@ void AEnvironmentDirector::ApplyEnvironment(const FGameDate& Date, double TotalG
 	const float Fog = FMath::Clamp(Weather.FogDensity, 0.0f, 1.0f);
 	const float Flash = LightningFlashRemaining > 0.0f ? 1.0f : 0.0f;
 
+	// Bad weather darkens the sky, the ambient light and the fog, and fights auto exposure.
+	FSkyMoodParams MoodParams;
+	MoodParams.ExposureBiasEV = GloomExposureBiasEV;
+	MoodParams.SkyLuminance = GloomSkyLuminance;
+	MoodParams.SkyLight = GloomSkyLight;
+	MoodParams.Saturation = GloomSaturation;
+	MoodParams.FogBrightness = GloomFogBrightness;
+	MoodNow = SkyMood::Compute(Overcast, Weather.PrecipitationMmPerHour / RainRateForFullIntensity, Weather.StormIntensity, MoodParams);
+
 	if (SunLight && SunLight->GetLightComponent())
 	{
 		SunLight->SetActorRotation(LightRotationFor(Sun, NorthYawDeg));
-		const float Direct = Daylight * (1.0f - 0.8f * Overcast) * (1.0f - 0.5f * Fog);
+		const float Direct = Daylight * MoodNow.SunFactor * (1.0f - 0.5f * Fog);
 		SunLight->GetLightComponent()->SetIntensity(Initial.SunIntensity * Direct);
 	}
 
@@ -354,7 +393,23 @@ void AEnvironmentDirector::ApplyEnvironment(const FGameDate& Date, double TotalG
 	if (SkyLight && SkyLight->GetLightComponent())
 	{
 		const float DayNight = FMath::Lerp(SkyLightNightFraction, 1.0f, SmoothStep01(-10.0f, 10.0f, Sun.ElevationDeg));
-		SkyLight->GetLightComponent()->SetIntensity(Initial.SkyLightIntensity * DayNight * (1.0f - 0.25f * Overcast) * (1.0f + 6.0f * Flash));
+		SkyLight->GetLightComponent()->SetIntensity(Initial.SkyLightIntensity * DayNight * MoodNow.SkyLightFactor * (1.0f + 6.0f * Flash));
+	}
+
+	if (bInGame)
+	{
+		if (SkyAtmosphere && SkyAtmosphere->GetComponent())
+		{
+			SkyAtmosphere->GetComponent()->SetSkyLuminanceFactor(Initial.SkyLuminance * MoodNow.SkyLuminanceFactor);
+		}
+		if (WeatherPostProcess)
+		{
+			FPostProcessSettings& Grading = WeatherPostProcess->Settings;
+			Grading.bOverride_AutoExposureBias = true;
+			Grading.AutoExposureBias = Initial.ExposureBias + MoodNow.ExposureBiasEV;
+			Grading.bOverride_ColorSaturation = true;
+			Grading.ColorSaturation = FVector4(MoodNow.Saturation, MoodNow.Saturation, MoodNow.Saturation, 1.0);
+		}
 	}
 
 	if (HeightFog && HeightFog->GetComponent())
@@ -362,6 +417,17 @@ void AEnvironmentDirector::ApplyEnvironment(const FGameDate& Date, double TotalG
 		const float RainHaze = FMath::Clamp(Weather.PrecipitationMmPerHour / RainRateForFullIntensity, 0.0f, 1.0f);
 		const float Multiplier = FMath::Lerp(1.0f, FogDensityMultiplierAtFullFog, Fog) * FMath::Lerp(1.0f, FogDensityMultiplierInHeavyRain, RainHaze);
 		HeightFog->GetComponent()->SetFogDensity(Initial.FogDensity * Multiplier);
+		if (bInGame)
+		{
+			// The fog turns grey and darker under heavy clouds.
+			const auto Grey = [&](const FLinearColor& Color)
+			{
+				const float Luminance = Color.GetLuminance();
+				return FMath::Lerp(Color, FLinearColor(Luminance, Luminance, Luminance), MoodNow.Gloom) * MoodNow.FogBrightness;
+			};
+			HeightFog->GetComponent()->SetFogInscatteringColor(Grey(Initial.FogInscattering));
+			HeightFog->GetComponent()->SetDirectionalInscatteringColor(Grey(Initial.FogDirectionalInscattering) * MoodNow.SunFactor);
+		}
 	}
 
 	if (CloudMaterial && bCloudCoverageFound)

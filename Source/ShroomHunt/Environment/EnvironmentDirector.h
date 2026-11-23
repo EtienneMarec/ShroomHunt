@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Environment/LocalRain.h"
+#include "Environment/SkyMood.h"
 #include "GameFramework/Actor.h"
 #include "Materials/MaterialParameters.h"
 #include "Time/TimeTypes.h"
@@ -12,7 +13,9 @@ class ADirectionalLight;
 class FForestField;
 class UAudioComponent;
 class AExponentialHeightFog;
+class ASkyAtmosphere;
 class ASkyLight;
+class UPostProcessComponent;
 class AVolumetricCloud;
 class UMaterialInstanceDynamic;
 class UMaterialParameterCollection;
@@ -52,6 +55,7 @@ public:
 	/** Rain felt at the camera this frame (debug HUD). */
 	const FLocalRain& GetLocalRain() const { return LocalRainNow; }
 	float GetCanopyAtCamera() const { return CanopyAtCamera; }
+	const FSkyMood& GetSkyMood() const { return MoodNow; }
 
 	/** The director of a world, if any. */
 	static AEnvironmentDirector* Find(const UWorld* World);
@@ -65,6 +69,13 @@ protected:
 	/** Rain particles, kept above the camera. Assign a Niagara System asset in the Blueprint. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment")
 	TObjectPtr<UNiagaraComponent> RainParticles;
+
+	/**
+	 * Weather grading (unbound, above the level's post process volumes): exposure compensation
+	 * and saturation of bad weather, on top of the level's own exposure compensation.
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment")
+	TObjectPtr<UPostProcessComponent> WeatherPostProcess;
 
 	/** Rain sound loop (optional): assign a looping Sound in the Blueprint; volume follows the rain. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment")
@@ -91,6 +102,9 @@ protected:
 
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "ShroomHunt|Environment|References")
 	TObjectPtr<AVolumetricCloud> VolumetricCloud;
+
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "ShroomHunt|Environment|References")
+	TObjectPtr<ASkyAtmosphere> SkyAtmosphere;
 
 	/** Optional MPC (MPC_Environment) with scalar parameters: TimeOfDay, SunElevation, CloudCover,
 	 *  RainIntensity, Wetness, FogDensity, WindSpeed, TemperatureC, SeasonProgress. */
@@ -134,6 +148,28 @@ protected:
 	/** How fast visuals follow the weather (1/s). Lower = smoother transitions. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Sky", meta = (ClampMin = "0.05"))
 	float VisualResponse = 0.8f;
+
+	// --- Bad weather darkening (values at full gloom: storm under a black sky) ------
+
+	/** Exposure compensation (EV) at full gloom; auto exposure would otherwise brighten a dark sky back. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Gloom", meta = (ClampMin = "-4", ClampMax = "0"))
+	float GloomExposureBiasEV = -1.3f;
+
+	/** Sky atmosphere luminance factor at full gloom (1 = unchanged). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Gloom", meta = (ClampMin = "0", ClampMax = "1"))
+	float GloomSkyLuminance = 0.3f;
+
+	/** Sky light intensity factor at full gloom. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Gloom", meta = (ClampMin = "0", ClampMax = "1"))
+	float GloomSkyLight = 0.45f;
+
+	/** Color saturation at full gloom. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Gloom", meta = (ClampMin = "0", ClampMax = "1"))
+	float GloomSaturation = 0.65f;
+
+	/** Fog color brightness at full gloom (the fog turns grey). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Gloom", meta = (ClampMin = "0", ClampMax = "1"))
+	float GloomFogBrightness = 0.4f;
 
 	// --- Fog & clouds ---------------------------------------------------------------
 
@@ -232,6 +268,10 @@ private:
 		float MoonIntensity = 0.3f;
 		float SkyLightIntensity = 1.0f;
 		float FogDensity = 0.02f;
+		FLinearColor FogInscattering = FLinearColor::White;
+		FLinearColor FogDirectionalInscattering = FLinearColor::White;
+		FLinearColor SkyLuminance = FLinearColor::White;
+		float ExposureBias = 0.0f;
 		bool bCaptured = false;
 	};
 
@@ -264,4 +304,5 @@ private:
 	float CanopyAtCamera = 0.0f;
 	bool bHasCanopy = false;
 	FLocalRain LocalRainNow;
+	FSkyMood MoodNow;
 };

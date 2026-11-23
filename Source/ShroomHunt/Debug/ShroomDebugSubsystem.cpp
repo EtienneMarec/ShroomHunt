@@ -106,8 +106,9 @@ void UShroomDebugSubsystem::Tick(float DeltaTime)
 	FString LocalRainText;
 	if (const AEnvironmentDirector* Director = AEnvironmentDirector::Find(GetWorld()))
 	{
-		LocalRainText = FString::Printf(TEXT(" | here: rain %.2f  drips %.2f  canopy %.2f"),
-			Director->GetLocalRain().Direct, Director->GetLocalRain().Drip, Director->GetCanopyAtCamera());
+		LocalRainText = FString::Printf(TEXT(" | here: rain %.2f  drips %.2f  canopy %.2f | gloom %.2f (%.1f EV)"),
+			Director->GetLocalRain().Direct, Director->GetLocalRain().Drip, Director->GetCanopyAtCamera(),
+			Director->GetSkyMood().Gloom, Director->GetSkyMood().ExposureBiasEV);
 	}
 	GEngine->AddOnScreenDebugMessage(KeyBase + 2, Duration, Body,
 		FString::Printf(TEXT("Air %.1f C  RH %.0f%%  wind %.1f m/s toward %.0f deg  ground wetness %.2f%s"),
