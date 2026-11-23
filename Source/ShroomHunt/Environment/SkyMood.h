@@ -6,24 +6,22 @@
 struct SHROOMHUNT_API FSkyMoodParams
 {
 	/** Exposure compensation (EV) added at full gloom: auto exposure would otherwise brighten a dark sky back. */
-	float ExposureBiasEV = -0.7f;
+	float ExposureBiasEV = -0.4f;
 	/** Sky atmosphere luminance factor at full gloom (1 = unchanged). */
-	float SkyLuminance = 0.3f;
+	float SkyLuminance = 0.5f;
 	/** Sky light intensity factor at full gloom (it stays the main light under clouds). */
-	float SkyLight = 0.65f;
+	float SkyLight = 0.8f;
 	/** Color saturation at full gloom. */
-	float Saturation = 0.65f;
+	float Saturation = 0.75f;
 	/** Fog inscattering brightness at full gloom (the fog turns grey). */
-	float FogBrightness = 0.4f;
+	float FogBrightness = 0.6f;
 	/** Sun shadow strength under a closed sky (the light becomes diffuse). */
 	float OvercastShadowAmount = 0.15f;
-	/** Sun source angle multiplier under a closed sky (softer, blurred shadows). */
-	float OvercastSourceAngleScale = 15.0f;
 };
 
 /**
  * How bad weather changes the light. Under a closed sky the sun's direct light and its
- * sharp shadows go away and the diffuse sky light remains (merely dimming the sun looks
+ * shadows fade and the diffuse sky light remains (merely dimming the sun looks
  * like an eclipse); rain and storms then darken everything. Pure, unit-tested.
  */
 struct SHROOMHUNT_API FSkyMood
@@ -34,7 +32,6 @@ struct SHROOMHUNT_API FSkyMood
 	float Diffuse = 0.0f;
 	float SunFactor = 1.0f;
 	float ShadowAmount = 1.0f;
-	float SourceAngleScale = 1.0f;
 	float SkyLightFactor = 1.0f;
 	float SkyLuminanceFactor = 1.0f;
 	float ExposureBiasEV = 0.0f;

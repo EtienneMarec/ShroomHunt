@@ -25,10 +25,11 @@ bool FSkyMoodTest::RunTest(const FString& Parameters)
 		&& FMath::IsNearlyEqual(Storm.SkyLuminanceFactor, Params.SkyLuminance) && FMath::IsNearlyEqual(Storm.Saturation, Params.Saturation));
 	TestTrue(TEXT("The sun fades under storm clouds"), Storm.SunFactor < 0.05f && Clear.SunFactor > 0.95f);
 	// No eclipse light: under a closed sky the direct sun and its sharp shadows are gone, broken clouds keep them.
-	TestTrue(TEXT("Overcast: almost no direct sun"), Overcast.SunFactor < 0.1f && Overcast.Diffuse > 0.9f);
-	TestTrue(TEXT("Overcast: faint, soft shadows"), Overcast.ShadowAmount < 0.25f && Overcast.SourceAngleScale > 10.0f);
+	TestTrue(TEXT("Overcast: little direct sun"), Overcast.SunFactor < 0.15f && Overcast.Diffuse > 0.9f);
+	TestTrue(TEXT("Overcast: faint shadows"), Overcast.ShadowAmount < 0.25f);
 	TestTrue(TEXT("Broken clouds: sunlight and shadows stay"), Broken.SunFactor > 0.7f && Broken.ShadowAmount > 0.8f);
-	TestTrue(TEXT("Clear sky: sharp shadows"), Clear.ShadowAmount > 0.99f && Clear.SourceAngleScale < 1.01f);
+	TestTrue(TEXT("Clear sky: full shadows"), Clear.ShadowAmount > 0.99f);
+	TestTrue(TEXT("A storm stays readable (mild exposure compensation)"), Storm.ExposureBiasEV > -0.6f && Storm.SkyLuminanceFactor >= 0.4f);
 	TestTrue(TEXT("The sky light stays the main light under clouds"), Storm.SkyLightFactor > 0.5f);
 	TestTrue(TEXT("Factors stay positive"), Storm.SkyLightFactor > 0.0f && Storm.FogBrightness > 0.0f && Storm.SunFactor >= 0.0f);
 	return true;

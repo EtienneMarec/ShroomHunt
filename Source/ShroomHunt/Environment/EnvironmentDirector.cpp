@@ -252,7 +252,6 @@ void AEnvironmentDirector::CaptureInitialValues()
 		Initial.SunIntensity = SunLight->GetLightComponent()->Intensity;
 		if (const UDirectionalLightComponent* SunComponent = Cast<UDirectionalLightComponent>(SunLight->GetLightComponent()))
 		{
-			Initial.SunSourceAngle = SunComponent->LightSourceAngle;
 			Initial.SunShadowAmount = SunComponent->ShadowAmount;
 		}
 	}
@@ -273,17 +272,6 @@ void AEnvironmentDirector::CaptureInitialValues()
 	if (SkyAtmosphere && SkyAtmosphere->GetComponent())
 	{
 		Initial.SkyLuminance = SkyAtmosphere->GetComponent()->SkyLuminanceFactor;
-	}
-	// The level's exposure compensation (highest-priority volume that sets it) stays the reference.
-	float BestPriority = -MAX_flt;
-	for (TActorIterator<APostProcessVolume> It(GetWorld()); It; ++It)
-	{
-		const APostProcessVolume* Volume = *It;
-		if (Volume->bEnabled && Volume->Settings.bOverride_AutoExposureBias && Volume->Priority > BestPriority)
-		{
-			BestPriority = Volume->Priority;
-			Initial.ExposureBias = Volume->Settings.AutoExposureBias;
-		}
 	}
 	if (SunClearIntensity >= 0.0f)
 	{
@@ -364,7 +352,6 @@ void AEnvironmentDirector::ApplyEnvironment(const FGameDate& Date, double TotalG
 	MoodParams.Saturation = GloomSaturation;
 	MoodParams.FogBrightness = GloomFogBrightness;
 	MoodParams.OvercastShadowAmount = OvercastShadowAmount;
-	MoodParams.OvercastSourceAngleScale = OvercastSourceAngleScale;
 	MoodNow = SkyMood::Compute(Overcast, Weather.PrecipitationMmPerHour / RainRateForFullIntensity, Weather.StormIntensity, MoodParams);
 
 	if (SunLight && SunLight->GetLightComponent())
@@ -372,16 +359,11 @@ void AEnvironmentDirector::ApplyEnvironment(const FGameDate& Date, double TotalG
 		SunLight->SetActorRotation(LightRotationFor(Sun, NorthYawDeg));
 		const float Direct = Daylight * MoodNow.SunFactor * (1.0f - 0.5f * Fog);
 		SunLight->GetLightComponent()->SetIntensity(Initial.SunIntensity * Direct);
-		// Under clouds the sun is a blurred bright patch at most: soft, faint shadows.
+		// Under clouds the sun is a faint bright patch at most: faint shadows, diffuse light.
 		UDirectionalLightComponent* SunComponent = Cast<UDirectionalLightComponent>(SunLight->GetLightComponent());
 		if (bInGame && SunComponent)
 		{
-			const float Angle = Initial.SunSourceAngle * MoodNow.SourceAngleScale;
 			const float Shadows = Initial.SunShadowAmount * MoodNow.ShadowAmount;
-			if (!FMath::IsNearlyEqual(SunComponent->LightSourceAngle, Angle, 0.01f))
-			{
-				SunComponent->SetLightSourceAngle(Angle);
-			}
 			if (!FMath::IsNearlyEqual(SunComponent->ShadowAmount, Shadows, 0.005f))
 			{
 				SunComponent->SetShadowAmount(Shadows);
@@ -428,7 +410,8 @@ void AEnvironmentDirector::ApplyEnvironment(const FGameDate& Date, double TotalG
 		{
 			FPostProcessSettings& Grading = WeatherPostProcess->Settings;
 			Grading.bOverride_AutoExposureBias = true;
-			Grading.AutoExposureBias = Initial.ExposureBias + MoodNow.ExposureBiasEV;
+			const APlayerCameraManager* Camera = UGameplayStatics::GetPlayerCameraManager(this, 0);
+			Grading.AutoExposureBias = GetLevelExposureBias(Camera ? Camera->GetCameraLocation() : GetActorLocation()) + MoodNow.ExposureBiasEV;
 			Grading.bOverride_ColorSaturation = true;
 			Grading.ColorSaturation = FVector4(MoodNow.Saturation, MoodNow.Saturation, MoodNow.Saturation, 1.0);
 		}
@@ -480,6 +463,34 @@ void AEnvironmentDirector::ApplyEnvironment(const FGameDate& Date, double TotalG
 		SetEnvironmentParameter(TEXT("TemperatureC"), Weather.TemperatureC);
 		SetEnvironmentParameter(TEXT("SeasonProgress"), static_cast<float>(Date.Season) + Date.SeasonProgress);
 	}
+}
+
+float AEnvironmentDirector::GetLevelExposureBias(const FVector& Location) const
+{
+	// The level's own exposure compensation, read every frame (World Partition streams volumes in
+	// and out): the highest-priority enabled volume around the camera that sets it, else the
+	// engine default (not 0). Our own weather grading is skipped.
+	float Bias = FPostProcessSettings().AutoExposureBias;
+	float BestPriority = -MAX_flt;
+	const IInterface_PostProcessVolume* Own = WeatherPostProcess;
+	for (IInterface_PostProcessVolume& Volume : GetWorld()->GetPostProcessVolumeIterator())
+	{
+		if (&Volume == Own)
+		{
+			continue;
+		}
+		const FPostProcessVolumeProperties Properties = Volume.GetProperties();
+		if (!Properties.bIsEnabled || !Properties.Settings || !Properties.Settings->bOverride_AutoExposureBias || Properties.Priority <= BestPriority)
+		{
+			continue;
+		}
+		if (Properties.bIsUnbound || Volume.EncompassesPoint(Location, 0.0f, nullptr))
+		{
+			BestPriority = Properties.Priority;
+			Bias = Properties.Settings->AutoExposureBias;
+		}
+	}
+	return Bias;
 }
 
 float AEnvironmentDirector::SampleCanopy(const FVector& WorldLocation)

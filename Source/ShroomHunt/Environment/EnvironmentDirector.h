@@ -153,31 +153,27 @@ protected:
 
 	/** Exposure compensation (EV) at full gloom; auto exposure would otherwise brighten a dark sky back. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Gloom", meta = (ClampMin = "-4", ClampMax = "0"))
-	float GloomExposureBiasEV = -0.7f;
+	float GloomExposureBiasEV = -0.4f;
 
 	/** Sky atmosphere luminance factor at full gloom (1 = unchanged). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Gloom", meta = (ClampMin = "0", ClampMax = "1"))
-	float GloomSkyLuminance = 0.3f;
+	float GloomSkyLuminance = 0.5f;
 
 	/** Sky light intensity factor at full gloom (it stays the main light under clouds). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Gloom", meta = (ClampMin = "0", ClampMax = "1"))
-	float GloomSkyLight = 0.65f;
+	float GloomSkyLight = 0.8f;
 
 	/** Sun shadow strength under a closed sky: the light becomes diffuse (no eclipse-like sharp shadows). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Gloom", meta = (ClampMin = "0", ClampMax = "1"))
 	float OvercastShadowAmount = 0.15f;
 
-	/** Sun source angle multiplier under a closed sky (softer, blurred shadows). */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Gloom", meta = (ClampMin = "1", ClampMax = "40"))
-	float OvercastSourceAngleScale = 15.0f;
-
 	/** Color saturation at full gloom. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Gloom", meta = (ClampMin = "0", ClampMax = "1"))
-	float GloomSaturation = 0.65f;
+	float GloomSaturation = 0.75f;
 
 	/** Fog color brightness at full gloom (the fog turns grey). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Gloom", meta = (ClampMin = "0", ClampMax = "1"))
-	float GloomFogBrightness = 0.4f;
+	float GloomFogBrightness = 0.6f;
 
 	// --- Fog & clouds ---------------------------------------------------------------
 
@@ -273,7 +269,6 @@ private:
 	struct FInitialValues
 	{
 		float SunIntensity = 10.0f;
-		float SunSourceAngle = 0.5357f;
 		float SunShadowAmount = 1.0f;
 		float MoonIntensity = 0.3f;
 		float SkyLightIntensity = 1.0f;
@@ -281,7 +276,6 @@ private:
 		FLinearColor FogInscattering = FLinearColor::White;
 		FLinearColor FogDirectionalInscattering = FLinearColor::White;
 		FLinearColor SkyLuminance = FLinearColor::White;
-		float ExposureBias = 0.0f;
 		bool bCaptured = false;
 	};
 
@@ -292,6 +286,8 @@ private:
 		float LatitudeDeg, float LunarCycleGameDays, bool bInGame);
 	void UpdateRain(const FWeatherSample& Weather, float Wetness, float DeltaSeconds);
 	float SampleCanopy(const FVector& WorldLocation);
+	/** Exposure compensation the level gives at a point (its post process volumes, or the engine default). */
+	float GetLevelExposureBias(const FVector& Location) const;
 	void SetEnvironmentParameter(FName Name, float Value) const;
 
 	UFUNCTION()
