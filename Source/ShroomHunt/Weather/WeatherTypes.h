@@ -15,6 +15,8 @@ enum class EWeatherState : uint8
 	Rain,
 	HeavyRain,
 	Storm,
+	/** Precipitation falling as snow (cold air). */
+	Snow,
 	Count UMETA(Hidden)
 };
 
@@ -110,6 +112,13 @@ struct SHROOMHUNT_API FClimateProfile
 	/** Peak rain rate of a strong (non-storm) rain, mm per hour. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Climate", meta = (ClampMin = "0.5"))
 	float MaxRainRateMmPerHour = 3.5f;
+
+	/**
+	 * Depth (degrees C) of the winter cold spells (a few game hours to a day, in months with a
+	 * mean below 9 C): they bring the occasional snow of a lowland winter.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Climate", meta = (ClampMin = "0"))
+	float WinterColdSpellC = 6.0f;
 
 	/** Typical duration of a weather regime (pressure system), in game days. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Climate", meta = (ClampMin = "0.25"))

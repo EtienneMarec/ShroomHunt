@@ -3,6 +3,7 @@
 #include "Core/ShroomHash.h"
 #include "Core/ShroomMath.h"
 #include "Time/CalendarMath.h"
+#include "Weather/SnowModel.h"
 
 namespace
 {
@@ -20,6 +21,7 @@ namespace
 		constexpr uint32 CloudDetail = 7;
 		constexpr uint32 FogDetail = 8;
 		constexpr uint32 WindHeading = 9;
+		constexpr uint32 ColdSpell = 10;
 	}
 
 	/**
@@ -129,8 +131,14 @@ FWeatherSample FWeatherModel::SampleNatural(double GameSeconds) const
 
 	// --- Temperature: monthly mean + slow drift + diurnal cycle damped by clouds (max ~15 h, min ~3 h).
 	const float Drift = 2.5f * Fbm1D(Hash(Seed, Channel::TemperatureDrift), Days / 5.0, 2);
+	// Cold spells of the cold season, on the synoptic time scale (a game winter lasts a few days
+	// only): cold air masses that fronts can turn into snow. None above a 9 C monthly mean.
+	const float ColdSeason = 1.0f - SmoothStep01(4.5f, 9.0f, C.MeanTemperatureC);
+	const float ColdSpell = ColdSeason > 0.0f
+		? Climate.WinterColdSpellC * ColdSeason * SmoothStep01(0.1f, 0.45f, Fbm1D(Hash(Seed, Channel::ColdSpell), Days / 1.5, 2))
+		: 0.0f;
 	const float Diurnal = 0.5f * C.DiurnalRangeC * FMath::Cos(UE_TWO_PI * (Hour - 15.0f) / 24.0f) * (1.0f - 0.6f * Cloud);
-	float Temperature = C.MeanTemperatureC + Drift + Diurnal;
+	float Temperature = C.MeanTemperatureC + Drift - ColdSpell + Diurnal;
 
 	// --- Thunderstorms: some warm days are "storm days"; cells peak in the late afternoon.
 	const float StormRoll = ToUnitFloat(Hash(Seed, Channel::StormDay, static_cast<uint32>(DayIndex)));
@@ -248,6 +256,10 @@ EWeatherState FWeatherModel::Classify(const FWeatherSample& Sample)
 	{
 		return EWeatherState::Storm;
 	}
+	if (Sample.PrecipitationMmPerHour >= 0.05f && SnowModel::SnowFraction(Sample.TemperatureC) >= 0.5f)
+	{
+		return EWeatherState::Snow;
+	}
 	if (Sample.PrecipitationMmPerHour >= 3.0f)
 	{
 		return EWeatherState::HeavyRain;
@@ -296,6 +308,7 @@ FWeatherSample FWeatherModel::MakeStatePreset(EWeatherState State, const FWeathe
 	case EWeatherState::Rain:         Set(0.95f, 2.0f, 0.1f, 0.0f); break;
 	case EWeatherState::HeavyRain:    Set(1.0f, 6.0f, 0.15f, 0.0f); Preset.WindSpeed = FMath::Max(Natural.WindSpeed, 6.0f); break;
 	case EWeatherState::Storm:        Set(1.0f, 9.0f, 0.1f, 1.0f); Preset.WindSpeed = FMath::Max(Natural.WindSpeed, 12.0f); break;
+	case EWeatherState::Snow:         Set(0.95f, 1.2f, 0.3f, 0.0f); Preset.TemperatureC = FMath::Min(Natural.TemperatureC, -2.0f); Preset.Humidity = 0.95f; break;
 	default: break;
 	}
 	return Preset;

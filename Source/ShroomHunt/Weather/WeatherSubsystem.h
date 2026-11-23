@@ -43,6 +43,26 @@ public:
 	UFUNCTION(BlueprintPure, Category = "ShroomHunt|Weather")
 	float GetWetness() const { return Wetness; }
 
+	/** Snow water equivalent on the ground in mm (M2), from the recent weather history. */
+	UFUNCTION(BlueprintPure, Category = "ShroomHunt|Weather")
+	float GetSnowWaterMm() const { return SnowWaterMm; }
+
+	/** Ground covered by snow in [0, 1]. */
+	UFUNCTION(BlueprintPure, Category = "ShroomHunt|Weather")
+	float GetSnowCover() const { return SnowCover; }
+
+	/** Hoar frost in [0, 1] (cold nights and mornings). */
+	UFUNCTION(BlueprintPure, Category = "ShroomHunt|Weather")
+	float GetFrost() const { return Frost; }
+
+	/** Dry ground and grass in [0, 1] (warm days without rain). */
+	UFUNCTION(BlueprintPure, Category = "ShroomHunt|Weather")
+	float GetDryness() const { return Dryness; }
+
+	/** Share of the current precipitation falling as snow, in [0, 1]. */
+	UFUNCTION(BlueprintPure, Category = "ShroomHunt|Weather")
+	float GetSnowFraction() const;
+
 	/** Rain in mm over the last N game hours. */
 	UFUNCTION(BlueprintCallable, Category = "ShroomHunt|Weather")
 	float GetRainLastHours(float GameHours) const;
@@ -78,6 +98,7 @@ private:
 	UCalendarSubsystem* GetCalendar() const;
 	void UpdateWetness(double Now);
 	void UpdateLightning(double Now);
+	void UpdateGround(double Now);
 
 	FWeatherModel Model;
 	TArray<FWeatherOverride> Overrides;
@@ -90,6 +111,12 @@ private:
 
 	float Wetness = 0.0f;
 	float WetnessTimer = 0.0f;
+
+	float SnowWaterMm = 0.0f;
+	float SnowCover = 0.0f;
+	float Frost = 0.0f;
+	float Dryness = 0.0f;
+	float GroundTimer = 0.0f;
 
 	int64 LastLightningBucket = -1;
 };

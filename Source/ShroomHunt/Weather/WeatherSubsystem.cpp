@@ -7,12 +7,14 @@
 #include "Time/CalendarSubsystem.h"
 #include "Time/TimeSettings.h"
 #include "Weather/WeatherSettings.h"
+#include "Weather/SnowModel.h"
 
 namespace
 {
 	constexpr float WetnessRefreshRealSeconds = 0.5f;
 	constexpr double LightningBucketGameSeconds = 120.0;
 	constexpr int32 WetnessSteps = 12;
+	constexpr float GroundRefreshRealSeconds = 2.0f;
 
 	FString StateName(EWeatherState State)
 	{
@@ -109,7 +111,28 @@ void UWeatherSubsystem::Tick(float DeltaTime)
 		UpdateWetness(Now);
 	}
 
+	GroundTimer -= DeltaTime;
+	if (GroundTimer <= 0.0f)
+	{
+		GroundTimer = GroundRefreshRealSeconds;
+		UpdateGround(Now);
+	}
+
 	UpdateLightning(Now);
+}
+
+void UWeatherSubsystem::UpdateGround(double Now)
+{
+	// Snow pack, frost and dryness change over hours: a refresh every few real seconds is plenty.
+	SnowWaterMm = SnowModel::SnowWaterMm([this](double T) { return Model.Sample(T, Overrides); }, Now);
+	SnowCover = SnowModel::Cover(SnowWaterMm);
+	Frost = SnowModel::Frost(Model.MeanTemperatureC(Now - 3.0 * 3600.0, Now, Overrides));
+	Dryness = SnowModel::Dryness(Model.IntegrateRainMm(Now - 3.0 * GameSecondsPerDay, Now, Overrides, 3600.0), CurrentSample.TemperatureC);
+}
+
+float UWeatherSubsystem::GetSnowFraction() const
+{
+	return SnowModel::SnowFraction(CurrentSample.TemperatureC);
 }
 
 void UWeatherSubsystem::UpdateWetness(double Now)
@@ -176,6 +199,7 @@ void UWeatherSubsystem::ForceWeather(EWeatherState State, float DurationGameHour
 	Override.StartGameSeconds = Now;
 	Override.EndGameSeconds = Now + static_cast<double>(FMath::Max(0.1f, DurationGameHours)) * 3600.0;
 	Overrides.Add(Override);
+	GroundTimer = 0.0f;
 	UE_LOG(LogShroomWeather, Log, TEXT("Forcing %s for %.1f game hours"), *StateName(State), DurationGameHours);
 }
 
