@@ -327,6 +327,18 @@ namespace LandmarkMeshBuilder
 		}
 	}
 
+	bool GetCounterMount(EForestLandmarkKind Kind, FTransform& OutLocal, FVector2D& OutSizeCm)
+	{
+		if (Kind != EForestLandmarkKind::ForesterHouse)
+		{
+			return false;
+		}
+		// Front wall, mirror of the poster: between the door and the left window.
+		OutLocal = FTransform(FVector(301.0, -92.0, 170.0));
+		OutSizeCm = FVector2D(56.0, 44.0);
+		return true;
+	}
+
 	void BuildPaper(const FVector2D& SizeCm, TConstArrayView<FLinearColor> Swatches, bool bTorn, FDynamicMesh3& OutMesh, FLandmarkCollision* OutCollision)
 	{
 		using namespace LandmarkMeshDetail;

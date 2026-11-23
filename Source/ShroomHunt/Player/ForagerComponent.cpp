@@ -19,6 +19,7 @@
 #include "Mycology/SpeciesDatabaseSubsystem.h"
 #include "Player/ForagingSettings.h"
 #include "Player/ForagingSubsystem.h"
+#include "UI/CounterWidget.h"
 #include "UI/EncyclopediaWidget.h"
 #include "UI/ForagingWidget.h"
 
@@ -52,6 +53,12 @@ void UForagerComponent::BeginPlay()
 		Encyclopedia->AddToViewport(2);
 		Encyclopedia->SetVisibility(ESlateVisibility::Collapsed);
 	}
+	Counter = CreateWidget<UCounterWidget>(Controller, UCounterWidget::StaticClass());
+	if (Counter)
+	{
+		Counter->AddToViewport(3);
+		Counter->SetVisibility(ESlateVisibility::Collapsed);
+	}
 	Specimen = NewObject<UStaticMeshComponent>(Pawn, TEXT("ExaminedSpecimen"));
 	Specimen->SetUsingAbsoluteLocation(true);
 	Specimen->SetUsingAbsoluteRotation(true);
@@ -75,6 +82,11 @@ void UForagerComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	{
 		Encyclopedia->RemoveFromParent();
 		Encyclopedia = nullptr;
+	}
+	if (Counter)
+	{
+		Counter->RemoveFromParent();
+		Counter = nullptr;
 	}
 	const APawn* Pawn = Cast<APawn>(GetOwner());
 	const APlayerController* Controller = Pawn ? Cast<APlayerController>(Pawn->GetController()) : nullptr;
@@ -197,7 +209,7 @@ void UForagerComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 		Specimen->SetWorldLocationAndRotation(Center - Turn.RotateVector(FVector(0.0, 0.0, 0.5 * ExaminedHeightCm)), Turn);
 		return;
 	}
-	if (bReading || bEncyclopediaOpen)
+	if (bReading || bEncyclopediaOpen || bCounterOpen)
 	{
 		return;
 	}
@@ -211,6 +223,12 @@ void UForagerComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 	const UKnowledgeSubsystem* Knowledge = GetKnowledge();
 	const FKnowledgeSource* SourceData = Knowledge ? Knowledge->FindSource(Source) : nullptr;
 
+	if (Source == AForestLandmarkSet::CounterId && ReadableDistance < MushroomDistance)
+	{
+		Target = ETarget::Counter;
+		Widget->SetPrompt(FText::Format(LOCTEXT("CounterPrompt", "The buyer's counter\n[{0}] Sell and buy"), Settings->ExamineKey.GetDisplayName()));
+		return;
+	}
 	if (SourceData && ReadableDistance < MushroomDistance)
 	{
 		Target = ETarget::Readable;
@@ -247,6 +265,11 @@ void UForagerComponent::SetPlayerFrozen(bool bFrozen)
 
 void UForagerComponent::OnExamine()
 {
+	if (bCounterOpen)
+	{
+		CloseCounter();
+		return;
+	}
 	if (bEncyclopediaOpen)
 	{
 		return;
@@ -267,6 +290,48 @@ void UForagerComponent::OnExamine()
 	{
 		BeginReading(TargetSource);
 	}
+	else if (Target == ETarget::Counter)
+	{
+		OpenCounter();
+	}
+}
+
+void UForagerComponent::OpenCounter()
+{
+	APawn* Pawn = Cast<APawn>(GetOwner());
+	APlayerController* Controller = Pawn ? Cast<APlayerController>(Pawn->GetController()) : nullptr;
+	if (!Counter || !Controller)
+	{
+		return;
+	}
+	bCounterOpen = true;
+	Counter->Refresh();
+	Counter->SetVisibility(ESlateVisibility::Visible);
+	Widget->SetPrompt(FText::GetEmpty());
+	SetPlayerFrozen(true);
+	// The mouse clicks the counter's buttons; the keys still reach the game (E closes it).
+	Controller->SetShowMouseCursor(true);
+	FInputModeGameAndUI Mode;
+	Mode.SetHideCursorDuringCapture(false);
+	Mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	Controller->SetInputMode(Mode);
+}
+
+void UForagerComponent::CloseCounter()
+{
+	bCounterOpen = false;
+	if (Counter)
+	{
+		Counter->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	APawn* Pawn = Cast<APawn>(GetOwner());
+	if (APlayerController* Controller = Pawn ? Cast<APlayerController>(Pawn->GetController()) : nullptr)
+	{
+		Controller->SetShowMouseCursor(false);
+		Controller->SetInputMode(FInputModeGameOnly());
+	}
+	SetPlayerFrozen(false);
+	RefreshBasket();
 }
 
 void UForagerComponent::BeginExamine(uint32 Seed)
@@ -386,7 +451,7 @@ void UForagerComponent::OnEncyclopedia()
 	{
 		CloseEncyclopedia();
 	}
-	else if (!bExamining && !bReading)
+	else if (!bExamining && !bReading && !bCounterOpen)
 	{
 		OpenEncyclopedia();
 	}
@@ -467,7 +532,7 @@ void UForagerComponent::OnTurn(const FInputActionValue& Value)
 void UForagerComponent::OnPick()
 {
 	AMushroomSpawner* Mushrooms = GetSpawner();
-	if (!Mushrooms || bReading || bEncyclopediaOpen || (!bExamining && Target != ETarget::Mushroom))
+	if (!Mushrooms || bReading || bEncyclopediaOpen || bCounterOpen || (!bExamining && Target != ETarget::Mushroom))
 	{
 		return;
 	}

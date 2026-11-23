@@ -5,6 +5,7 @@
 #include "ForagerComponent.generated.h"
 
 class AMushroomSpawner;
+class UCounterWidget;
 class UEncyclopediaWidget;
 class UForagingWidget;
 class UInputAction;
@@ -36,7 +37,7 @@ public:
 	bool IsExamining() const { return bExamining; }
 
 private:
-	enum class ETarget : uint8 { None, Mushroom, Readable };
+	enum class ETarget : uint8 { None, Mushroom, Readable, Counter };
 
 	void SetupInput();
 	void OnExamine();
@@ -50,6 +51,8 @@ private:
 	void EndReading();
 	void OpenEncyclopedia();
 	void CloseEncyclopedia();
+	void OpenCounter();
+	void CloseCounter();
 	void SetPlayerFrozen(bool bFrozen);
 	void RefreshBasket();
 	bool GetView(FVector& OutOrigin, FVector& OutDirection) const;
@@ -82,6 +85,10 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UEncyclopediaWidget> Encyclopedia;
 
+	/** The buyer's counter (sell, shop), M3. */
+	UPROPERTY(Transient)
+	TObjectPtr<UCounterWidget> Counter;
+
 	/** The examined specimen, held in front of the camera (its own unique mesh). */
 	UPROPERTY(Transient)
 	TObjectPtr<UStaticMeshComponent> Specimen;
@@ -93,6 +100,7 @@ private:
 	bool bExamining = false;
 	bool bReading = false;
 	bool bEncyclopediaOpen = false;
+	bool bCounterOpen = false;
 	uint32 ExaminedSeed = 0;
 	float ExaminedHeightCm = 10.0f;
 	FRotator SpecimenRotation = FRotator::ZeroRotator;

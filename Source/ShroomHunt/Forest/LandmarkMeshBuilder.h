@@ -35,6 +35,9 @@ namespace LandmarkMeshBuilder
 	 */
 	SHROOMHUNT_API bool GetPaperMount(EForestLandmarkKind Kind, FTransform& OutLocal, FVector2D& OutSizeCm);
 
+	/** Where the buyer's counter board hangs (forester's house only, left of the door; M3). */
+	SHROOMHUNT_API bool GetCounterMount(EForestLandmarkKind Kind, FTransform& OutLocal, FVector2D& OutSizeCm);
+
 	/**
 	 * A sheet of paper facing +X, centered on the origin, with a title band and one colored
 	 * illustration per swatch; a torn sheet has a ragged lower edge.

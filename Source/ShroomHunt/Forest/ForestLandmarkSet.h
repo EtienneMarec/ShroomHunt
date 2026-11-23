@@ -31,6 +31,9 @@ public:
 	/** Readable sheets (poster, guide page) carry this component tag followed by their source id. */
 	static const FName ReadableTag;
 
+	/** Second tag of the buyer's counter board (a readable with no knowledge source; M3). */
+	static const FName CounterId;
+
 	/** The knowledge source a component shows, or NAME_None. */
 	static FName GetReadableSource(const UPrimitiveComponent* Component);
 

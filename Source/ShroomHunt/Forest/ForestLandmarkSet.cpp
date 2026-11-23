@@ -30,6 +30,7 @@ namespace ForestLandmarkSetDetail
 }
 
 const FName AForestLandmarkSet::ReadableTag(TEXT("ShroomReadable"));
+const FName AForestLandmarkSet::CounterId(TEXT("BuyerCounter"));
 
 FName AForestLandmarkSet::GetReadableSource(const UPrimitiveComponent* Component)
 {
@@ -306,6 +307,10 @@ void AForestLandmarkSet::Build()
 	{
 		for (const FKnowledgeSource& Source : Sources.Sources)
 		{
+			if (Source.Kind == EKnowledgeSourceKind::Book)
+			{
+				continue; // sold at the counter, not hung on a landmark
+			}
 			const FForestLandmark* Host = Field->GetLandmarks().FindByPredicate([&Source](const FForestLandmark& L) { return Source.Landmark == ForestLandmarks::KindName(L.Kind); });
 			FTransform Mount;
 			FVector2D Size;
@@ -352,6 +357,34 @@ void AForestLandmarkSet::Build()
 				const float ColumnW = 0.9f * Size.X / SpeciesNames.Num();
 				const FString Name = SpeciesNames[Index].ToString();
 				AddText(Paper, Name, FVector(0.8, -0.45 * Size.X + ColumnW * (Index + 0.5), -0.3 * Size.Y), 0.0f, FitSize(Name, 0.95f * ColumnW, 3.2f));
+			}
+		}
+	}
+	// The buyer's counter (M3): a board by the door of the forester's house.
+	if (const FForestLandmark* House = Field->GetLandmarks().FindByPredicate([](const FForestLandmark& L) { return L.Kind == EForestLandmarkKind::ForesterHouse; }))
+	{
+		FTransform Mount;
+		FVector2D Size;
+		if (LandmarkMeshBuilder::GetCounterMount(House->Kind, Mount, Size))
+		{
+			const TArray<FLinearColor> Coins = { FLinearColor(0.75f, 0.6f, 0.2f), FLinearColor(0.55f, 0.35f, 0.15f), FLinearColor(0.3f, 0.45f, 0.25f) };
+			UStaticMesh* CounterMesh = GetMesh(TEXT("Paper_Counter"), [&]()
+			{
+				UE::Geometry::FDynamicMesh3 Mesh;
+				FLandmarkCollision Collision;
+				LandmarkMeshBuilder::BuildPaper(Size, Coins, false, Mesh, &Collision);
+				return ShroomMesh::CreateTransientStaticMesh(Mesh, MeshMaterial, TEXT("SM_Paper_Counter"), &Collision.Boxes);
+			});
+			if (CounterMesh)
+			{
+				UStaticMeshComponent* Board = AddMesh(CounterMesh, Mount * WorldAt(House->PositionM, House->GroundM, House->YawDeg), true);
+				Board->SetCastShadow(false);
+				Board->ComponentTags = { ReadableTag, CounterId };
+				if (bShowTexts)
+				{
+					const FString Title = TEXT("Mushroom buyer - field guides");
+					AddText(Board, Title, FVector(0.8, 0.0, 0.39 * Size.Y), 0.0f, FitSize(Title, 0.85f * Size.X, 4.0f), FColor(235, 228, 205));
+				}
 			}
 		}
 	}
