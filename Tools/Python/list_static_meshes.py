@@ -27,7 +27,6 @@ def list_meshes(folder: str) -> list:
         class_paths=[unreal.TopLevelAssetPath("/Script/Engine", "StaticMesh")],
         recursive_paths=True,
     )
-    meshes_subsystem = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
     rows = []
     for data in sorted(registry.get_assets(filter_), key=lambda d: str(d.package_name)):
         mesh = data.get_asset()
@@ -43,7 +42,8 @@ def list_meshes(folder: str) -> list:
             "bottom_m": round((origin.z - extent.z) / 100.0, 2),
             "width_m": round(2.0 * max(extent.x, extent.y) / 100.0, 2),
             "nanite": nanite,
-            "lods": meshes_subsystem.get_lod_count(mesh),
+            # The editor subsystems do not exist in the headless commandlet: ask the mesh.
+            "lods": mesh.get_num_lods(),
         })
     return rows
 
