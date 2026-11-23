@@ -15,7 +15,9 @@ shading of the per-vertex sRGB colors; good enough to review shapes and colors.
 Vegetation (M1d-2): `sh.Vegetation.ExportObj` writes Saved/VegetationDebug/<Key>.obj, then
        python Tools/Python/render_mushroom_preview.py Saved/VegetationDebug out.png --grid
 draws one row per tree genus (Sapling, Pole, Mature..., Old at a common scale) and one row
-for the understory (each tile at its own scale).
+for the understory (each tile at its own scale). Ground debris (V1-3): leaf litter has one
+row per genus, the other debris one row; add "--top" for a steep view from above
+(flat objects are unreadable from the default low camera).
 
 Like Unreal, it uses the left-handed convention (front-face normal = (C - A) x (B - A))
 and culls back faces, so a mesh with inverted winding shows up as "inside out" here too.
@@ -31,6 +33,8 @@ import zlib
 TILE = 320
 AZIMUTH = math.radians(35.0)
 ELEVATION = math.radians(22.0)
+# Vertical position of the ground in a tile (0 top, 1 bottom); "--top" centers it.
+GROUND_ANCHOR = 0.78
 LIGHT_DIRECTION = (-0.45, -0.35, 0.82)
 BACKGROUND = (40, 44, 52)
 
@@ -82,7 +86,7 @@ def render_tile(image, origin_x, origin_y, mesh, scale, center, cull=True):
     projected = []
     for v in vertices:
         sx, depth, sy = to_view((v[0] - center[0], v[1] - center[1], v[2] - center[2]))
-        projected.append((TILE / 2 + sx * scale, TILE * 0.78 - sy * scale, depth))
+        projected.append((TILE / 2 + sx * scale, TILE * GROUND_ANCHOR - sy * scale, depth))
 
     for a, b, c in faces:
         A, B, C = vertices[a], vertices[b], vertices[c]
@@ -147,6 +151,8 @@ def grid_key(name):
         return parts[0], (forms[parts[1]], parts[1], int(parts[2]))
     if len(parts) == 3 and parts[1] == "Age":
         return parts[0], (int(parts[2]), "Age", 0)
+    if len(parts) == 3 and parts[1] == "LeafLitter":
+        return f"~Litter {parts[0]}", (0, parts[1], int(parts[2]))
     return "~Understory", (0, parts[0], int(parts[-1]) if parts[-1].isdigit() else 0)
 
 
@@ -184,6 +190,10 @@ def main():
         sys.exit(1)
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     cull = "--no-cull" not in sys.argv
+    if "--top" in sys.argv:
+        global ELEVATION, GROUND_ANCHOR
+        ELEVATION = math.radians(62.0)
+        GROUND_ANCHOR = 0.55
     folder, output = args[0], args[1]
     if "--grid" in sys.argv:
         render_grid(folder, output, cull)
