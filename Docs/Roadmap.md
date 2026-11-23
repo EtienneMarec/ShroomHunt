@@ -8,7 +8,7 @@ short "UE concepts learned" section. Sub-steps are individually demoable.
 Git + LFS, CLAUDE.md, design docs (architecture, species schema, spawn model,
 world generation, progression, roadmap, decisions).
 
-## M1 — Vertical slice (lowland oak–beech, 1 km²)
+## M1 — Vertical slice (lowland oak–beech, 1 km²) ✅ (done 2026-11-23)
 | Step | Deliverable | Demo |
 |---|---|---|
 | M1a Time & weather core ✅ code (editor setup: `Docs/Milestones/M1a.md`) | `UTimeSettings`, `UCalendarSubsystem`, `FWeatherModel`, `UWeatherSubsystem`, `AEnvironmentDirector` (sun/moon, fog, clouds, rain FX), debug HUD, `sh.Time.*` / `sh.Weather.*` | template map: 10-min day/night, rain arriving and clearing, forced storm |
@@ -21,7 +21,7 @@ world generation, progression, roadmap, decisions).
 | M1f Spawning ✅ (`Docs/Milestones/M1f.md`) | suitability, patches, daily flushes, ISM streaming, debug maps | rain → mushrooms 2–3 days later in predictable spots |
 | M1g-1 Foraging ✅ (`Docs/Milestones/M1g.md`) | aim, examine with observable criteria, pick, basket, patch exhaustion | find, examine, pick |
 | M1g-2 Knowledge ✅ (`Docs/Milestones/M1g.md`, part 2) | poster + torn page, names of known species, minimal encyclopedia | identify |
-| M1h Rain polish (`Docs/Milestones/M1h.md`) | wind heading, rain slanted by the wind, streak material, ground splashes (CPU collision events), less rain and dripping leaves under the canopy, rain sound, wet materials (`MF_Wetness`) | walk from a clearing into a dense stand in the rain |
+| M1h Rain polish ✅ (`Docs/Milestones/M1h.md`) | wind heading, rain slanted by the wind, streak material, ground splashes (CPU collision events), less rain and dripping leaves under the canopy, rain sound, wet materials (`MF_Wetness`) | walk from a clearing into a dense stand in the rain |
 
 ## M2 — Seasons
 Season-driven temperature/weather, foliage color & leaf fall (`MPC_Season`),
