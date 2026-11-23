@@ -123,7 +123,7 @@ bool FPCGForestScatterElement::ExecuteInternal(FPCGContext* Context) const
 	}
 
 	UE_LOG(LogShroomVegetation, Verbose, TEXT("Forest Scatter %s %s: %d points in [%.0f, %.0f] - [%.0f, %.0f] m"), *Settings->ForestName,
-		Settings->Layer == EVegetationLayer::Trees ? TEXT("trees") : TEXT("understory"), Instances.Num(), BoundsM.Min.X, BoundsM.Min.Y, BoundsM.Max.X, BoundsM.Max.Y);
+		*StaticEnum<EVegetationLayer>()->GetNameStringByValue(static_cast<int64>(Settings->Layer)), Instances.Num(), BoundsM.Min.X, BoundsM.Min.Y, BoundsM.Max.X, BoundsM.Max.Y);
 
 	FPCGTaggedData& Output = Context->OutputData.TaggedData.Emplace_GetRef();
 	Output.Data = Points;

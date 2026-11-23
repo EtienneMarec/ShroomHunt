@@ -1,6 +1,7 @@
 #include "DynamicMesh/DynamicMesh3.h"
 #include "Forest/ForestField.h"
 #include "Forest/ForestFieldCache.h"
+#include "Forest/ForestPaths.h"
 #include "Misc/AutomationTest.h"
 #include "Vegetation/VegetationDefinition.h"
 #include "Vegetation/VegetationMeshBuilder.h"
@@ -72,14 +73,20 @@ bool FVegetationDefinitionTest::RunTest(const FString& Parameters)
 	{
 		Expected += Rule.Kind == EVegetationKind::Sapling ? 0 : Rule.Variants;
 	}
-	TestEqual(TEXT("One mesh per genus x form x variant plus understory variants"), Specs.Num(), Expected);
+	for (const FUnderstoryRule& Rule : Definition.Ground)
+	{
+		Expected += Rule.Variants * (Rule.Kind == EVegetationKind::LeafLitter ? Definition.Trees.Num() : 1);
+	}
+	TestEqual(TEXT("One mesh per genus x form x variant plus understory and ground variants (leaf litter per genus)"), Specs.Num(), Expected);
+	TestEqual(TEXT("Four ground debris kinds"), Definition.GetRules(EVegetationLayer::Ground).Num(), 4);
 	TSet<FString> Keys;
 	for (const FVegetationMeshSpec& Spec : Specs)
 	{
 		Keys.Add(Spec.GetKey());
 	}
 	TestEqual(TEXT("Mesh keys are unique"), Keys.Num(), Specs.Num());
-	TestTrue(TEXT("Key format"), Keys.Contains(TEXT("Fagus_Mature_0")) && Keys.Contains(TEXT("Bracken_0")));
+	TestTrue(TEXT("Key format"), Keys.Contains(TEXT("Fagus_Mature_0")) && Keys.Contains(TEXT("Bracken_0"))
+		&& Keys.Contains(TEXT("Quercus_LeafLitter_0")) && Keys.Contains(TEXT("Stones_0")));
 
 	FVegetationDefinition Bad;
 	TArray<FString> BadErrors;
@@ -118,14 +125,25 @@ bool FVegetationMeshTest::RunTest(const FString& Parameters)
 		TestTrue(Key + TEXT(" stays under 40k triangles"), Mesh.TriangleCount() < 40000);
 
 		const UE::Geometry::FAxisAlignedBox3d Bounds = Mesh.GetBounds();
-		TestTrue(Key + TEXT(" stands on the ground"), Bounds.Min.Z < 5.0 && Bounds.Max.Z > 5.0);
+		const bool bGround = VegetationData::GetLayer(Spec.Kind) == EVegetationLayer::Ground;
+		if (bGround)
+		{
+			TestTrue(FString::Printf(TEXT("%s lies flat on the ground (%.1f to %.1f cm)"), *Key, Bounds.Min.Z, Bounds.Max.Z),
+				Bounds.Min.Z < 2.0 && Bounds.Max.Z > 0.3 && Bounds.Max.Z < 40.0);
+			TestTrue(Key + TEXT(" stays small (< 2 m wide)"), Bounds.Width() < 200.0 && Bounds.Height() < 200.0);
+			TestTrue(Key + TEXT(" is light (< 5k triangles: many instances)"), Mesh.TriangleCount() < 5000);
+		}
+		else
+		{
+			TestTrue(Key + TEXT(" stands on the ground"), Bounds.Min.Z < 5.0 && Bounds.Max.Z > 5.0);
+		}
 
 		const bool bTree = Spec.Kind == EVegetationKind::Pole || Spec.Kind == EVegetationKind::Mature || Spec.Kind == EVegetationKind::Old;
 		TestEqual(Key + TEXT(" collision: capsule for trees and dead wood only"), Collision.bHasCapsule,
 			bTree || Spec.Kind == EVegetationKind::Log || Spec.Kind == EVegetationKind::Stump);
-		if (Spec.Kind != EVegetationKind::Bracken)
+		if (Spec.Kind != EVegetationKind::Bracken && Spec.Kind != EVegetationKind::LeafLitter)
 		{
-			// Every part is a closed or nearly closed surface facing outward (bracken is double-sided).
+			// Every part is a closed or nearly closed surface facing outward (bracken and leaves are double-sided).
 			TestTrue(Key + TEXT(" faces outward (positive volume)"), SignedVolume(Mesh) > 0.0);
 		}
 		if (Spec.Kind == EVegetationKind::Mature)
@@ -156,9 +174,9 @@ bool FVegetationScatterTest::RunTest(const FString& Parameters)
 	const double SizeM = Field->GetSizeM();
 	const FBox2d Whole(FVector2d::ZeroVector, FVector2d(SizeM, SizeM));
 
-	for (const EVegetationLayer Layer : { EVegetationLayer::Trees, EVegetationLayer::Understory })
+	for (const EVegetationLayer Layer : { EVegetationLayer::Trees, EVegetationLayer::Understory, EVegetationLayer::Ground })
 	{
-		const FString Name = Layer == EVegetationLayer::Trees ? TEXT("Trees") : TEXT("Understory");
+		const FString Name = StaticEnum<EVegetationLayer>()->GetNameStringByValue(static_cast<int64>(Layer));
 		TArray<FVegetationInstance> All;
 		TArray<FVegetationInstance> AllAgain;
 		VegetationScatter::Scatter(*Field, *Definition, Layer, Whole, All);
@@ -207,6 +225,48 @@ bool FVegetationScatterTest::RunTest(const FString& Parameters)
 			{
 				TestTrue(FString::Printf(TEXT("Alders grow closer to water than beeches (%.0f m vs %.0f m)"), AlderWater / Alders, BeechWater / Beeches),
 					AlderWater / Alders < BeechWater / Beeches);
+			}
+		}
+		else if (Layer == EVegetationLayer::Ground)
+		{
+			TMap<EVegetationKind, int32> Counts;
+			int32 OnPath = 0, ForeignLeaves = 0, Litter = 0;
+			double StoneSlope = 0.0, AllSlope = 0.0;
+			int32 Stones = 0;
+			for (const FVegetationInstance& I : All)
+			{
+				++Counts.FindOrAdd(I.Kind);
+				const FForestSample S = Field->Sample(static_cast<float>(I.PositionM.X), static_cast<float>(I.PositionM.Y));
+				OnPath += (S.PathRank >= 0 && S.PathDistanceM < ForestPaths::HalfWidthM(static_cast<EForestPathRank>(S.PathRank), Field->GetDefinition())) ? 1 : 0;
+				if (I.Kind == EVegetationKind::LeafLitter)
+				{
+					++Litter;
+					const int32 GenusIndex = Field->GetGenera().IndexOfByKey(I.Genus);
+					ForeignLeaves += (GenusIndex == INDEX_NONE || !S.StandWeights.IsValidIndex(GenusIndex) || S.StandWeights[GenusIndex] <= 0.0f) ? 1 : 0;
+				}
+				const FFieldRaster& H = Field->GetHeights();
+				const float X = static_cast<float>(I.PositionM.X), Y = static_cast<float>(I.PositionM.Y);
+				const double Slope = FVector2d((H.Sample(X + 1.0f, Y) - H.Sample(X - 1.0f, Y)) * 0.5, (H.Sample(X, Y + 1.0f) - H.Sample(X, Y - 1.0f)) * 0.5).Size();
+				AllSlope += Slope;
+				if (I.Kind == EVegetationKind::Stones)
+				{
+					StoneSlope += Slope;
+					++Stones;
+				}
+			}
+			AddInfo(FString::Printf(TEXT("%d ground debris: %d leaf litter, %d twigs, %d stones, %d moss"), All.Num(),
+				Counts.FindRef(EVegetationKind::LeafLitter), Counts.FindRef(EVegetationKind::Twigs), Counts.FindRef(EVegetationKind::Stones), Counts.FindRef(EVegetationKind::Moss)));
+			for (const EVegetationKind Kind : { EVegetationKind::LeafLitter, EVegetationKind::Twigs, EVegetationKind::Stones, EVegetationKind::Moss })
+			{
+				TestTrue(FString::Printf(TEXT("%s present"), VegetationData::KindName(Kind)), Counts.FindRef(Kind) > 0);
+			}
+			TestTrue(TEXT("Plausible amount of ground debris for 1 km2 (20k - 400k)"), All.Num() > 20000 && All.Num() < 400000);
+			TestEqual(TEXT("No debris on the path surfaces"), OnPath, 0);
+			TestEqual(TEXT("Fallen leaves come from the genera of the stand"), ForeignLeaves, 0);
+			if (Stones > 0 && All.Num() > 0)
+			{
+				TestTrue(FString::Printf(TEXT("Stones prefer slopes (%.3f vs %.3f mean slope)"), StoneSlope / Stones, AllSlope / All.Num()),
+					StoneSlope / Stones > AllSlope / All.Num());
 			}
 		}
 		else

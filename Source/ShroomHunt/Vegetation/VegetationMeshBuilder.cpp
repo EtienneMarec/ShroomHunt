@@ -646,6 +646,198 @@ namespace VegetationMeshDetail
 			OutCollision->Rotation = FRotator::ZeroRotator;
 		}
 	}
+
+	// --- Ground debris (V1-3) ------------------------------------------------------------
+
+	/** A patch of fallen leaves of one genus: double-sided leaf blades, curled up at the edges. */
+	void BuildLeafLitter(const FTreeArchetype& Arch, uint32 Seed, FMeshAccumulator& Acc)
+	{
+		FRandomStream Rng(static_cast<int32>(Seed));
+		const FLinearColor Base = VegetationData::ToColor(Arch.Litter, Srgb(0.45, 0.30, 0.14));
+		const FLinearColor Decayed = Srgb(0.17, 0.12, 0.07);
+		// A dense carpet: about three quarters of the patch covered by leaves.
+		const double PatchRadius = Rng.FRandRange(0.45f, 0.65f);
+		const int32 Leaves = Rng.RandRange(85, 110);
+		constexpr int32 MaxOutline = 12;
+		const int32 Outline = Arch.LeafLobes > 0 ? 12 : 8;
+
+		for (int32 L = 0; L < Leaves; ++L)
+		{
+			const double Length = Arch.LeafSizeCm / 100.0 * Rng.FRandRange(0.8f, 1.2f);
+			const double Width = Length * (Arch.LeafLobes > 0 ? 0.62 : Rng.FRandRange(0.5f, 0.62f));
+			const double Distance = PatchRadius * FMath::Pow(Rng.FRand(), 0.6f);
+			const double Angle = Rng.FRandRange(0.0f, UE_TWO_PI);
+			const FVector3d Center(Distance * FMath::Cos(Angle), Distance * FMath::Sin(Angle), 0.0);
+			const double Yaw = Rng.FRandRange(0.0f, UE_TWO_PI);
+			const FVector3d U(FMath::Cos(Yaw), FMath::Sin(Yaw), 0.0);
+			const FVector3d V(-U.Y, U.X, 0.0);
+			// Stacked leaves, slightly tilted, edges curled up.
+			const double Height = 0.002 + 0.012 * Rng.FRand();
+			const double TiltU = Rng.FRandRange(-0.15f, 0.15f);
+			const double TiltV = Rng.FRandRange(-0.15f, 0.15f);
+			const double Curl = Rng.FRandRange(0.1f, 0.35f);
+
+			FLinearColor Color = ScaleSRGB(Base, Rng.FRandRange(0.75f, 1.15f));
+			const float Fate = Rng.FRand();
+			if (Fate < 0.2f)
+			{
+				Color = LerpSRGB(Color, Decayed, Rng.FRandRange(0.3f, 0.7f));
+			}
+			else if (Fate > 0.9f)
+			{
+				Color = ScaleSRGB(Color, 1.25f);
+			}
+
+			auto PointAt = [&](double X, double Y)
+			{
+				const double Edge = FMath::Square(Y / (0.5 * Width));
+				const double Z = Height + TiltU * X + TiltV * Y + Curl * Edge * Width * 0.25;
+				return Center + U * X + V * Y + FVector3d(0.0, 0.0, Z);
+			};
+			TArray<FVector3d, TInlineAllocator<MaxOutline>> Rim;
+			for (int32 K = 0; K < Outline; ++K)
+			{
+				const double T = UE_DOUBLE_TWO_PI * K / Outline;
+				// Egg-shaped blade, tip toward +U; oak leaves get lobes.
+				double Half = 0.5 * Width * FMath::Sin(T) * (1.0 - 0.25 * FMath::Cos(T));
+				if (Arch.LeafLobes > 0)
+				{
+					Half *= 1.0 - 0.35 * FMath::Abs(FMath::Sin(T * Arch.LeafLobes));
+				}
+				Rim.Add(PointAt(0.5 * Length * FMath::Cos(T), Half));
+			}
+			for (int32 Face = 0; Face < 2; ++Face)
+			{
+				const bool bBack = Face == 1;
+				const FLinearColor FaceColor = bBack ? ScaleSRGB(Color, 0.7f) : Color;
+				const int32 Middle = AddVertexM(Acc, PointAt(0.0, 0.0), ScaleSRGB(FaceColor, 0.92f));
+				TArray<int32, TInlineAllocator<MaxOutline>> Ids;
+				for (const FVector3d& P : Rim)
+				{
+					Ids.Add(AddVertexM(Acc, P, FaceColor));
+				}
+				for (int32 K = 0; K < Outline; ++K)
+				{
+					const int32 K1 = (K + 1) % Outline;
+					const FVector2f UvC(0.5f, 0.5f);
+					const FVector2f Uv0(0.5f + 0.5f * FMath::Cos(UE_TWO_PI * K / Outline), 0.5f + 0.5f * FMath::Sin(UE_TWO_PI * K / Outline));
+					const FVector2f Uv1(0.5f + 0.5f * FMath::Cos(UE_TWO_PI * K1 / Outline), 0.5f + 0.5f * FMath::Sin(UE_TWO_PI * K1 / Outline));
+					// The rim runs counter-clockwise seen from above: (center, k, k+1) faces up.
+					if (bBack)
+					{
+						Acc.AddTriangle(Middle, Ids[K1], Ids[K], UvC, Uv1, Uv0, static_cast<uint8>(EVegetationSurface::Foliage));
+					}
+					else
+					{
+						Acc.AddTriangle(Middle, Ids[K], Ids[K1], UvC, Uv0, Uv1, static_cast<uint8>(EVegetationSurface::Foliage));
+					}
+				}
+			}
+		}
+	}
+
+	/** A few dead twigs lying on the ground, some with a side branch. */
+	void BuildTwigs(uint32 Seed, FMeshAccumulator& Acc)
+	{
+		FRandomStream Rng(static_cast<int32>(Seed));
+		const FLinearColor Bark = Srgb(0.29, 0.24, 0.18);
+		const FLinearColor Wood = Srgb(0.55, 0.45, 0.31);
+		const int32 Count = Rng.RandRange(2, 4);
+		for (int32 T = 0; T < Count; ++T)
+		{
+			const double Length = Rng.FRandRange(0.3f, 0.7f);
+			const double Radius = Rng.FRandRange(0.007f, 0.016f);
+			const double Angle = Rng.FRandRange(0.0f, UE_TWO_PI);
+			const FVector3d Dir(FMath::Cos(Angle), FMath::Sin(Angle), 0.0);
+			const FVector3d Side(-Dir.Y, Dir.X, 0.0);
+			const FVector3d Start = FVector3d(Rng.FRandRange(-0.2f, 0.2f), Rng.FRandRange(-0.2f, 0.2f), 0.0) - Dir * (0.5 * Length);
+			const double Bend = Rng.FRandRange(-0.08f, 0.08f);
+			const FLinearColor Tint = ScaleSRGB(Bark, Rng.FRandRange(0.8f, 1.2f));
+
+			auto AddStick = [&](const FVector3d& From, const FVector3d& Direction, const FVector3d& Normal, double StickLength, double StickRadius, double StickBend)
+			{
+				TArray<FVector3d> Path;
+				for (int32 K = 0; K <= 5; ++K)
+				{
+					const double S = K / 5.0;
+					Path.Add(From + Direction * (StickLength * S) + Normal * (StickBend * FMath::Sin(UE_DOUBLE_PI * S)) + FVector3d(0.0, 0.0, StickRadius));
+				}
+				AddTube(Acc, Path, 5, [&](int32 Ring, double) { return StickRadius * (1.0 - 0.5 * Ring / 5.0); },
+					[&](int32, double, const FVector3d&) { return Tint; },
+					EVegetationSurface::Bark, true, true, Wood, Wood, EVegetationSurface::Wood);
+			};
+			AddStick(Start, Dir, Side, Length, Radius, Bend);
+			if (Rng.FRand() < 0.6f)
+			{
+				const double Along = Rng.FRandRange(0.3f, 0.7f);
+				const double Branch = Rng.FRandRange(0.5f, 0.9f) * (Rng.FRand() < 0.5f ? -1.0 : 1.0);
+				const FVector3d BranchDir = (Dir + Side * Branch).GetSafeNormal();
+				AddStick(Start + Dir * (Length * Along), BranchDir, FVector3d(-BranchDir.Y, BranchDir.X, 0.0),
+					Length * Rng.FRandRange(0.25f, 0.45f), Radius * 0.6, Bend * 0.5);
+			}
+		}
+	}
+
+	/** One to three stones half sunk in the ground, mossy on top. */
+	void BuildStones(uint32 Seed, FMeshAccumulator& Acc)
+	{
+		FRandomStream Rng(static_cast<int32>(Seed));
+		const FLinearColor Rock = Srgb(0.43, 0.42, 0.39);
+		const FLinearColor Moss = Srgb(0.20, 0.31, 0.08);
+		const int32 Count = Rng.RandRange(1, 3);
+		for (int32 S = 0; S < Count; ++S)
+		{
+			const double Radius = Rng.FRandRange(0.06f, 0.22f) * (S == 0 ? 1.0 : 0.6);
+			const FVector3d Stretch(1.0, Rng.FRandRange(0.65f, 0.95f), Rng.FRandRange(0.45f, 0.65f));
+			const double Angle = Rng.FRandRange(0.0f, UE_TWO_PI);
+			const FVector3d Center = FVector3d(FMath::Cos(Angle), FMath::Sin(Angle), 0.0) * (S == 0 ? 0.0 : Rng.FRandRange(0.15f, 0.3f))
+				+ FVector3d(0.0, 0.0, Radius * Stretch.Z * 0.3);
+			const uint32 BlobSeed = ShroomHash::Hash(Seed, static_cast<uint32>(S), 0x570u);
+			const FLinearColor Tint = ScaleSRGB(Rock, Rng.FRandRange(0.8f, 1.15f));
+			const float MossShare = Rng.FRandRange(0.0f, 0.8f);
+			AddBlob(Acc, Radius > 0.12 ? 2 : 1,
+				[&](const FVector3d& D)
+				{
+					const double Bump = 1.0 + 0.22 * DirectionNoise(BlobSeed, D, 1.6);
+					return Center + FVector3d(D.X * Stretch.X, D.Y * Stretch.Y, D.Z * Stretch.Z) * (Radius * Bump);
+				},
+				[&](const FVector3d& D, const FVector3d&)
+				{
+					const float Grain = DirectionNoise(BlobSeed ^ 0x9u, D, 4.0);
+					const float MossAlpha = MossShare * ShroomMath::SmoothStep01(0.3f, 0.9f, static_cast<float>(D.Z)) * FMath::Clamp(0.6f + Grain, 0.0f, 1.0f);
+					return LerpSRGB(ScaleSRGB(Tint, 1.0f + 0.12f * Grain), Moss, MossAlpha);
+				},
+				EVegetationSurface::Wood);
+		}
+	}
+
+	/** Low, bumpy moss cushions. */
+	void BuildMoss(uint32 Seed, FMeshAccumulator& Acc)
+	{
+		FRandomStream Rng(static_cast<int32>(Seed));
+		const FLinearColor Dark = Srgb(0.15, 0.26, 0.06);
+		const FLinearColor Light = Srgb(0.31, 0.43, 0.12);
+		const int32 Count = Rng.RandRange(2, 5);
+		for (int32 M = 0; M < Count; ++M)
+		{
+			const double Radius = Rng.FRandRange(0.12f, 0.35f);
+			const double Angle = Rng.FRandRange(0.0f, UE_TWO_PI);
+			const FVector3d Center = FVector3d(FMath::Cos(Angle), FMath::Sin(Angle), 0.0) * Rng.FRandRange(0.0f, 0.35f) - FVector3d(0.0, 0.0, Radius * 0.05);
+			const uint32 BlobSeed = ShroomHash::Hash(Seed, static_cast<uint32>(M), 0x3055u);
+			AddBlob(Acc, 2,
+				[&](const FVector3d& D)
+				{
+					const double Bump = 1.0 + 0.3 * DirectionNoise(BlobSeed, D, 3.5);
+					return Center + FVector3d(D.X, D.Y, D.Z * 0.28) * (Radius * Bump);
+				},
+				[&](const FVector3d& D, const FVector3d&)
+				{
+					const float Mottle = DirectionNoise(BlobSeed ^ 0x7u, D, 6.0) * 0.5f + 0.5f;
+					return ScaleSRGB(LerpSRGB(Dark, Light, Mottle), FMath::Lerp(0.55f, 1.0f, static_cast<float>(0.5 + 0.5 * D.Z)));
+				},
+				EVegetationSurface::Foliage);
+		}
+	}
 }
 
 FTreeShape FTreeShape::Sample(const FTreeArchetype& Archetype, const FTreeFormDefinition& Form, uint32 Seed)
@@ -693,7 +885,16 @@ namespace VegetationMeshBuilder
 		}
 		FMeshAccumulator Acc;
 		const uint32 Seed = Spec.GetSeed();
-		if (VegetationData::IsTreeKind(Spec.Kind))
+		if (Spec.Kind == EVegetationKind::LeafLitter)
+		{
+			const FTreeArchetype* Archetype = Definition.FindTree(Spec.Genus);
+			if (!Archetype)
+			{
+				return false;
+			}
+			BuildLeafLitter(*Archetype, Seed, Acc);
+		}
+		else if (VegetationData::IsTreeKind(Spec.Kind))
 		{
 			const FTreeArchetype* Archetype = Definition.FindTree(Spec.Genus);
 			const FTreeFormDefinition* Form = Definition.FindForm(Spec.Kind);
@@ -711,6 +912,9 @@ namespace VegetationMeshBuilder
 			case EVegetationKind::Bramble: BuildBramble(Seed, Acc); break;
 			case EVegetationKind::Log: BuildLog(Seed, Acc, OutCollision); break;
 			case EVegetationKind::Stump: BuildStump(Seed, Acc, OutCollision); break;
+			case EVegetationKind::Twigs: BuildTwigs(Seed, Acc); break;
+			case EVegetationKind::Stones: BuildStones(Seed, Acc); break;
+			case EVegetationKind::Moss: BuildMoss(Seed, Acc); break;
 			default: return false;
 			}
 		}

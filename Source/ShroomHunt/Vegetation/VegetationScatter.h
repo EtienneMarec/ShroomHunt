@@ -35,7 +35,10 @@ struct SHROOMHUNT_API FVegetationInstance
  */
 namespace VegetationScatter
 {
-	/** Instances of one layer whose position lies in [Min, Max) of BoundsM (field meters). */
+	/**
+	 * Instances of one layer whose position lies in [Min, Max) of BoundsM (field meters).
+	 * Ground debris is tilted onto the terrain slope; it skips the trunk test of the understory.
+	 */
 	SHROOMHUNT_API void Scatter(const FForestField& Field, const FVegetationDefinition& Definition, EVegetationLayer Layer, const FBox2d& BoundsM, TArray<FVegetationInstance>& Out);
 
 	/** Trees per hectare at a point before thinning and water margins (age class x canopy gaps). */

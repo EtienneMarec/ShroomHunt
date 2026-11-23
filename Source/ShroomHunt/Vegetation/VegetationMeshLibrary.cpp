@@ -182,6 +182,8 @@ FString UVegetationMeshLibrary::ScatterReport(const FString& ForestName)
 	VegetationScatter::Scatter(*Field, *Definition, EVegetationLayer::Trees, Bounds, Instances);
 	const int32 TreeCount = Instances.Num();
 	VegetationScatter::Scatter(*Field, *Definition, EVegetationLayer::Understory, Bounds, Instances);
+	const int32 UnderstoryCount = Instances.Num() - TreeCount;
+	VegetationScatter::Scatter(*Field, *Definition, EVegetationLayer::Ground, Bounds, Instances);
 	const double Seconds = FPlatformTime::Seconds() - Start;
 
 	TMap<FString, int32> Counts;
@@ -196,8 +198,8 @@ FString UVegetationMeshLibrary::ScatterReport(const FString& ForestName)
 	Counts.KeySort(TLess<FString>());
 	const double Hectares = SizeM * SizeM / 10000.0;
 	TArray<FString> Lines;
-	Lines.Add(FString::Printf(TEXT("OK: %s, %d trees + %d understory instances on %.0f ha in %.2f s"),
-		*ForestName, TreeCount, Instances.Num() - TreeCount, Hectares, Seconds));
+	Lines.Add(FString::Printf(TEXT("OK: %s, %d trees + %d understory + %d ground debris instances on %.0f ha in %.2f s"),
+		*ForestName, TreeCount, UnderstoryCount, Instances.Num() - TreeCount - UnderstoryCount, Hectares, Seconds));
 	for (const TPair<FString, int32>& Pair : Counts)
 	{
 		Lines.Add(FString::Printf(TEXT("%-24s %7d  (%.1f / ha)"), *Pair.Key, Pair.Value, Pair.Value / Hectares));

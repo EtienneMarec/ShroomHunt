@@ -4,7 +4,10 @@
 #include "Forest/ForestDefinition.h"
 #include "VegetationDefinition.generated.h"
 
-/** Everything the vegetation scatter places. The first four are tree forms (one mesh set per genus). */
+/**
+ * Everything the vegetation scatter places. The first four are tree forms (one mesh set per
+ * genus); leaf litter also has one mesh set per genus (its leaves).
+ */
 UENUM(BlueprintType)
 enum class EVegetationKind : uint8
 {
@@ -15,7 +18,12 @@ enum class EVegetationKind : uint8
 	Bracken,
 	Bramble,
 	Log,
-	Stump
+	Stump,
+	/** Ground debris (V1-3): patches of fallen leaves, twigs, stones, moss cushions. */
+	LeafLitter,
+	Twigs,
+	Stones,
+	Moss
 };
 
 /** Which group of kinds a PCG node outputs (separate spawners: collision and cull distances differ). */
@@ -25,7 +33,9 @@ enum class EVegetationLayer : uint8
 	/** Pole, mature and old trees. */
 	Trees,
 	/** Saplings, bracken, brambles, dead wood. */
-	Understory
+	Understory,
+	/** Small ground debris: many instances, no collision, short cull distance. */
+	Ground
 };
 
 /** Look and size of one tree genus at the Mature form. Colors are sRGB [r, g, b]. */
@@ -65,6 +75,11 @@ struct FTreeArchetype
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") float Fluting = 0.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") TArray<float> Foliage;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") float FoliageVariation = 0.1f;
+	/** Color of the dead leaves on the ground (leaf litter); optional. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") TArray<float> Litter;
+	/** Leaf length (cm) and number of lobes on each side (oak) for the leaf litter. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") float LeafSizeCm = 7.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") int32 LeafLobes = 0;
 };
 
 /** Size of a tree form relative to the genus archetype, and its number of mesh variants. */
@@ -158,7 +173,11 @@ struct FUnderstoryRule
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") float SpacingFactor = 0.5f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") float WaterMarginM = 1.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") float ScaleJitter = 0.25f;
-	/** Mesh variants (saplings use the Sapling tree form instead). */
+	/** Density multiplier 1 + SlopeBoost x slope (stones on steep ground). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") float SlopeBoost = 0.0f;
+	/** Density multiplier up to 1 + BankBoost within a few meters of water (stones along streams). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") float BankBoost = 0.0f;
+	/** Mesh variants (saplings use the Sapling tree form instead; leaf litter has them per genus). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") int32 Variants = 2;
 };
 
@@ -172,6 +191,12 @@ struct SHROOMHUNT_API FVegetationDefinition
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") TArray<FTreeFormDefinition> Forms;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") FTreeDensityDefinition TreeDensity;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") TArray<FUnderstoryRule> Understory;
+	/** Ground debris rules (same fields as the understory), placed by the Ground layer. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") TArray<FUnderstoryRule> Ground;
+
+	/** Understory and ground rules together (the layer of a rule follows from its kind). */
+	TArray<const FUnderstoryRule*> GetRules(EVegetationLayer Layer) const;
+	const FUnderstoryRule* FindRule(EVegetationKind Kind) const;
 
 	const FTreeArchetype* FindTree(FName Genus) const { return Trees.FindByPredicate([Genus](const FTreeArchetype& T) { return T.Genus == Genus; }); }
 	const FTreeFormDefinition* FindForm(EVegetationKind Kind) const { return Forms.FindByPredicate([Kind](const FTreeFormDefinition& F) { return F.Kind == Kind; }); }
@@ -182,7 +207,7 @@ struct SHROOMHUNT_API FVegetationDefinition
 struct SHROOMHUNT_API FVegetationMeshSpec
 {
 	EVegetationKind Kind = EVegetationKind::Mature;
-	/** NAME_None for understory kinds other than saplings. */
+	/** NAME_None for kinds other than tree forms and leaf litter. */
 	FName Genus;
 	int32 Variant = 0;
 
@@ -194,6 +219,8 @@ struct SHROOMHUNT_API FVegetationMeshSpec
 namespace VegetationData
 {
 	SHROOMHUNT_API bool IsTreeKind(EVegetationKind Kind);
+	/** Kinds with one mesh set per genus: tree forms and leaf litter. */
+	SHROOMHUNT_API bool HasGenus(EVegetationKind Kind);
 	SHROOMHUNT_API EVegetationLayer GetLayer(EVegetationKind Kind);
 	SHROOMHUNT_API const TCHAR* KindName(EVegetationKind Kind);
 

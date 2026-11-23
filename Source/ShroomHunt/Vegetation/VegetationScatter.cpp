@@ -203,6 +203,30 @@ namespace VegetationScatterDetail
 		Out.PositionM = FVector3d(C.Position.X, C.Position.Y, Field.GetHeights().Sample(static_cast<float>(C.Position.X), static_cast<float>(C.Position.Y)) - Sink);
 		return Out;
 	}
+
+	/** Tilts a flat piece of ground debris onto the terrain slope (keeps its yaw around the normal). */
+	void AlignToGround(const FForestField& Field, FVegetationInstance& Instance)
+	{
+		const FFieldRaster& H = Field.GetHeights();
+		const float X = static_cast<float>(Instance.PositionM.X);
+		const float Y = static_cast<float>(Instance.PositionM.Y);
+		const double GX = (H.Sample(X + 1.0f, Y) - H.Sample(X - 1.0f, Y)) * 0.5;
+		const double GY = (H.Sample(X, Y + 1.0f) - H.Sample(X, Y - 1.0f)) * 0.5;
+		const FVector Normal = FVector(-GX, -GY, 1.0).GetSafeNormal();
+		const FQuat Tilt = FQuat::FindBetweenNormals(FVector::UpVector, Normal);
+		const FQuat Yaw(FVector::UpVector, FMath::DegreesToRadians(Instance.YawDeg));
+		const FRotator Rotation = (Tilt * Yaw).Rotator();
+		Instance.PitchDeg = static_cast<float>(Rotation.Pitch);
+		Instance.YawDeg = static_cast<float>(Rotation.Yaw);
+		Instance.RollDeg = static_cast<float>(Rotation.Roll);
+	}
+
+	/** Density multiplier of a rule from the local slope and the distance to water (stones, moss). */
+	float HabitatBoost(const FUnderstoryRule& Rule, const FForestSample& Sample, float Slope)
+	{
+		const float Bank = 1.0f - ShroomMath::SmoothStep01(1.0f, 6.0f, Sample.WaterDistanceM);
+		return (1.0f + Rule.SlopeBoost * Slope) * (1.0f + Rule.BankBoost * Bank);
+	}
 }
 
 namespace VegetationScatter
@@ -294,18 +318,23 @@ namespace VegetationScatter
 
 		// Trunks of the trees around the region: nothing grows inside them. The trees are a
 		// global function of the forest, so a slightly larger region gives the same answer in
-		// every PCG partition.
+		// every PCG partition. Ground debris skips this (tiny, flat, hidden by the trunk anyway).
+		const bool bGround = Layer == EVegetationLayer::Ground;
 		FVegetationObstacleGrid Trunks;
+		if (!bGround)
 		{
 			TArray<FVegetationInstance> Trees;
 			Scatter(Field, Definition, EVegetationLayer::Trees, FBox2d(BoundsM.Min - FVector2d(6.0), BoundsM.Max + FVector2d(6.0)), Trees);
 			Trunks.AddInstances(Definition, Trees);
 		}
 
-		for (const FUnderstoryRule& Rule : Definition.Understory)
+		for (const FUnderstoryRule* RulePtr : Definition.GetRules(Layer))
 		{
+			const FUnderstoryRule& Rule = *RulePtr;
 			const bool bSapling = Rule.Kind == EVegetationKind::Sapling;
-			const float PathClearance = (Rule.Kind == EVegetationKind::Log || bSapling) ? 1.0f : 0.3f;
+			const bool bByGenus = bSapling || Rule.Kind == EVegetationKind::LeafLitter;
+			const float PathClearance = bGround ? 0.0f : ((Rule.Kind == EVegetationKind::Log || bSapling) ? 1.0f : 0.3f);
+			const bool bBoosted = Rule.SlopeBoost > 0.0f || Rule.BankBoost > 0.0f;
 			TArray<FCandidate> Kept;
 			RunProcess(Field, ShroomHash::Hash(ForestSeed, 0x0DE5u, static_cast<uint32>(Rule.Kind)), CellSizeFor(Rule.PerHa.GetMax()), Rule.SpacingFactor, BoundsM,
 				[&](const FVector2d& P, uint32 Hash, float& OutDensity, FCandidate& C)
@@ -320,8 +349,9 @@ namespace VegetationScatter
 					{
 						return false; // a horizontal log on a steep slope would float
 					}
-					if (bSapling)
+					if (bByGenus)
 					{
+						// Saplings and fallen leaves of the stand's trees.
 						const int32 GenusIndex = PickGenus(Sample, ShroomHash::Hash(Hash, 10u));
 						if (GenusIndex == INDEX_NONE)
 						{
@@ -330,8 +360,24 @@ namespace VegetationScatter
 						C.Genus = Genera[GenusIndex];
 					}
 					OutDensity = UnderstoryDensityPerHa(Rule, Sample);
+					if (bBoosted)
+					{
+						OutDensity *= HabitatBoost(Rule, Sample, FineSlope(Field, P));
+					}
 					return true;
 				}, Kept);
+			if (bGround)
+			{
+				// Flat on the terrain, just above it (leaves, moss) or sunk in it (stones).
+				const float Sink = Rule.Kind == EVegetationKind::Stones ? 0.03f : 0.005f;
+				for (const FCandidate& C : Kept)
+				{
+					FVegetationInstance Instance = MakeInstance(Field, Definition, C, Rule.ScaleJitter, Sink, 0.0f);
+					AlignToGround(Field, Instance);
+					Out.Add(Instance);
+				}
+				continue;
+			}
 			const float MaxTilt = (Rule.Kind == EVegetationKind::Log || Rule.Kind == EVegetationKind::Stump) ? 3.0f : 8.0f;
 			for (const FCandidate& C : Kept)
 			{

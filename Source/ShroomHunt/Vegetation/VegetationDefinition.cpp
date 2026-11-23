@@ -37,8 +37,30 @@ int32 FVegetationDefinition::GetVariantCount(EVegetationKind Kind) const
 		const FTreeFormDefinition* Form = FindForm(Kind);
 		return Form ? FMath::Max(1, Form->Variants) : 0;
 	}
-	const FUnderstoryRule* Rule = Understory.FindByPredicate([Kind](const FUnderstoryRule& R) { return R.Kind == Kind; });
+	const FUnderstoryRule* Rule = FindRule(Kind);
 	return Rule ? FMath::Max(1, Rule->Variants) : 0;
+}
+
+const FUnderstoryRule* FVegetationDefinition::FindRule(EVegetationKind Kind) const
+{
+	const FUnderstoryRule* Rule = Understory.FindByPredicate([Kind](const FUnderstoryRule& R) { return R.Kind == Kind; });
+	return Rule ? Rule : Ground.FindByPredicate([Kind](const FUnderstoryRule& R) { return R.Kind == Kind; });
+}
+
+TArray<const FUnderstoryRule*> FVegetationDefinition::GetRules(EVegetationLayer Layer) const
+{
+	TArray<const FUnderstoryRule*> Rules;
+	for (const TArray<FUnderstoryRule>* List : { &Understory, &Ground })
+	{
+		for (const FUnderstoryRule& Rule : *List)
+		{
+			if (VegetationData::GetLayer(Rule.Kind) == Layer)
+			{
+				Rules.Add(&Rule);
+			}
+		}
+	}
+	return Rules;
 }
 
 FString FVegetationMeshSpec::GetKey() const
@@ -62,10 +84,18 @@ namespace VegetationData
 		return Kind <= EVegetationKind::Old;
 	}
 
+	bool HasGenus(EVegetationKind Kind)
+	{
+		return IsTreeKind(Kind) || Kind == EVegetationKind::LeafLitter;
+	}
+
 	EVegetationLayer GetLayer(EVegetationKind Kind)
 	{
-		return (Kind == EVegetationKind::Pole || Kind == EVegetationKind::Mature || Kind == EVegetationKind::Old)
-			? EVegetationLayer::Trees : EVegetationLayer::Understory;
+		if (Kind == EVegetationKind::Pole || Kind == EVegetationKind::Mature || Kind == EVegetationKind::Old)
+		{
+			return EVegetationLayer::Trees;
+		}
+		return Kind >= EVegetationKind::LeafLitter ? EVegetationLayer::Ground : EVegetationLayer::Understory;
 	}
 
 	const TCHAR* KindName(EVegetationKind Kind)
@@ -80,6 +110,10 @@ namespace VegetationData
 		case EVegetationKind::Bramble: return TEXT("Bramble");
 		case EVegetationKind::Log: return TEXT("Log");
 		case EVegetationKind::Stump: return TEXT("Stump");
+		case EVegetationKind::LeafLitter: return TEXT("LeafLitter");
+		case EVegetationKind::Twigs: return TEXT("Twigs");
+		case EVegetationKind::Stones: return TEXT("Stones");
+		case EVegetationKind::Moss: return TEXT("Moss");
 		}
 		return TEXT("Unknown");
 	}
@@ -151,6 +185,11 @@ namespace VegetationData
 			CheckColor(Field + TEXT(".Bark"), Tree.Bark, false);
 			CheckColor(Field + TEXT(".BarkPatch"), Tree.BarkPatch, true);
 			CheckColor(Field + TEXT(".Foliage"), Tree.Foliage, false);
+			CheckColor(Field + TEXT(".Litter"), Tree.Litter, true);
+			if (Tree.LeafSizeCm <= 0.0f || Tree.LeafLobes < 0)
+			{
+				Error(Field, TEXT("LeafSizeCm > 0 and LeafLobes >= 0 required"));
+			}
 		}
 
 		for (const EVegetationKind Kind : { EVegetationKind::Sapling, EVegetationKind::Pole, EVegetationKind::Mature, EVegetationKind::Old })
@@ -187,29 +226,34 @@ namespace VegetationData
 			Error(TEXT("TreeDensity.GapCanopy"), TEXT("expected [low, high]"));
 		}
 
-		for (int32 Index = 0; Index < Out.Understory.Num(); ++Index)
+		auto CheckRules = [&](const TArray<FUnderstoryRule>& Rules, const TCHAR* ListName, EVegetationLayer Layer, const TCHAR* Allowed)
 		{
-			const FUnderstoryRule& Rule = Out.Understory[Index];
-			const FString Field = FString::Printf(TEXT("Understory[%d] (%s)"), Index, KindName(Rule.Kind));
-			if (GetLayer(Rule.Kind) != EVegetationLayer::Understory)
+			for (int32 Index = 0; Index < Rules.Num(); ++Index)
 			{
-				Error(Field + TEXT(".Kind"), TEXT("must be Sapling, Bracken, Bramble, Log or Stump"));
-			}
-			CheckTrapezoid(Field + TEXT(".Moisture"), Rule.Moisture);
-			CheckTrapezoid(Field + TEXT(".PH"), Rule.PH);
-			CheckTrapezoid(Field + TEXT(".Light"), Rule.Light);
-			if (Rule.SpacingFactor < 0.0f || Rule.SpacingFactor > 1.0f || Rule.Variants < 1)
-			{
-				Error(Field, TEXT("SpacingFactor in [0, 1] and Variants >= 1 required"));
-			}
-			for (int32 Other = 0; Other < Index; ++Other)
-			{
-				if (Out.Understory[Other].Kind == Rule.Kind)
+				const FUnderstoryRule& Rule = Rules[Index];
+				const FString Field = FString::Printf(TEXT("%s[%d] (%s)"), ListName, Index, KindName(Rule.Kind));
+				if (GetLayer(Rule.Kind) != Layer)
 				{
-					Error(Field + TEXT(".Kind"), TEXT("duplicate"));
+					Error(Field + TEXT(".Kind"), FString::Printf(TEXT("must be %s"), Allowed));
+				}
+				CheckTrapezoid(Field + TEXT(".Moisture"), Rule.Moisture);
+				CheckTrapezoid(Field + TEXT(".PH"), Rule.PH);
+				CheckTrapezoid(Field + TEXT(".Light"), Rule.Light);
+				if (Rule.SpacingFactor < 0.0f || Rule.SpacingFactor > 1.0f || Rule.Variants < 1 || Rule.SlopeBoost < 0.0f || Rule.BankBoost < 0.0f)
+				{
+					Error(Field, TEXT("SpacingFactor in [0, 1], Variants >= 1 and SlopeBoost, BankBoost >= 0 required"));
+				}
+				for (int32 Other = 0; Other < Index; ++Other)
+				{
+					if (Rules[Other].Kind == Rule.Kind)
+					{
+						Error(Field + TEXT(".Kind"), TEXT("duplicate"));
+					}
 				}
 			}
-		}
+		};
+		CheckRules(Out.Understory, TEXT("Understory"), EVegetationLayer::Understory, TEXT("Sapling, Bracken, Bramble, Log or Stump"));
+		CheckRules(Out.Ground, TEXT("Ground"), EVegetationLayer::Ground, TEXT("LeafLitter, Twigs, Stones or Moss"));
 		return OutErrors.Num() == ErrorsBefore;
 	}
 
@@ -246,17 +290,37 @@ namespace VegetationData
 				}
 			}
 		}
-		for (const FUnderstoryRule& Rule : Definition.Understory)
+		for (const TArray<FUnderstoryRule>* Rules : { &Definition.Understory, &Definition.Ground })
 		{
-			if (Rule.Kind == EVegetationKind::Sapling)
+			for (const FUnderstoryRule& Rule : *Rules)
 			{
-				continue; // tree form, listed above
-			}
-			for (int32 Variant = 0; Variant < Rule.Variants; ++Variant)
-			{
-				FVegetationMeshSpec& Spec = Specs.AddDefaulted_GetRef();
-				Spec.Kind = Rule.Kind;
-				Spec.Variant = Variant;
+				if (Rule.Kind == EVegetationKind::Sapling)
+				{
+					continue; // tree form, listed above
+				}
+				// Leaf litter: one set per genus (the leaves of the trees above).
+				TArray<FName> Genera;
+				if (Rule.Kind == EVegetationKind::LeafLitter)
+				{
+					for (const FTreeArchetype& Tree : Definition.Trees)
+					{
+						Genera.Add(Tree.Genus);
+					}
+				}
+				else
+				{
+					Genera.Add(NAME_None);
+				}
+				for (const FName Genus : Genera)
+				{
+					for (int32 Variant = 0; Variant < Rule.Variants; ++Variant)
+					{
+						FVegetationMeshSpec& Spec = Specs.AddDefaulted_GetRef();
+						Spec.Kind = Rule.Kind;
+						Spec.Genus = Genus;
+						Spec.Variant = Variant;
+					}
+				}
 			}
 		}
 		return Specs;
