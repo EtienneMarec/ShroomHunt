@@ -650,30 +650,25 @@ namespace VegetationMeshDetail
 	// --- Ground debris (V1-3) ------------------------------------------------------------
 
 	/**
-	 * Fallen leaves of one genus spread evenly over a 2 m square (no visible patch outline:
-	 * overlapping squares add relief on top of the leaf carpet of the ground material).
-	 * Double-sided blades, curled up at the edges.
+	 * One fallen leaf of a genus (each variant a different shape and color: flat, curled,
+	 * tilted, decayed). Placed one by one around the player (PCG runtime generation), on top
+	 * of the leaf carpet of the ground material. Double-sided blade, tip toward +X.
 	 */
-	void BuildLeafLitter(const FTreeArchetype& Arch, uint32 Seed, FMeshAccumulator& Acc)
+	void BuildLeaf(const FTreeArchetype& Arch, uint32 Seed, FMeshAccumulator& Acc)
 	{
 		FRandomStream Rng(static_cast<int32>(Seed));
 		const FLinearColor Base = VegetationData::ToColor(Arch.Litter, Srgb(0.45, 0.30, 0.14));
 		const FLinearColor Decayed = Srgb(0.17, 0.12, 0.07);
-		constexpr double HalfSide = 1.0;
-		const int32 Leaves = Rng.RandRange(24, 32);
-		constexpr int32 MaxOutline = 12;
-		const int32 Outline = Arch.LeafLobes > 0 ? 12 : 8;
+		constexpr int32 MaxOutline = 16;
+		const int32 Outline = Arch.LeafLobes > 0 ? 16 : 10;
 
-		for (int32 L = 0; L < Leaves; ++L)
 		{
-			const double Length = Arch.LeafSizeCm / 100.0 * Rng.FRandRange(0.8f, 1.2f);
+			const double Length = Arch.LeafSizeCm / 100.0 * Rng.FRandRange(0.85f, 1.15f);
 			const double Width = Length * (Arch.LeafLobes > 0 ? 0.62 : Rng.FRandRange(0.5f, 0.62f));
-			const FVector3d Center(Rng.FRandRange(-HalfSide, HalfSide), Rng.FRandRange(-HalfSide, HalfSide), 0.0);
-			const double Yaw = Rng.FRandRange(0.0f, UE_TWO_PI);
-			const FVector3d U(FMath::Cos(Yaw), FMath::Sin(Yaw), 0.0);
-			const FVector3d V(-U.Y, U.X, 0.0);
-			// Stacked leaves, slightly tilted, edges curled up.
-			const double Height = 0.002 + 0.012 * Rng.FRand();
+			const FVector3d Center = FVector3d::ZeroVector;
+			const FVector3d U(1.0, 0.0, 0.0);
+			const FVector3d V(0.0, 1.0, 0.0);
+			const double Height = 0.006;
 			const double TiltU = Rng.FRandRange(-0.15f, 0.15f);
 			const double TiltV = Rng.FRandRange(-0.15f, 0.15f);
 			const double Curl = Rng.FRandRange(0.1f, 0.35f);
@@ -886,14 +881,14 @@ namespace VegetationMeshBuilder
 		}
 		FMeshAccumulator Acc;
 		const uint32 Seed = Spec.GetSeed();
-		if (Spec.Kind == EVegetationKind::LeafLitter)
+		if (Spec.Kind == EVegetationKind::Leaf)
 		{
 			const FTreeArchetype* Archetype = Definition.FindTree(Spec.Genus);
 			if (!Archetype)
 			{
 				return false;
 			}
-			BuildLeafLitter(*Archetype, Seed, Acc);
+			BuildLeaf(*Archetype, Seed, Acc);
 		}
 		else if (VegetationData::IsTreeKind(Spec.Kind))
 		{

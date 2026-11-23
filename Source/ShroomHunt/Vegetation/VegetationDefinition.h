@@ -6,7 +6,7 @@
 
 /**
  * Everything the vegetation scatter places. The first four are tree forms (one mesh set per
- * genus); leaf litter also has one mesh set per genus (its leaves).
+ * genus); fallen leaves also have one mesh set per genus.
  */
 UENUM(BlueprintType)
 enum class EVegetationKind : uint8
@@ -19,8 +19,8 @@ enum class EVegetationKind : uint8
 	Bramble,
 	Log,
 	Stump,
-	/** Ground debris (V1-3): patches of fallen leaves, twigs, stones, moss cushions. */
-	LeafLitter,
+	/** Ground debris (V1-3): single fallen leaves, twigs, stones, moss cushions. */
+	Leaf,
 	Twigs,
 	Stones,
 	Moss

@@ -86,7 +86,7 @@ namespace VegetationData
 
 	bool HasGenus(EVegetationKind Kind)
 	{
-		return IsTreeKind(Kind) || Kind == EVegetationKind::LeafLitter;
+		return IsTreeKind(Kind) || Kind == EVegetationKind::Leaf;
 	}
 
 	EVegetationLayer GetLayer(EVegetationKind Kind)
@@ -95,7 +95,7 @@ namespace VegetationData
 		{
 			return EVegetationLayer::Trees;
 		}
-		return Kind >= EVegetationKind::LeafLitter ? EVegetationLayer::Ground : EVegetationLayer::Understory;
+		return Kind >= EVegetationKind::Leaf ? EVegetationLayer::Ground : EVegetationLayer::Understory;
 	}
 
 	const TCHAR* KindName(EVegetationKind Kind)
@@ -110,7 +110,7 @@ namespace VegetationData
 		case EVegetationKind::Bramble: return TEXT("Bramble");
 		case EVegetationKind::Log: return TEXT("Log");
 		case EVegetationKind::Stump: return TEXT("Stump");
-		case EVegetationKind::LeafLitter: return TEXT("LeafLitter");
+		case EVegetationKind::Leaf: return TEXT("Leaf");
 		case EVegetationKind::Twigs: return TEXT("Twigs");
 		case EVegetationKind::Stones: return TEXT("Stones");
 		case EVegetationKind::Moss: return TEXT("Moss");
@@ -257,7 +257,7 @@ namespace VegetationData
 			}
 		};
 		CheckRules(Out.Understory, TEXT("Understory"), EVegetationLayer::Understory, TEXT("Sapling, Bracken, Bramble, Log or Stump"));
-		CheckRules(Out.Ground, TEXT("Ground"), EVegetationLayer::Ground, TEXT("LeafLitter, Twigs, Stones or Moss"));
+		CheckRules(Out.Ground, TEXT("Ground"), EVegetationLayer::Ground, TEXT("Leaf, Twigs, Stones or Moss"));
 		return OutErrors.Num() == ErrorsBefore;
 	}
 
@@ -304,7 +304,7 @@ namespace VegetationData
 				}
 				// Leaf litter: one set per genus (the leaves of the trees above).
 				TArray<FName> Genera;
-				if (Rule.Kind == EVegetationKind::LeafLitter)
+				if (Rule.Kind == EVegetationKind::Leaf)
 				{
 					for (const FTreeArchetype& Tree : Definition.Trees)
 					{

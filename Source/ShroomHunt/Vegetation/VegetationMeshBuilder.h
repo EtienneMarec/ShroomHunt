@@ -53,7 +53,7 @@ struct SHROOMHUNT_API FTreeShape
  * Trees: a tapered trunk with root flare, bark ridges or fluting, foliage clumps spread
  * in the crown envelope of the genus and one branch from the trunk to each outer clump.
  * Understory: bracken (double-sided fronds), bramble mounds with canes, fallen logs and
- * stumps. Ground debris: patches of fallen leaves of a genus (double-sided blades), twigs,
+ * stumps. Ground debris: single fallen leaves of a genus (double-sided blades), twigs,
  * stones and moss cushions. Vertex colors carry the sRGB albedo, UV1 the surface id.
  * Origin: base on the ground, +Z up, centimeters.
  */

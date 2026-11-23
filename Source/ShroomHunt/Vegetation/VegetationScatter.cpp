@@ -60,10 +60,14 @@ namespace VegetationScatterDetail
 			&& Sample.PathDistanceM < ForestPaths::HalfWidthM(static_cast<EForestPathRank>(Sample.PathRank), Field.GetDefinition()) + Clearance;
 	}
 
-	/** Candidate cell size so that the keep probability stays below ~0.5 at the highest density. */
-	double CellSizeFor(float MaxPerHa)
+	/**
+	 * Candidate cell size so that the keep probability stays below ~0.5 at the highest density.
+	 * Thinned processes keep cells of 1 m or more (bounded neighborhood search); unthinned ones
+	 * (SpacingFactor 0: fallen leaves, tens per square meter) go down to 10 cm.
+	 */
+	double CellSizeFor(float MaxPerHa, bool bThinned = true)
 	{
-		return FMath::Clamp(0.7 * FMath::Sqrt(10000.0 / FMath::Max(MaxPerHa, 1.0f)), 1.0, 20.0);
+		return FMath::Clamp(0.7 * FMath::Sqrt(10000.0 / FMath::Max(MaxPerHa, 1.0f)), bThinned ? 1.0 : 0.1, 20.0);
 	}
 
 	/**
@@ -75,7 +79,9 @@ namespace VegetationScatterDetail
 	void RunProcess(const FForestField& Field, uint32 Seed, double CellM, double SpacingFactor, const FBox2d& Bounds, TEvaluate&& Evaluate, TArray<FCandidate>& OutKept)
 	{
 		const double SizeM = Field.GetSizeM();
-		const int32 Margin = FMath::CeilToInt(VegetationScatter::MaxSpacingM / CellM);
+		// No thinning: candidates are independent, no neighborhood to look at.
+		const bool bThinned = SpacingFactor > 0.0;
+		const int32 Margin = bThinned ? FMath::CeilToInt(VegetationScatter::MaxSpacingM / CellM) : 0;
 		const int32 MaxCell = FMath::CeilToInt(SizeM / CellM);
 		const int32 X0 = FMath::Max(FMath::FloorToInt(Bounds.Min.X / CellM) - Margin, 0);
 		const int32 Y0 = FMath::Max(FMath::FloorToInt(Bounds.Min.Y / CellM) - Margin, 0);
@@ -131,7 +137,7 @@ namespace VegetationScatterDetail
 					continue;
 				}
 				bool bKeep = true;
-				for (int32 DY = -Margin; DY <= Margin && bKeep; ++DY)
+				for (int32 DY = -Margin; DY <= Margin && bKeep && bThinned; ++DY)
 				{
 					const int32 NRow = Row + DY;
 					if (NRow < 0 || NRow >= Height)
@@ -332,11 +338,11 @@ namespace VegetationScatter
 		{
 			const FUnderstoryRule& Rule = *RulePtr;
 			const bool bSapling = Rule.Kind == EVegetationKind::Sapling;
-			const bool bByGenus = bSapling || Rule.Kind == EVegetationKind::LeafLitter;
+			const bool bByGenus = bSapling || Rule.Kind == EVegetationKind::Leaf;
 			const float PathClearance = bGround ? 0.0f : ((Rule.Kind == EVegetationKind::Log || bSapling) ? 1.0f : 0.3f);
 			const bool bBoosted = Rule.SlopeBoost > 0.0f || Rule.BankBoost > 0.0f;
 			TArray<FCandidate> Kept;
-			RunProcess(Field, ShroomHash::Hash(ForestSeed, 0x0DE5u, static_cast<uint32>(Rule.Kind)), CellSizeFor(Rule.PerHa.GetMax()), Rule.SpacingFactor, BoundsM,
+			RunProcess(Field, ShroomHash::Hash(ForestSeed, 0x0DE5u, static_cast<uint32>(Rule.Kind)), CellSizeFor(Rule.PerHa.GetMax(), Rule.SpacingFactor > 0.0f), Rule.SpacingFactor, BoundsM,
 				[&](const FVector2d& P, uint32 Hash, float& OutDensity, FCandidate& C)
 				{
 					const FForestSample Sample = Field.Sample(static_cast<float>(P.X), static_cast<float>(P.Y));

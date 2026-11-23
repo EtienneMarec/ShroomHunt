@@ -183,7 +183,11 @@ FString UVegetationMeshLibrary::ScatterReport(const FString& ForestName)
 	const int32 TreeCount = Instances.Num();
 	VegetationScatter::Scatter(*Field, *Definition, EVegetationLayer::Understory, Bounds, Instances);
 	const int32 UnderstoryCount = Instances.Num() - TreeCount;
-	VegetationScatter::Scatter(*Field, *Definition, EVegetationLayer::Ground, Bounds, Instances);
+	// Ground debris (millions of leaves): counted on a 1 ha sample in the middle, scaled up.
+	const FBox2d Sample(FVector2d(0.5 * SizeM - 50.0), FVector2d(0.5 * SizeM + 50.0));
+	TArray<FVegetationInstance> Ground;
+	VegetationScatter::Scatter(*Field, *Definition, EVegetationLayer::Ground, Sample, Ground);
+	const double GroundScale = (SizeM * SizeM) / Sample.GetArea();
 	const double Seconds = FPlatformTime::Seconds() - Start;
 
 	TMap<FString, int32> Counts;
@@ -198,8 +202,12 @@ FString UVegetationMeshLibrary::ScatterReport(const FString& ForestName)
 	Counts.KeySort(TLess<FString>());
 	const double Hectares = SizeM * SizeM / 10000.0;
 	TArray<FString> Lines;
-	Lines.Add(FString::Printf(TEXT("OK: %s, %d trees + %d understory + %d ground debris instances on %.0f ha in %.2f s"),
-		*ForestName, TreeCount, UnderstoryCount, Instances.Num() - TreeCount - UnderstoryCount, Hectares, Seconds));
+	for (const FVegetationInstance& Instance : Ground)
+	{
+		Counts.FindOrAdd(FString(TEXT("~")) + VegetationData::KindName(Instance.Kind)) += FMath::RoundToInt(GroundScale);
+	}
+	Lines.Add(FString::Printf(TEXT("OK: %s, %d trees + %d understory instances on %.0f ha, ~%.0f ground debris (estimated from 1 ha, generated around the player) in %.2f s"),
+		*ForestName, TreeCount, UnderstoryCount, Hectares, Ground.Num() * GroundScale, Seconds));
 	for (const TPair<FString, int32>& Pair : Counts)
 	{
 		Lines.Add(FString::Printf(TEXT("%-24s %7d  (%.1f / ha)"), *Pair.Key, Pair.Value, Pair.Value / Hectares));
