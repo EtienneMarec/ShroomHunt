@@ -327,5 +327,10 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
 - An Enhanced Input action **consumes** its keys by default (`bConsumeInput`):
   a higher-priority mapping context that maps the mouse silently disabled the
   template's look action. Runtime actions sharing keys set `bConsumeInput = false`.
+- The project uses **Substrate** (`r.Substrate=True`): blend modes are named
+  *Translucent - Greyscale Transmittance* (= classic Translucent), and the
+  material result node takes a single *Front Material*; use a *Substrate
+  Shading Models* node to get the classic pins (Base Color, Emissive, Opacity,
+  Unlit...). Write editor steps accordingly.
 - Player-facing strings are `FText` (localization-ready, D-014); never build
   UI text from `FString` concatenation.

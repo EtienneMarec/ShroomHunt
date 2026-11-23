@@ -12,7 +12,8 @@ rain sound.
 | `FWeatherSample::WindHeadingDeg` | the wind now has a direction: westerlies (toward +X of the forest) veering slowly over a day or two, deterministic like the rest of the weather |
 | `LocalRain::Compute` | pure: rain intensity, ground wetness and canopy cover → direct rain, drops from leaves, wind factor under the trees |
 | `AEnvironmentDirector` | samples the forest canopy under the camera (`Data/Forests/<ForestName>.json`), feeds the Niagara system three user parameters (`RainIntensity` = direct rain, `DripIntensity`, `Wind` in cm/s), moves the emitter upwind so the slanted rain lands around you, drives the `RainAudio` component |
-| Debug HUD | line 2: wind heading, and `here: rain / drips / canopy` at the camera |
+| `SkyMood::Compute` + *WeatherPostProcess* component | bad weather darkens the scene (D-032): sky atmosphere luminance, sky light, sun, grey fog, exposure compensation and saturation, from 0 (broken clouds) to full gloom (storm); tunable in the director's *Gloom* category |
+| Debug HUD | line 2: wind heading, and `here: rain / drips / canopy` at the camera, `gloom` and its exposure compensation |
 
 > **UE concept — Niagara user parameters.** Values exposed by a Niagara system
 > (*User Exposed* section) that code can set at runtime
@@ -36,8 +37,13 @@ tell me what you see.
 1. In `Content/ShroomHunt/Environment`: right-click > **Material**, name it
    `M_RainDrop`, double-click it.
 2. Click the big result node (`M_RainDrop`). In **Details**:
-   - **Material Domain** *Surface*, **Blend Mode** *Translucent*,
-     **Shading Model** *Unlit*;
+   - **Material Domain** *Surface*, **Blend Mode** *Translucent - Greyscale
+     Transmittance* (the project uses Substrate: plain *Translucent* is this one;
+     *Colored Transmittance* would tint what is behind the drop);
+   - with Substrate the result node has a single **Front Material** pin and no
+     *Shading Model* setting: add a **Substrate Shading Models** node, set its
+     **Shading Model** to *Unlit* in **Details**, and wire its output into
+     **Front Material**. Steps 3–5 then wire into this node's pins;
    - section **Usage** (search `niagara`): tick **Used with Niagara Sprites**.
 3. Right-click in the graph, search **Particle Color**, add it. Right-click,
    search **RadialGradientExponential**, add it (keep its default inputs).
@@ -89,9 +95,11 @@ tiny splash, through a Niagara *event*.
    - *Initialize Particle*: **Lifetime** `2.5` (time to reach the ground in
      a valley);
    - *Particle Update* > **+** > **Collision**: **Collision Type** (or
-     *Collision Query Type*) *CPU Ray Traces* (not *Scene Depth*);
-     **Collision Response** *Kill* (if there is no Kill option, choose *Stop*
-     and tell me);
+     *Collision Query Type*) *CPU Ray Traces* (not *Scene Depth*); keep the
+     *Bounce* response with **Restitution** `0` and **Friction** `1`: the drop
+     stops at its first contact and, with no gravity in this emitter, never
+     collides again (one event, one splash). If searching `kill` in the
+     Selection panel shows a *Kill Particles On Collision* option, tick it too;
    - *Particle Update* > **+** > **Generate Collision Event**;
    - *Render*: untick the **Sprite Renderer** checkbox (these drops are
      invisible, the `Rain` emitter already draws the rain).
@@ -124,14 +132,19 @@ tiny splash, through a Niagara *event*.
      **Use Preview Value As Default**.
 3. Add a **Collection Parameter** node: **Collection** `MPC_Environment`,
    **Parameter Name** `Wetness`. **Multiply** it by *Porosity*: this is `W`.
-4. Color: a **Lerp** node with **A** = `1` (constant, hold **1** and click),
-   **B** = `0.55`, **Alpha** = `W`; **Multiply** *BaseColor* by it.
+4. Color: a **Lerp** node (the basic *LinearInterpolate* of *Math*: hold **L**
+   and click; not the *Lerp_...* functions) with **A** = `1` (constant, hold **1** and click),
+   **B** = `0.55`, **Alpha** = `W`; then a second **Multiply** with **A** =
+   *BaseColor* and **B** = this Lerp's output, wired into the *BaseColor*
+   output. The Lerp is a darkening factor (1 dry, 0.55 soaked): *BaseColor*
+   must not go into the Lerp, or every material turns white.
 5. Roughness: a **Lerp** with **A** = *Roughness*, **B** = constant `0.15`,
-   **Alpha** = `W`.
+   **Alpha** = `W` (the same `W` wire, not a typed value).
 6. Two **Function Output** nodes named `BaseColor` and `Roughness`, wired from
    steps 4 and 5. **Save**.
 7. In each material below, drag `MF_Wetness` from the Content Browser into
-   the graph, wire what currently goes into the result node's **Base Color**
+   the graph, wire what currently goes into **Base Color** (of the result node,
+   or of the *Substrate* node plugged into *Front Material*)
    into its *BaseColor* input and what goes into **Roughness** into its
    *Roughness* input (no roughness wired: a constant `0.8`), then its two
    outputs into **Base Color** and **Roughness**. Set **Porosity** with a
@@ -152,19 +165,54 @@ tiny splash, through a Niagara *event*.
    **Details** set **Sound** to `SW_RainLoop`. **Compile**, **Save**.
    The volume follows the rain (louder under the trees, where it hits the leaves).
 
+### 7. Clouds that follow the weather — `M_VolumetricCloud`
+The code already darkens the sky in bad weather (sky atmosphere luminance,
+sky light, grey fog, exposure compensation and saturation through the
+director's *WeatherPostProcess* component: nothing to set up). The clouds
+themselves keep the engine material's fixed coverage; this step makes them
+close in with the weather. The material reads `MPC_Environment.CloudCover`
+(no dynamic material instance, which crashed the editor in M1e).
+
+1. In the **Outliner**, select the **VolumetricCloud** actor. In **Details**,
+   **Material** shows `m_SimpleVolumetricCloud`: click the folder-with-arrow
+   icon (*Browse to asset*). If the Content Browser cannot show it, click
+   **Settings** (top right of the Content Browser) > tick **Show Engine Content**,
+   then browse again.
+2. Drag `m_SimpleVolumetricCloud` onto the folder `ShroomHunt/Environment`
+   (left tree of the Content Browser) > **Copy Here**. Rename the copy
+   `M_VolumetricCloud`, double-click it.
+3. In the material graph, press **Ctrl+F** and search `Coverage`. Find the
+   **Scalar Parameter** that controls the global coverage (named like
+   `Cloud_GlobalCoverage`); note its **Default Value** (say `C0`) in **Details**.
+4. Add a **Collection Parameter** node (**Collection** `MPC_Environment`,
+   **Parameter Name** `CloudCover`) and a **Lerp** (hold **L** + click):
+   **A** = constant `C0`, **B** = constant `1`, **Alpha** = *CloudCover*.
+5. Drag from the Lerp output to every pin the coverage parameter was wired to
+   (Alt+click the old wires to remove them), then delete the parameter node.
+   **Apply**, **Save**, wait for the shaders.
+6. Select the **VolumetricCloud** actor again: **Details** > **Material** =
+   `M_VolumetricCloud`. *File > Save All*.
+
+If you cannot find a coverage parameter in step 3, take a screenshot of the
+graph around the result node and send it to me.
+
 ## Test checklist
 - [ ] `sh.Weather.Force Rain 3` in a clearing: streaks (not rectangles) fall
       slanted with the wind; the HUD line 2 shows `here: rain ~0.3, canopy < 0.3`.
 - [ ] Walk into a dense stand: fewer streaks, big drops from the leaves
       (`drips` near 1), the slant decreases.
 - [ ] `sh.Weather.Force Storm 2`: strong slant, heavy rain.
+- [ ] The sky darkens with the weather: overcast a little, rain more, a storm
+      much more (HUD `gloom` 0 → ~0.6 → 1, exposure down to -1.3 EV); the fog
+      turns grey, colors desaturate; clouds close in (step 7). Back to normal
+      after the forced weather.
 - [ ] Small splashes on the ground around you while it rains.
 - [ ] After the forced rain: drops keep falling under the trees for a while
       (`drips` > 0 while `ground wetness` is high), none in the clearings.
 - [ ] Ground, trees and mushrooms look darker and shinier when wet and dry out
       over a few game hours.
 - [ ] (Optional) the rain sound fades in and out with the rain.
-- [ ] Automation: 28 tests green (`ShroomHunt.Environment.LocalRain` included).
+- [ ] Automation: 29 tests green (`ShroomHunt.Environment.LocalRain` and `SkyMood` included).
 
 ## UE concepts learned
 - Niagara: user parameters set from C++, dynamic inputs (*Add Vector*),

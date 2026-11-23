@@ -244,6 +244,16 @@ canopy into direct rain, drops from leaves (lasting while the forest is wet)
 and a wind factor; Niagara draws them through user parameters. The wind
 heading is part of the deterministic weather model.
 
+**D-032 — Bad weather grading** · Accepted · 2026-11-23
+A closed sky, rain and storms darken the scene through one pure "gloom"
+value (`SkyMood`): sky atmosphere luminance, sky light, sun, grey fog,
+plus an exposure compensation and a desaturation applied by an unbound
+post process component of the director (priority 100, on top of the level's
+own exposure compensation). Without the exposure term, auto exposure brightens
+a dark sky back to a normal image. Clouds follow `MPC_Environment.CloudCover`
+in a project copy of the cloud material (`M_VolumetricCloud`), not through a
+dynamic material instance (crash, M1e).
+
 ## Open questions (to the developer)
 
 - None at the moment.
