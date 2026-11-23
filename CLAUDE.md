@@ -234,8 +234,9 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   `sh.Vegetation.BakeMeshes`) and `VegetationScatter` (deterministic placement from
   the field, partition-independent) → PCG node *Forest Scatter* → Static Mesh
   Spawner. Field and vegetation data shared through `ForestFieldCache`.
-  Three layers: Trees, Understory, Ground (debris: leaf litter per genus,
-  twigs, stones, moss; no collision, short cull distance). Third-party meshes
+  Three layers: Trees, Understory (static PCG graph `PCG_ForestVegetation`),
+  Ground (single leaves per genus, twigs, stones, moss: ~8 M instances, so
+  generated at runtime around the player by `PCG_ForestGround`). Third-party meshes
   replace placeholders via `MeshOverrides`, falling back when missing (D-033).
 - **Foraging** (`Player/`, D-029): `UForagerComponent` (added to the pawn by the
   spawner: aim, examine, pick; runtime Enhanced Input; `UI/UForagingWidget` built

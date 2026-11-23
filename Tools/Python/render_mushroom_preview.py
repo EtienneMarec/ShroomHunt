@@ -15,8 +15,8 @@ shading of the per-vertex sRGB colors; good enough to review shapes and colors.
 Vegetation (M1d-2): `sh.Vegetation.ExportObj` writes Saved/VegetationDebug/<Key>.obj, then
        python Tools/Python/render_mushroom_preview.py Saved/VegetationDebug out.png --grid
 draws one row per tree genus (Sapling, Pole, Mature..., Old at a common scale) and one row
-for the understory (each tile at its own scale). Ground debris (V1-3): leaf litter has one
-row per genus, the other debris one row; add "--top" for a steep view from above
+for the understory (each tile at its own scale). Ground debris (V1-3): one row of fallen
+leaves (one per genus and variant), the other debris one row; add "--top" for a steep view from above
 (flat objects are unreadable from the default low camera).
 
 Like Unreal, it uses the left-handed convention (front-face normal = (C - A) x (B - A))
@@ -151,8 +151,8 @@ def grid_key(name):
         return parts[0], (forms[parts[1]], parts[1], int(parts[2]))
     if len(parts) == 3 and parts[1] == "Age":
         return parts[0], (int(parts[2]), "Age", 0)
-    if len(parts) == 3 and parts[1] == "LeafLitter":
-        return f"~Litter {parts[0]}", (0, parts[1], int(parts[2]))
+    if len(parts) == 3 and parts[1] == "Leaf":
+        return "~Leaves", (0, parts[0], int(parts[2]))
     return "~Understory", (0, parts[0], int(parts[-1]) if parts[-1].isdigit() else 0)
 
 
