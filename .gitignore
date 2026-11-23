@@ -72,3 +72,6 @@ __pycache__/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Material editor preview captures (generated)
+Content/**/*_EditorSphere_*.png

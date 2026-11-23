@@ -245,8 +245,11 @@ and a wind factor; Niagara draws them through user parameters. The wind
 heading is part of the deterministic weather model.
 
 **D-032 — Bad weather grading** · Accepted · 2026-11-23
-A closed sky, rain and storms darken the scene through one pure "gloom"
-value (`SkyMood`): sky atmosphere luminance, sky light, sun, grey fog,
+A closed sky makes the light diffuse: the direct sun fades and its shadows
+blur and fade (light source angle x15, shadow amount 0.15), so the sky light
+becomes the main light. Only dimming the sun gave an "eclipse light" (darker
+but still sharp, directional shadows). Rain and storms then darken the scene
+through one pure "gloom" value (`SkyMood`): sky atmosphere luminance, sky light, grey fog,
 plus an exposure compensation and a desaturation applied by an unbound
 post process component of the director (priority 100, on top of the level's
 own exposure compensation). Without the exposure term, auto exposure brightens

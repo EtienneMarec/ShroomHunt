@@ -12,7 +12,7 @@ rain sound.
 | `FWeatherSample::WindHeadingDeg` | the wind now has a direction: westerlies (toward +X of the forest) veering slowly over a day or two, deterministic like the rest of the weather |
 | `LocalRain::Compute` | pure: rain intensity, ground wetness and canopy cover → direct rain, drops from leaves, wind factor under the trees |
 | `AEnvironmentDirector` | samples the forest canopy under the camera (`Data/Forests/<ForestName>.json`), feeds the Niagara system three user parameters (`RainIntensity` = direct rain, `DripIntensity`, `Wind` in cm/s), moves the emitter upwind so the slanted rain lands around you, drives the `RainAudio` component |
-| `SkyMood::Compute` + *WeatherPostProcess* component | bad weather darkens the scene (D-032): sky atmosphere luminance, sky light, sun, grey fog, exposure compensation and saturation, from 0 (broken clouds) to full gloom (storm); tunable in the director's *Gloom* category |
+| `SkyMood::Compute` + *WeatherPostProcess* component | bad weather changes the light (D-032): under a closed sky the direct sun fades and its shadows blur and fade (source angle, shadow amount), leaving diffuse sky light; rain and storms then darken the sky atmosphere, sky light and fog, with exposure compensation and desaturation; tunable in the director's *Gloom* category |
 | Debug HUD | line 2: wind heading, and `here: rain / drips / canopy` at the camera, `gloom` and its exposure compensation |
 
 > **UE concept — Niagara user parameters.** Values exposed by a Niagara system
@@ -173,28 +173,59 @@ themselves keep the engine material's fixed coverage; this step makes them
 close in with the weather. The material reads `MPC_Environment.CloudCover`
 (no dynamic material instance, which crashed the editor in M1e).
 
+The cloud actor uses a **material instance**, `m_SimpleVolumetricCloud_Inst`
+(its parameter values make the clouds), of the material
+`m_SimpleVolumetricCloud` (the graph, whose default values alone give no
+visible clouds). We copy both, edit the graph copy, and point the instance
+copy at it.
+
+> **UE concept — Material Instance.** A material instance (`MI_`) has no graph:
+> it reuses a parent material and overrides some of its parameters (ticked in
+> its Details panel). Double-clicking one opens a 3D preview with the
+> parameter list, not a graph.
+
 1. In the **Outliner**, select the **VolumetricCloud** actor. In **Details**,
-   **Material** shows `m_SimpleVolumetricCloud`: click the folder-with-arrow
-   icon (*Browse to asset*). If the Content Browser cannot show it, click
-   **Settings** (top right of the Content Browser) > tick **Show Engine Content**,
-   then browse again.
-2. Drag `m_SimpleVolumetricCloud` onto the folder `ShroomHunt/Environment`
-   (left tree of the Content Browser) > **Copy Here**. Rename the copy
-   `M_VolumetricCloud`, double-click it.
-3. In the material graph, press **Ctrl+F** and search `Coverage`. Find the
-   **Scalar Parameter** that controls the global coverage (named like
-   `Cloud_GlobalCoverage`); note its **Default Value** (say `C0`) in **Details**.
-4. Add a **Collection Parameter** node (**Collection** `MPC_Environment`,
+   **Material** shows `m_SimpleVolumetricCloud_Inst`: click the
+   folder-with-arrow icon (*Browse to asset*). If the Content Browser cannot
+   show it, click **Settings** (top right of the Content Browser) > tick
+   **Show Engine Content**, then browse again.
+2. Drag `m_SimpleVolumetricCloud_Inst` onto the folder `ShroomHunt/Environment`
+   (left tree of the Content Browser) > **Copy Here**; rename the copy
+   `MI_VolumetricCloud`. Do the same with its parent `m_SimpleVolumetricCloud`
+   (same engine folder), renamed `M_VolumetricCloud`.
+3. Double-click `MI_VolumetricCloud`. In its **Details**, find
+   **Cloud_GlobalCoverage** (search `coverage`): if it is ticked, note its value
+   (`C0`); if not, `C0` = `-0.2` (the parent's default). Close it.
+4. Double-click `M_VolumetricCloud` (graph). Press **Ctrl+F**, search
+   `Coverage`: the **Scalar Parameter** `Cloud_GlobalCoverage`. Add a
+   **Collection Parameter** node (**Collection** `MPC_Environment`,
    **Parameter Name** `CloudCover`) and a **Lerp** (hold **L** + click):
-   **A** = constant `C0`, **B** = constant `1`, **Alpha** = *CloudCover*.
-5. Drag from the Lerp output to every pin the coverage parameter was wired to
+   **A** = constant `C0`, **B** = constant (see step 7), **Alpha** = *CloudCover*.
+   Drag from the Lerp output to every pin the parameter was wired to
    (Alt+click the old wires to remove them), then delete the parameter node.
-   **Apply**, **Save**, wait for the shaders.
-6. Select the **VolumetricCloud** actor again: **Details** > **Material** =
-   `M_VolumetricCloud`. *File > Save All*.
+   **Apply**, **Save**.
+5. Open `MI_VolumetricCloud` again: **Details** > **General** > **Parent** =
+   `M_VolumetricCloud`. **Save**.
+6. Select the **VolumetricCloud** actor: **Details** > **Material** =
+   `MI_VolumetricCloud`. Wait for the shaders: the clouds look as before.
+7. Overcast value for **B**: outside Play the viewport uses the MPC default
+   values. In `MPC_Environment` set the default of `CloudCover` to `1` (do not
+   save), then in `M_VolumetricCloud` try **B** values (**Apply** each time)
+   until the sky is overcast; set `CloudCover` back to `0`, **Save** both.
+   *File > Save All*.
 
 If you cannot find a coverage parameter in step 3, take a screenshot of the
 graph around the result node and send it to me.
+
+### 8. Clouds that block the sun
+1. In the **Outliner**, select the sun (the **DirectionalLight** with
+   *Atmosphere Sun Light Index* 0). In **Details**, search `cloud`: tick
+   **Cast Cloud Shadows** (section *Atmosphere and Cloud*). The volumetric
+   clouds now shade the ground: passing cloud shadows on a cloudy day.
+2. Select the **SkyLight**: search `real time`, tick **Real Time Capture** (if
+   it is not already). The ambient light then takes the real sky color: grey
+   under clouds instead of blue.
+3. *File > Save All*.
 
 ## Test checklist
 - [ ] `sh.Weather.Force Rain 3` in a clearing: streaks (not rectangles) fall
@@ -202,10 +233,12 @@ graph around the result node and send it to me.
 - [ ] Walk into a dense stand: fewer streaks, big drops from the leaves
       (`drips` near 1), the slant decreases.
 - [ ] `sh.Weather.Force Storm 2`: strong slant, heavy rain.
+- [ ] `sh.Weather.Force Overcast 2`: no "eclipse light": the sharp sun
+      shadows blur and fade, the light becomes flat and diffuse (not just dimmer).
 - [ ] The sky darkens with the weather: overcast a little, rain more, a storm
-      much more (HUD `gloom` 0 → ~0.6 → 1, exposure down to -1.3 EV); the fog
-      turns grey, colors desaturate; clouds close in (step 7). Back to normal
-      after the forced weather.
+      much more (HUD `gloom` 0 → ~0.6 → 1, exposure down to -0.7 EV); the fog
+      turns grey, colors desaturate; clouds close in (step 7) and their shadows
+      pass on the ground (step 8). Back to normal after the forced weather.
 - [ ] Small splashes on the ground around you while it rains.
 - [ ] After the forced rain: drops keep falling under the trees for a while
       (`drips` > 0 while `ground wetness` is high), none in the clearings.
