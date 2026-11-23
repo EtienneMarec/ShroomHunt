@@ -12,7 +12,7 @@ rain sound.
 | `FWeatherSample::WindHeadingDeg` | the wind now has a direction: westerlies (toward +X of the forest) veering slowly over a day or two, deterministic like the rest of the weather |
 | `LocalRain::Compute` | pure: rain intensity, ground wetness and canopy cover → direct rain, drops from leaves, wind factor under the trees |
 | `AEnvironmentDirector` | samples the forest canopy under the camera (`Data/Forests/<ForestName>.json`), feeds the Niagara system three user parameters (`RainIntensity` = direct rain, `DripIntensity`, `Wind` in cm/s), moves the emitter upwind so the slanted rain lands around you, drives the `RainAudio` component |
-| `SkyMood::Compute` + *WeatherPostProcess* component | bad weather changes the light (D-032): under a closed sky the direct sun fades and its shadows blur and fade (source angle, shadow amount), leaving diffuse sky light; rain and storms then darken the sky atmosphere, sky light and fog, with exposure compensation and desaturation; tunable in the director's *Gloom* category |
+| `SkyMood::Compute` + *WeatherPostProcess* component | bad weather changes the light (D-032): under a closed sky the direct sun fades and its shadows fade (shadow amount), leaving diffuse sky light; rain and storms then darken the sky atmosphere, sky light and fog, with exposure compensation and desaturation; tunable in the director's *Gloom* category |
 | Debug HUD | line 2: wind heading, and `here: rain / drips / canopy` at the camera, `gloom` and its exposure compensation |
 
 > **UE concept — Niagara user parameters.** Values exposed by a Niagara system
@@ -234,9 +234,10 @@ graph around the result node and send it to me.
       (`drips` near 1), the slant decreases.
 - [ ] `sh.Weather.Force Storm 2`: strong slant, heavy rain.
 - [ ] `sh.Weather.Force Overcast 2`: no "eclipse light": the sharp sun
-      shadows blur and fade, the light becomes flat and diffuse (not just dimmer).
+      shadows fade, the light becomes flat and diffuse (not just dimmer); the
+      sun disk keeps its size.
 - [ ] The sky darkens with the weather: overcast a little, rain more, a storm
-      much more (HUD `gloom` 0 → ~0.6 → 1, exposure down to -0.7 EV); the fog
+      much more (HUD `gloom` 0 → ~0.6 → 1, exposure down to -0.4 EV, a storm stays readable); the fog
       turns grey, colors desaturate; clouds close in (step 7) and their shadows
       pass on the ground (step 8). Back to normal after the forced weather.
 - [ ] Small splashes on the ground around you while it rains.

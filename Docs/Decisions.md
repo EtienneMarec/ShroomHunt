@@ -246,13 +246,16 @@ heading is part of the deterministic weather model.
 
 **D-032 — Bad weather grading** · Accepted · 2026-11-23
 A closed sky makes the light diffuse: the direct sun fades and its shadows
-blur and fade (light source angle x15, shadow amount 0.15), so the sky light
-becomes the main light. Only dimming the sun gave an "eclipse light" (darker
+fade (shadow amount 0.15), so the sky light becomes the main light (widening
+the light source angle also blurred the shadows, but it scales the sun disk
+drawn in the sky: rejected). Only dimming the sun gave an "eclipse light" (darker
 but still sharp, directional shadows). Rain and storms then darken the scene
 through one pure "gloom" value (`SkyMood`): sky atmosphere luminance, sky light, grey fog,
 plus an exposure compensation and a desaturation applied by an unbound
 post process component of the director (priority 100, on top of the level's
-own exposure compensation). Without the exposure term, auto exposure brightens
+own exposure compensation, read every frame from the volumes around the camera,
+else the engine default, which is not 0). Values stay mild (-0.4 EV at full
+gloom): a storm must stay readable. Without the exposure term, auto exposure brightens
 a dark sky back to a normal image. Clouds follow `MPC_Environment.CloudCover`
 in a project copy of the cloud material (`M_VolumetricCloud`), not through a
 dynamic material instance (crash, M1e).
