@@ -29,7 +29,8 @@ public:
 
 	/**
 	 * Replacement meshes (e.g. Megascans trees later): key "Fagus_Mature_0" for one variant or
-	 * "Fagus_Mature" for every variant of a genus and form. Unlisted meshes use the baked placeholders.
+	 * "Fagus_Mature" for every variant of a genus and form. Unlisted meshes, and listed ones whose
+	 * asset is not in the project (third-party assets are not versioned, D-010), use the baked placeholders.
 	 */
 	UPROPERTY(Config, EditAnywhere, Category = "Meshes")
 	TMap<FString, TSoftObjectPtr<UStaticMesh>> MeshOverrides;
