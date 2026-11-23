@@ -1,0 +1,58 @@
+{
+  "Name": "HygrophoropsisAurantiaca",
+  "ScientificName": "Hygrophoropsis aurantiaca",
+  "CommonNames": { "en": "False chanterelle", "fr": "Fausse girolle" },
+  "Genus": "Hygrophoropsis", "Family": "Hygrophoropsidaceae", "GuideGroup": "Chanterelles",
+  "Edibility": "Inedible", "ToxicSyndrome": "Gastrointestinal", "PricePerKg": 0.0,
+
+  "Trophic": "Saprotrophic",
+  "Substrates": ["Litter", "DeadWood"],
+  "Hosts": [],
+  "pH": [3.5, 4.0, 5.5, 6.5],
+  "AltitudeM": [0, 0, 1600, 2000],
+  "Moisture": [0.25, 0.40, 0.75, 0.90],
+  "Canopy": [0.30, 0.50, 0.95, 1.00],
+  "EdgeAffinity": 0.0,
+  "Soils": [ { "type": "Sandy", "weight": 1.0 }, { "type": "Peat", "weight": 1.0 },
+             { "type": "Loam", "weight": 0.6 }, { "type": "Clay", "weight": 0.3 }, { "type": "Limestone", "weight": 0.1 } ],
+
+  "FruitingMonths": [8.0, 9.3, 11.0, 12.0],
+  "RainWindowDays": 10, "RainMm": [15, 30],
+  "TempC": [6, 10, 18, 22],
+  "LagDays": [5, 9],
+  "FlushRate": 1.0, "FlushCooldownDays": 7,
+
+  "PatchDensityPerHa": 1.0, "PatchRadiusM": [3, 7],
+  "Clustering": "Troop", "FruitsPerFlush": 8,
+  "LifetimeDays": 10, "StageSplit": [0.25, 0.7], "WormyChance": 0.05,
+
+  "Cap": {
+    "ShapesByStage": {
+      "young":  [ { "shape": "Convex", "weight": 0.6 }, { "shape": "Depressed", "weight": 0.4 } ],
+      "mature": [ { "shape": "Depressed", "weight": 0.6 }, { "shape": "Infundibuliform", "weight": 0.4 } ],
+      "old":    [ { "shape": "Infundibuliform", "weight": 1.0 } ]
+    },
+    "DiameterCm": [2, 7], "MarginType": "Inrolled", "Surface": "Velvety",
+    "Colors": ["#C9661A", "#EE9A3C"],
+    "Warts": null
+  },
+  "Underside": {
+    "Type": "Gills", "Attachment": "Decurrent",
+    "ColorsByStage": { "young": "#F0902E", "mature": "#E8842A", "old": "#D07A30" }
+  },
+  "Stem": {
+    "LengthCm": [2, 5], "ThicknessCm": [0.5, 1.0], "Shape": "Cylindrical",
+    "Colors": ["#D9832E", "#C06E28"],
+    "Reticulation": { "present": false },
+    "Ring": "None", "Volva": "None"
+  },
+  "Flesh": { "Color": "#F2C890", "ColorChange": "None", "Odor": "Faint, mushroomy", "Taste": "Mild" },
+  "SporePrint": "#FFFFFF",
+
+  "Lookalikes": [
+    { "species": "CantharellusCibarius", "danger": "Excellent",
+      "keyDifferences": ["The chanterelle has blunt, shallow ridges, not thin crowded forked gills", "Egg-yellow rather than orange, with firm white flesh smelling of apricot", "Thicker, solid stem"] }
+  ],
+  "Description": "Small orange funnel with an inrolled velvety margin and thin, crowded, repeatedly forked orange gills running down a slender stem.",
+  "HabitatText": "Needle and leaf litter and rotten wood on acidic soils, from late summer to the end of autumn; often taken for a chanterelle. Causes stomach upsets."
+}

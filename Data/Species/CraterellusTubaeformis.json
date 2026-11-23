@@ -1,0 +1,62 @@
+{
+  "Name": "CraterellusTubaeformis",
+  "ScientificName": "Craterellus tubaeformis",
+  "CommonNames": { "en": "Yellowfoot / Winter chanterelle", "fr": "Chanterelle en tube" },
+  "Genus": "Craterellus", "Family": "Cantharellaceae", "GuideGroup": "Chanterelles",
+  "Edibility": "Edible", "ToxicSyndrome": "None", "PricePerKg": 18.0,
+
+  "Trophic": "Mycorrhizal",
+  "Substrates": ["Moss", "Litter"],
+  "Hosts": [
+    { "genus": "Picea", "affinity": 1.0 }, { "genus": "Abies", "affinity": 1.0 },
+    { "genus": "Fagus", "affinity": 0.7 }, { "genus": "Quercus", "affinity": 0.5 },
+    { "genus": "Betula", "affinity": 0.5 }, { "genus": "Carpinus", "affinity": 0.4 }
+  ],
+  "pH": [3.5, 4.0, 5.5, 6.5],
+  "AltitudeM": [0, 0, 1600, 2000],
+  "Moisture": [0.45, 0.60, 0.95, 1.00],
+  "Canopy": [0.40, 0.60, 1.00, 1.00],
+  "EdgeAffinity": -0.2,
+  "Soils": [ { "type": "Loam", "weight": 1.0 }, { "type": "Peat", "weight": 1.0 },
+             { "type": "Sandy", "weight": 0.8 }, { "type": "Clay", "weight": 0.5 }, { "type": "Limestone", "weight": 0.1 } ],
+
+  "FruitingMonths": [9.0, 10.3, 12.5, 13.5],
+  "RainWindowDays": 10, "RainMm": [15, 30],
+  "TempC": [1, 5, 14, 18],
+  "LagDays": [6, 11],
+  "FlushRate": 1.0, "FlushCooldownDays": 8,
+
+  "PatchDensityPerHa": 1.2, "PatchRadiusM": [3, 8],
+  "Clustering": "Troop", "FruitsPerFlush": 14,
+  "LifetimeDays": 16, "StageSplit": [0.25, 0.75], "WormyChance": 0.02,
+
+  "Cap": {
+    "ShapesByStage": {
+      "young":  [ { "shape": "Convex", "weight": 0.5 }, { "shape": "Depressed", "weight": 0.5 } ],
+      "mature": [ { "shape": "Infundibuliform", "weight": 1.0 } ],
+      "old":    [ { "shape": "Infundibuliform", "weight": 1.0 } ]
+    },
+    "DiameterCm": [1.5, 5], "MarginType": "Wavy", "Surface": "Smooth",
+    "Colors": ["#5E472C", "#86704A"],
+    "Warts": null
+  },
+  "Underside": {
+    "Type": "Ridges", "Attachment": "Decurrent",
+    "ColorsByStage": { "young": "#B9AE8A", "mature": "#A39E8C", "old": "#8E8878" }
+  },
+  "Stem": {
+    "LengthCm": [4, 9], "ThicknessCm": [0.4, 1.0], "Shape": "Cylindrical",
+    "Colors": ["#D8B44A", "#C49A38"],
+    "Reticulation": { "present": false },
+    "Ring": "None", "Volva": "None"
+  },
+  "Flesh": { "Color": "#E0D4B0", "ColorChange": "None", "Odor": "Faint, earthy", "Taste": "Mild" },
+  "SporePrint": "#F2EBD8",
+
+  "Lookalikes": [
+    { "species": "HygrophoropsisAurantiaca", "danger": "Inedible",
+      "keyDifferences": ["Bright orange all over, cap included", "Thin, crowded, forked true gills instead of blunt grey veins", "Solid stem, not a hollow tube"] }
+  ],
+  "Description": "Small brown funnel with a wavy margin, grey-yellow blunt veins running down a hollow, bright yellow stem.",
+  "HabitatText": "Damp mossy ground under conifers and beech on acidic soils, in large troops, from autumn until the frosts of early winter."
+}

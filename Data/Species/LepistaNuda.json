@@ -1,0 +1,58 @@
+{
+  "Name": "LepistaNuda",
+  "ScientificName": "Lepista nuda",
+  "CommonNames": { "en": "Wood blewit", "fr": "Pied bleu" },
+  "Genus": "Lepista", "Family": "Tricholomataceae", "GuideGroup": "Tricholomas",
+  "Edibility": "EdibleWithCare", "ToxicSyndrome": "None", "PricePerKg": 15.0,
+
+  "Trophic": "Saprotrophic",
+  "Substrates": ["Litter", "Soil"],
+  "Hosts": [],
+  "pH": [4.5, 5.5, 7.5, 8.2],
+  "AltitudeM": [0, 0, 1400, 1800],
+  "Moisture": [0.30, 0.45, 0.80, 0.92],
+  "Canopy": [0.20, 0.40, 0.90, 1.00],
+  "EdgeAffinity": 0.2,
+  "Soils": [ { "type": "Loam", "weight": 1.0 }, { "type": "Clay", "weight": 0.8 },
+             { "type": "Limestone", "weight": 0.8 }, { "type": "Sandy", "weight": 0.4 } ],
+
+  "FruitingMonths": [9.5, 10.5, 12.8, 14.0],
+  "RainWindowDays": 12, "RainMm": [15, 35],
+  "TempC": [0, 4, 12, 17],
+  "LagDays": [8, 14],
+  "FlushRate": 1.0, "FlushCooldownDays": 8,
+
+  "PatchDensityPerHa": 1.2, "PatchRadiusM": [3, 8],
+  "Clustering": "FairyRing", "FruitsPerFlush": 7,
+  "LifetimeDays": 14, "StageSplit": [0.25, 0.7], "WormyChance": 0.05,
+
+  "Cap": {
+    "ShapesByStage": {
+      "young":  [ { "shape": "Convex", "weight": 1.0 } ],
+      "mature": [ { "shape": "Convex", "weight": 0.6 }, { "shape": "Flat", "weight": 0.4 } ],
+      "old":    [ { "shape": "Flat", "weight": 0.6 }, { "shape": "Depressed", "weight": 0.4 } ]
+    },
+    "DiameterCm": [6, 15], "MarginType": "Inrolled", "Surface": "Smooth",
+    "Colors": ["#8C6FA8", "#B39CB8"],
+    "Warts": null
+  },
+  "Underside": {
+    "Type": "Gills", "Attachment": "Sinuate",
+    "ColorsByStage": { "young": "#B99BD3", "mature": "#A88BB8", "old": "#B4A193" }
+  },
+  "Stem": {
+    "LengthCm": [5, 10], "ThicknessCm": [1.5, 3], "Shape": "Clavate",
+    "Colors": ["#A88BC4", "#C3B0D3"],
+    "Reticulation": { "present": false },
+    "Ring": "None", "Volva": "None"
+  },
+  "Flesh": { "Color": "#D8C8E0", "ColorChange": "None", "Odor": "Fruity, perfumed", "Taste": "Mild" },
+  "SporePrint": "#E8D0C0",
+
+  "Lookalikes": [
+    { "species": "CortinariusTraganus", "danger": "Inedible",
+      "keyDifferences": ["Cobweb-like veil (cortina) under the young cap", "Rusty brown spore print", "Smell of goat or pear drops"] }
+  ],
+  "Description": "Fleshy lilac to violet mushroom with an inrolled margin, crowded lilac gills and a stout lilac stem; the colors fade to tan with age.",
+  "HabitatText": "Leaf litter of broadleaf woods, hedges and gardens, often in rings, from late autumn into early winter; it withstands the first frosts. Must be well cooked."
+}

@@ -1,0 +1,62 @@
+{
+  "Name": "AmanitaPantherina",
+  "ScientificName": "Amanita pantherina",
+  "CommonNames": { "en": "Panther cap", "fr": "Amanite panthère" },
+  "Genus": "Amanita", "Family": "Amanitaceae", "GuideGroup": "Amanitas",
+  "Edibility": "Toxic", "ToxicSyndrome": "Pantherinic", "PricePerKg": 0.0,
+
+  "Trophic": "Mycorrhizal",
+  "Substrates": ["Soil", "Litter"],
+  "Hosts": [
+    { "genus": "Fagus", "affinity": 1.0 }, { "genus": "Quercus", "affinity": 1.0 },
+    { "genus": "Picea", "affinity": 0.7 }, { "genus": "Pinus", "affinity": 0.7 },
+    { "genus": "Carpinus", "affinity": 0.5 }, { "genus": "Betula", "affinity": 0.5 }
+  ],
+  "pH": [4.0, 5.0, 7.5, 8.0],
+  "AltitudeM": [0, 0, 1500, 1900],
+  "Moisture": [0.25, 0.40, 0.70, 0.85],
+  "Canopy": [0.35, 0.55, 0.90, 1.00],
+  "EdgeAffinity": 0.1,
+  "Soils": [ { "type": "Loam", "weight": 1.0 }, { "type": "Sandy", "weight": 0.8 },
+             { "type": "Limestone", "weight": 0.8 }, { "type": "Clay", "weight": 0.7 } ],
+
+  "FruitingMonths": [6.5, 7.8, 10.0, 11.0],
+  "RainWindowDays": 12, "RainMm": [15, 35],
+  "TempC": [10, 14, 22, 26],
+  "LagDays": [6, 10],
+  "FlushRate": 0.9, "FlushCooldownDays": 8,
+
+  "PatchDensityPerHa": 0.7, "PatchRadiusM": [3, 8],
+  "Clustering": "Scattered", "FruitsPerFlush": 4,
+  "LifetimeDays": 8, "StageSplit": [0.25, 0.65], "WormyChance": 0.1,
+
+  "Cap": {
+    "ShapesByStage": {
+      "young":  [ { "shape": "Hemispherical", "weight": 1.0 } ],
+      "mature": [ { "shape": "Convex", "weight": 0.8 }, { "shape": "Flat", "weight": 0.2 } ],
+      "old":    [ { "shape": "Flat", "weight": 1.0 } ]
+    },
+    "DiameterCm": [5, 12], "MarginType": "Striate", "Surface": "Warty",
+    "Colors": ["#5E4430", "#93744F"],
+    "Warts": { "color": "#FFFFFF", "density": 0.6, "washOffByRain": true }
+  },
+  "Underside": {
+    "Type": "Gills", "Attachment": "Free",
+    "ColorsByStage": { "young": "#FFFFFF", "mature": "#FDFDF8", "old": "#F4F0E4" }
+  },
+  "Stem": {
+    "LengthCm": [6, 12], "ThicknessCm": [1, 2], "Shape": "Bulbous",
+    "Colors": ["#FFFFFF", "#F4F0E6"],
+    "Reticulation": { "present": false },
+    "Ring": "Fragile", "Volva": "Bulb"
+  },
+  "Flesh": { "Color": "#FFFFFF", "ColorChange": "None", "Odor": "Faint, of radish", "Taste": "Untested" },
+  "SporePrint": "#FFFFFF",
+
+  "Lookalikes": [
+    { "species": "AmanitaRubescens", "danger": "EdibleWithCare",
+      "keyDifferences": ["The blusher's flesh turns pink-red where bruised or eaten by insects", "Grey-pink warts and a striate ring", "No rimmed bulb at the base"] }
+  ],
+  "Description": "Brown cap scattered with pure white warts and a finely striate margin, free white gills, white stem with a fragile ring and a bulb with a neat rim.",
+  "HabitatText": "Broadleaf and conifer woods on most soils, from summer to autumn. Toxic (confusion, agitation); close to the edible blusher."
+}

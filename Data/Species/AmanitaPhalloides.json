@@ -1,0 +1,62 @@
+{
+  "Name": "AmanitaPhalloides",
+  "ScientificName": "Amanita phalloides",
+  "CommonNames": { "en": "Death cap", "fr": "Amanite phalloïde" },
+  "Genus": "Amanita", "Family": "Amanitaceae", "GuideGroup": "Amanitas",
+  "Edibility": "Deadly", "ToxicSyndrome": "Phalloidian", "PricePerKg": 0.0,
+
+  "Trophic": "Mycorrhizal",
+  "Substrates": ["Soil", "Litter"],
+  "Hosts": [
+    { "genus": "Quercus", "affinity": 1.0 }, { "genus": "Fagus", "affinity": 0.8 },
+    { "genus": "Castanea", "affinity": 0.8 }, { "genus": "Carpinus", "affinity": 0.7 },
+    { "genus": "Betula", "affinity": 0.3 }
+  ],
+  "pH": [4.5, 5.5, 7.5, 8.0],
+  "AltitudeM": [0, 0, 1000, 1400],
+  "Moisture": [0.30, 0.45, 0.75, 0.90],
+  "Canopy": [0.40, 0.60, 0.95, 1.00],
+  "EdgeAffinity": 0.0,
+  "Soils": [ { "type": "Loam", "weight": 1.0 }, { "type": "Clay", "weight": 0.9 },
+             { "type": "Limestone", "weight": 0.7 }, { "type": "Sandy", "weight": 0.5 } ],
+
+  "FruitingMonths": [7.5, 8.8, 10.5, 11.5],
+  "RainWindowDays": 12, "RainMm": [18, 40],
+  "TempC": [8, 12, 20, 24],
+  "LagDays": [6, 11],
+  "FlushRate": 1.0, "FlushCooldownDays": 8,
+
+  "PatchDensityPerHa": 0.9, "PatchRadiusM": [4, 9],
+  "Clustering": "Scattered", "FruitsPerFlush": 5,
+  "LifetimeDays": 9, "StageSplit": [0.25, 0.7], "WormyChance": 0.1,
+
+  "Cap": {
+    "ShapesByStage": {
+      "young":  [ { "shape": "Hemispherical", "weight": 1.0 } ],
+      "mature": [ { "shape": "Convex", "weight": 0.8 }, { "shape": "Flat", "weight": 0.2 } ],
+      "old":    [ { "shape": "Flat", "weight": 1.0 } ]
+    },
+    "DiameterCm": [5, 15], "MarginType": "Even", "Surface": "Fibrillose",
+    "Colors": ["#6F7B3E", "#B2B67C"],
+    "Warts": null
+  },
+  "Underside": {
+    "Type": "Gills", "Attachment": "Free",
+    "ColorsByStage": { "young": "#FFFFFF", "mature": "#FDFDF8", "old": "#F2F0E2" }
+  },
+  "Stem": {
+    "LengthCm": [8, 15], "ThicknessCm": [1, 2], "Shape": "Bulbous",
+    "Colors": ["#F4F4EA", "#DCE0C0"],
+    "Reticulation": { "present": false },
+    "Ring": "Skirt", "Volva": "Sac"
+  },
+  "Flesh": { "Color": "#FFFFFF", "ColorChange": "None", "Odor": "Faint and sweetish, later of raw potato", "Taste": "Untested" },
+  "SporePrint": "#FFFFFF",
+
+  "Lookalikes": [
+    { "species": "RussulaVirescens", "danger": "Excellent",
+      "keyDifferences": ["The death cap has a hanging ring and a white sac at the base: always dig the whole stem up", "Smooth, streaky olive cap, not cracked into green patches", "Free white gills; firm flesh, not brittle like chalk"] }
+  ],
+  "Description": "Olive-green, radially streaked cap over free white gills; white stem with a hanging skirt and a bulb sheathed in a white sac-like volva.",
+  "HabitatText": "Under oaks, beech, hornbeam and chestnut, mostly on rich, not too acidic soils, from late summer to autumn. Responsible for most fatal mushroom poisonings: never taste it."
+}

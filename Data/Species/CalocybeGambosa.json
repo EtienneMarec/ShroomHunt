@@ -1,0 +1,58 @@
+{
+  "Name": "CalocybeGambosa",
+  "ScientificName": "Calocybe gambosa",
+  "CommonNames": { "en": "St George's mushroom", "fr": "Tricholome de la Saint-Georges" },
+  "Genus": "Calocybe", "Family": "Lyophyllaceae", "GuideGroup": "Tricholomas",
+  "Edibility": "Excellent", "ToxicSyndrome": "None", "PricePerKg": 30.0,
+
+  "Trophic": "Grassland",
+  "Substrates": ["Grass", "Soil"],
+  "Hosts": [],
+  "pH": [4.6, 5.6, 8.0, 8.6],
+  "AltitudeM": [0, 0, 1500, 2000],
+  "Moisture": [0.30, 0.45, 0.75, 0.90],
+  "Canopy": [0.00, 0.00, 0.50, 0.75],
+  "EdgeAffinity": 0.8,
+  "Soils": [ { "type": "Limestone", "weight": 1.0 }, { "type": "Loam", "weight": 1.0 },
+             { "type": "Clay", "weight": 0.7 }, { "type": "Sandy", "weight": 0.5 } ],
+
+  "FruitingMonths": [3.8, 4.3, 5.3, 6.0],
+  "RainWindowDays": 10, "RainMm": [8, 22],
+  "TempC": [5, 8, 16, 20],
+  "LagDays": [5, 10],
+  "FlushRate": 2.2, "FlushCooldownDays": 8,
+
+  "PatchDensityPerHa": 2.0, "PatchRadiusM": [4, 10],
+  "Clustering": "FairyRing", "FruitsPerFlush": 14,
+  "LifetimeDays": 10, "StageSplit": [0.25, 0.7], "WormyChance": 0.15,
+
+  "Cap": {
+    "ShapesByStage": {
+      "young":  [ { "shape": "Hemispherical", "weight": 1.0 } ],
+      "mature": [ { "shape": "Convex", "weight": 0.8 }, { "shape": "Flat", "weight": 0.2 } ],
+      "old":    [ { "shape": "Flat", "weight": 0.7 }, { "shape": "Depressed", "weight": 0.3 } ]
+    },
+    "DiameterCm": [5, 12], "MarginType": "Inrolled", "Surface": "Smooth",
+    "Colors": ["#EDE3CF", "#F5EFE2"],
+    "Warts": null
+  },
+  "Underside": {
+    "Type": "Gills", "Attachment": "Sinuate",
+    "ColorsByStage": { "young": "#FAF6EE", "mature": "#F4EEDF", "old": "#E6DCC6" }
+  },
+  "Stem": {
+    "LengthCm": [3, 7], "ThicknessCm": [1.5, 3], "Shape": "Cylindrical",
+    "Colors": ["#F6F1E6", "#EDE4D2"],
+    "Reticulation": { "present": false },
+    "Ring": "None", "Volva": "None"
+  },
+  "Flesh": { "Color": "#FFFFFF", "ColorChange": "None", "Odor": "Strong, of fresh flour", "Taste": "Mild" },
+  "SporePrint": "#FFFFFF",
+
+  "Lookalikes": [
+    { "species": "InosperaErubescens", "danger": "Deadly",
+      "keyDifferences": ["Silky, fibrous cap that bruises brick red", "No smell of flour", "Pale brown spore print"] }
+  ],
+  "Description": "Stocky cream-white mushroom with a thick inrolled margin, very crowded white gills and a short stout stem; smells strongly of flour.",
+  "HabitatText": "Grassy clearings, wood edges, hedges and rides on rich, often calcareous soils, in rings; one of the few spring mushrooms (April to May)."
+}

@@ -1,0 +1,62 @@
+{
+  "Name": "RussulaVirescens",
+  "ScientificName": "Russula virescens",
+  "CommonNames": { "en": "Green-cracking brittlegill", "fr": "Russule verdoyante (palomet)" },
+  "Genus": "Russula", "Family": "Russulaceae", "GuideGroup": "Russulas",
+  "Edibility": "Excellent", "ToxicSyndrome": "None", "PricePerKg": 15.0,
+
+  "Trophic": "Mycorrhizal",
+  "Substrates": ["Soil", "Litter"],
+  "Hosts": [
+    { "genus": "Quercus", "affinity": 1.0 }, { "genus": "Fagus", "affinity": 1.0 },
+    { "genus": "Castanea", "affinity": 0.9 }, { "genus": "Carpinus", "affinity": 0.6 },
+    { "genus": "Betula", "affinity": 0.4 }
+  ],
+  "pH": [4.0, 4.5, 6.5, 7.5],
+  "AltitudeM": [0, 0, 1000, 1400],
+  "Moisture": [0.25, 0.40, 0.70, 0.85],
+  "Canopy": [0.30, 0.50, 0.85, 0.95],
+  "EdgeAffinity": 0.3,
+  "Soils": [ { "type": "Sandy", "weight": 1.0 }, { "type": "Loam", "weight": 1.0 },
+             { "type": "Clay", "weight": 0.5 }, { "type": "Limestone", "weight": 0.3 } ],
+
+  "FruitingMonths": [6.0, 7.0, 9.5, 10.5],
+  "RainWindowDays": 12, "RainMm": [15, 35],
+  "TempC": [12, 16, 24, 28],
+  "LagDays": [5, 10],
+  "FlushRate": 0.9, "FlushCooldownDays": 8,
+
+  "PatchDensityPerHa": 1.0, "PatchRadiusM": [3, 8],
+  "Clustering": "Scattered", "FruitsPerFlush": 4,
+  "LifetimeDays": 8, "StageSplit": [0.25, 0.7], "WormyChance": 0.35,
+
+  "Cap": {
+    "ShapesByStage": {
+      "young":  [ { "shape": "Hemispherical", "weight": 1.0 } ],
+      "mature": [ { "shape": "Convex", "weight": 0.6 }, { "shape": "Depressed", "weight": 0.4 } ],
+      "old":    [ { "shape": "Depressed", "weight": 0.7 }, { "shape": "Flat", "weight": 0.3 } ]
+    },
+    "DiameterCm": [5, 12], "MarginType": "Even", "Surface": "Scaly",
+    "Colors": ["#6E8F52", "#A3B67E"],
+    "Warts": null
+  },
+  "Underside": {
+    "Type": "Gills", "Attachment": "Adnate",
+    "ColorsByStage": { "young": "#FFFFFF", "mature": "#FAF8EE", "old": "#EFE9D4" }
+  },
+  "Stem": {
+    "LengthCm": [3, 8], "ThicknessCm": [1.5, 3], "Shape": "Cylindrical",
+    "Colors": ["#FFFFFF", "#F2EEE2"],
+    "Reticulation": { "present": false },
+    "Ring": "None", "Volva": "None"
+  },
+  "Flesh": { "Color": "#FFFFFF", "ColorChange": "None", "Odor": "Faint", "Taste": "Mild" },
+  "SporePrint": "#F8F3E4",
+
+  "Lookalikes": [
+    { "species": "AmanitaPhalloides", "danger": "Deadly",
+      "keyDifferences": ["The death cap has a hanging ring and a sac at the base of the stem (dig it up)", "Smooth olive cap streaked with fibers, never cracked into patches", "Never pick a green-capped gilled mushroom without seeing the whole stem"] }
+  ],
+  "Description": "Firm russula with a dry, matt green cap cracking into small patches, white gills and a white stem without ring or volva; brittle flesh like chalk.",
+  "HabitatText": "Light oak and beech woods on acidic to neutral soils, often at edges, in summer and early autumn after warm rains."
+}

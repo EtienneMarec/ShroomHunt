@@ -1,0 +1,62 @@
+{
+  "Name": "TylopilusFelleus",
+  "ScientificName": "Tylopilus felleus",
+  "CommonNames": { "en": "Bitter bolete", "fr": "Bolet amer" },
+  "Genus": "Tylopilus", "Family": "Boletaceae", "GuideGroup": "Boletes",
+  "Edibility": "Inedible", "ToxicSyndrome": "None", "PricePerKg": 0.0,
+
+  "Trophic": "Mycorrhizal",
+  "Substrates": ["Soil", "Moss", "Litter"],
+  "Hosts": [
+    { "genus": "Picea", "affinity": 1.0 }, { "genus": "Fagus", "affinity": 0.9 },
+    { "genus": "Quercus", "affinity": 0.9 }, { "genus": "Pinus", "affinity": 0.9 },
+    { "genus": "Betula", "affinity": 0.5 }
+  ],
+  "pH": [3.5, 4.0, 5.5, 6.5],
+  "AltitudeM": [0, 0, 1500, 1900],
+  "Moisture": [0.30, 0.45, 0.80, 0.90],
+  "Canopy": [0.40, 0.60, 0.95, 1.00],
+  "EdgeAffinity": 0.0,
+  "Soils": [ { "type": "Sandy", "weight": 1.0 }, { "type": "Loam", "weight": 0.8 },
+             { "type": "Peat", "weight": 0.8 }, { "type": "Clay", "weight": 0.3 }, { "type": "Limestone", "weight": 0.05 } ],
+
+  "FruitingMonths": [6.5, 7.8, 10.0, 11.0],
+  "RainWindowDays": 15, "RainMm": [20, 40],
+  "TempC": [9, 13, 21, 25],
+  "LagDays": [7, 12],
+  "FlushRate": 1.1, "FlushCooldownDays": 7,
+
+  "PatchDensityPerHa": 1.2, "PatchRadiusM": [3, 8],
+  "Clustering": "Scattered", "FruitsPerFlush": 4,
+  "LifetimeDays": 9, "StageSplit": [0.25, 0.7], "WormyChance": 0.1,
+
+  "Cap": {
+    "ShapesByStage": {
+      "young":  [ { "shape": "Hemispherical", "weight": 1.0 } ],
+      "mature": [ { "shape": "Convex", "weight": 0.9 }, { "shape": "Flat", "weight": 0.1 } ],
+      "old":    [ { "shape": "Convex", "weight": 0.5 }, { "shape": "Flat", "weight": 0.5 } ]
+    },
+    "DiameterCm": [5, 15], "MarginType": "Even", "Surface": "Velvety",
+    "Colors": ["#A8825A", "#C9A57A"],
+    "Warts": null
+  },
+  "Underside": {
+    "Type": "Pores", "Attachment": "Adnate",
+    "ColorsByStage": { "young": "#F3EEE6", "mature": "#E6C6BC", "old": "#D3A69C" }
+  },
+  "Stem": {
+    "LengthCm": [6, 12], "ThicknessCm": [2, 4], "Shape": "Clavate",
+    "Colors": ["#C9AE84", "#A88B62"],
+    "Reticulation": { "present": true, "color": "#5A4128", "extent": 0.7 },
+    "Ring": "None", "Volva": "None"
+  },
+  "Flesh": { "Color": "#FFFFFF", "ColorChange": "None", "Odor": "Pleasant", "Taste": "Bitter" },
+  "SporePrint": "#B38A86",
+
+  "Lookalikes": [
+    { "species": "BoletusEdulis", "danger": "Excellent",
+      "keyDifferences": ["The cep has a fine white network on a pale stem", "Pores white, then yellow to olive, never pink", "Mild, nutty taste (one bitter bolete spoils a whole dish)"] }
+  ],
+  "Description": "Bolete with a tan velvety cap, white pores turning pink with age and a club-shaped stem covered by a coarse dark brown network; very bitter.",
+  "HabitatText": "Acidic soils under conifers, beech and oak, often near stumps, from summer to autumn: the classic confusion of cep hunters."
+}
