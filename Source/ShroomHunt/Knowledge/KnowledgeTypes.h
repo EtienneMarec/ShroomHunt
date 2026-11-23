@@ -87,6 +87,19 @@ struct SHROOMHUNT_API FSpeciesKnowledge
 	double LastSeenGameSeconds = 0.0;
 };
 
+/** What is saved of the player's knowledge (M4). */
+USTRUCT()
+struct SHROOMHUNT_API FKnowledgeSaveData
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TArray<FName> OwnedSources;
+
+	UPROPERTY()
+	TMap<FName, FSpeciesKnowledge> Species;
+};
+
 /**
  * The player's knowledge, pure logic (the subsystem wraps it): owned sources and what was seen
  * of each species. Identified = taught by an owned source AND at least one specimen examined
@@ -118,6 +131,10 @@ public:
 	void RecordPick(FName SpeciesId) { ++Species.FindOrAdd(SpeciesId).Picks; }
 
 	void Reset();
+
+	FKnowledgeSaveData ExportSave() const;
+	/** Replaces the state (unknown source ids are kept: data may come back in a later version). */
+	void ImportSave(const FKnowledgeSaveData& Data);
 
 private:
 	const FKnowledgeSourceData* Sources = nullptr;

@@ -54,3 +54,37 @@ int32 UForagingSubsystem::RemoveFromBasket(const TSet<int64>& Seeds)
 {
 	return Basket.RemoveAll([&Seeds](const FBasketItem& Item) { return Seeds.Contains(Item.Seed); });
 }
+
+FForagingSaveData UForagingSubsystem::ExportSave() const
+{
+	FForagingSaveData Out;
+	Out.Basket = Basket;
+	for (const uint32 Seed : PickedSeeds)
+	{
+		Out.PickedSeeds.Add(Seed);
+	}
+	Out.PickedSeeds.Sort();
+	for (const TPair<uint32, TArray<double>>& Pair : PatchPicks)
+	{
+		FPatchPickTimes& Patch = Out.Patches.AddDefaulted_GetRef();
+		Patch.PatchId = Pair.Key;
+		Patch.PickGameSeconds = Pair.Value;
+	}
+	Out.Patches.Sort([](const FPatchPickTimes& A, const FPatchPickTimes& B) { return A.PatchId < B.PatchId; });
+	return Out;
+}
+
+void UForagingSubsystem::ImportSave(const FForagingSaveData& Data)
+{
+	Basket = Data.Basket;
+	PickedSeeds.Reset();
+	for (const int64 Seed : Data.PickedSeeds)
+	{
+		PickedSeeds.Add(static_cast<uint32>(Seed));
+	}
+	PatchPicks.Reset();
+	for (const FPatchPickTimes& Patch : Data.Patches)
+	{
+		PatchPicks.Add(static_cast<uint32>(Patch.PatchId), Patch.PickGameSeconds);
+	}
+}

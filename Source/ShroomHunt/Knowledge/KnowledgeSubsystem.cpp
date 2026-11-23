@@ -65,3 +65,9 @@ void UKnowledgeSubsystem::ResetKnowledge()
 	State.Reset();
 	OnKnowledgeChanged.Broadcast();
 }
+
+void UKnowledgeSubsystem::ImportSave(const FKnowledgeSaveData& Data)
+{
+	State.ImportSave(Data);
+	OnKnowledgeChanged.Broadcast();
+}

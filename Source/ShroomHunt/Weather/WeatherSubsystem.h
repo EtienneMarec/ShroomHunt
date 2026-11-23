@@ -82,6 +82,9 @@ public:
 	void ClearForcedWeather();
 
 	const TArray<FWeatherOverride>& GetOverrides() const { return Overrides; }
+
+	/** Restores the override history (save game): they are part of the rain history. */
+	void SetOverrides(const TArray<FWeatherOverride>& NewOverrides);
 	const FWeatherModel& GetModel() const { return Model; }
 
 	/** Current game time in seconds (0 if no calendar). */

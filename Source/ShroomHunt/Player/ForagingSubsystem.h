@@ -31,6 +31,35 @@ struct FBasketItem
 	float WeightGrams = 0.0f;
 };
 
+/** Pick times of one mycelium patch (exhaustion), saved. */
+USTRUCT()
+struct FPatchPickTimes
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	int64 PatchId = 0;
+
+	UPROPERTY()
+	TArray<double> PickGameSeconds;
+};
+
+/** What is saved of the foraging (M4): the basket and what was taken from the forests. */
+USTRUCT()
+struct FForagingSaveData
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TArray<FBasketItem> Basket;
+
+	UPROPERTY()
+	TArray<int64> PickedSeeds;
+
+	UPROPERTY()
+	TArray<FPatchPickTimes> Patches;
+};
+
 namespace ForagingMath
 {
 	/** Exhaustion of a patch at Now from its pick times: sum of PerPick x exp(-(Now - t) / tau), capped at 1. */
@@ -63,6 +92,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "ShroomHunt|Foraging")
 	void EmptyBasket() { Basket.Reset(); }
+
+	FForagingSaveData ExportSave() const;
+	void ImportSave(const FForagingSaveData& Data);
 
 	/** Takes specimens out of the basket (sold, discarded), by fruit seed. Returns how many. */
 	int32 RemoveFromBasket(const TSet<int64>& Seeds);

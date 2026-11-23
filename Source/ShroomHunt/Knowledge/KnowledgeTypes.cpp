@@ -74,3 +74,18 @@ void FKnowledgeState::Reset()
 	OwnedSources.Reset();
 	Species.Reset();
 }
+
+FKnowledgeSaveData FKnowledgeState::ExportSave() const
+{
+	FKnowledgeSaveData Out;
+	Out.OwnedSources = OwnedSources.Array();
+	Out.OwnedSources.Sort(FNameLexicalLess());
+	Out.Species = Species;
+	return Out;
+}
+
+void FKnowledgeState::ImportSave(const FKnowledgeSaveData& Data)
+{
+	OwnedSources = TSet<FName>(Data.OwnedSources);
+	Species = Data.Species;
+}

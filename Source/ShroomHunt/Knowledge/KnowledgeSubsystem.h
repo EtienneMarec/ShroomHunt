@@ -41,6 +41,9 @@ public:
 	/** Debug: every source owned, every species examined once (sh.Knowledge.UnlockAll). */
 	void UnlockAll(const TArray<FName>& SpeciesIds, double GameSeconds);
 
+	FKnowledgeSaveData ExportSave() const { return State.ExportSave(); }
+	void ImportSave(const FKnowledgeSaveData& Data);
+
 	/** Debug: back to the start of the game (sh.Knowledge.Reset). */
 	void ResetKnowledge();
 

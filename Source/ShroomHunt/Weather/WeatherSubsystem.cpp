@@ -221,3 +221,11 @@ void UWeatherSubsystem::ClearForcedWeather()
 	}
 	UE_LOG(LogShroomWeather, Log, TEXT("Forced weather cleared"));
 }
+
+void UWeatherSubsystem::SetOverrides(const TArray<FWeatherOverride>& NewOverrides)
+{
+	Overrides = NewOverrides;
+	bHasState = false;
+	GroundTimer = 0.0f;
+	WetnessTimer = 0.0f;
+}
