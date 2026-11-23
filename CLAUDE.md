@@ -65,6 +65,8 @@ ShroomHunt/
 ├─ Data/                   source-of-truth gameplay data (JSON), imported by Tools/
 │  ├─ Species/             one JSON file per species
 │  ├─ Forests/             one JSON file per forest definition
+│  ├─ Knowledge/           knowledge sources (posters, pages, books)
+│  ├─ Economy/             shop items and buyer rules (Shop.json)
 │  └─ Vegetation/          tree archetypes, densities, understory rules
 ├─ Docs/                   design docs, decision log, milestone notes
 ├─ Source/ShroomHunt/      C++ runtime module (see §5)
@@ -89,7 +91,7 @@ ShroomHunt/
 - `UPROPERTY` categories: `"ShroomHunt|<Domain>"`.
 - One log category per domain: `LogShroomTime`, `LogShroomWeather`,
   `LogShroomForest`, `LogShroomVegetation`, `LogShroomSpawn`, `LogShroomMesh`, `LogShroomKnowledge`,
-  `LogShroomSave` (declared in `Core/ShroomLog.h`).
+  `LogShroomEconomy`, `LogShroomSave` (declared in `Core/ShroomLog.h`).
 - **Pure logic in plain C++ (`F` structs / namespaces), UObject wrappers thin.**
   Weather model, forest field, suitability/spawn math and mesh builder are
   plain C++ so they are unit-testable and deterministic.
@@ -209,7 +211,13 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   the on-screen HUD (`UShroomDebugSubsystem`, `sh.Debug.HUD`).
 - **Weather** (`FWeatherModel` pure + `UWeatherSubsystem`): deterministic,
   random-access function of (forest seed, climate, time) + debug overrides.
-  Rain history is computed, not stored.
+  Rain history is computed, not stored. Snow pack, frost and dryness too
+  (`SnowModel`, D-035; state `Snow`, winter cold spells).
+- **Seasons** (D-034): leaf calendar per genus in `Vegetation.json` →
+  `SeasonModel` → `MPC_Season` (per genus + forest averages, snow, frost),
+  written by the Environment Director; `sh.Season.PreviewMonth`. The collection
+  is created by `Tools/Python/create_season_collection.py`. Placeholder surface
+  ids (UV1): Bark 0, Wood 1, Foliage 2, Frond 3, Cane 4, Litter 5.
 - **Forest field** (`FForestField`, from `Data/Forests/<Id>.json`): terrain
   (1 m), hydrology/moisture/soil/pH/parcels/stands/canopy (4 m cells), path
   network (roads, rides, footpaths; graded into the terrain, D-025),
@@ -247,7 +255,17 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   `UKnowledgeSubsystem`; sources in `Data/Knowledge/Sources.json` hang on
   landmarks (`AForestLandmarkSet`, component tag `ShroomReadable` + id);
   `KnowledgeText` builds labels and encyclopedia pages; `UI/UEncyclopediaWidget`.
-  Unknown specimens are shown by observable criteria only.
+  Unknown specimens are shown by observable criteria only. Books are
+  sources of kind `Book`, sold at the counter.
+- **Economy** (`Economy/`, D-036/037): `MarketModel` (pure valuation:
+  quality, freshness, worms, demand, reputation, toxic basket rule),
+  `FEconomyState` (money, reputation, ban, items), `UEconomySubsystem` (shop
+  from `Data/Economy/Shop.json`); `UI/UCounterWidget` at the board tagged
+  `BuyerCounter` on the forester's house. `sh.Economy.*`.
+- **Save** (`Save/`, D-038): `UShroomSaveGame` (versioned) gathers one save
+  struct per domain; `USaveSubsystem` autoloads, autosaves each game day and on
+  world close (`USaveSettings`). Any new persistent state needs an
+  export/import in its subsystem and a field in the save. `sh.Save.*`.
 
 ## 11. UE pitfalls met so far (keep this list growing)
 
@@ -338,3 +356,12 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   Unlit...). Write editor steps accordingly.
 - Player-facing strings are `FText` (localization-ready, D-014); never build
   UI text from `FString` concatenation.
+- Editor saves can leave **zero-filled `.uasset` files** (54 F01 partition
+  actors, 2026-11-23): before committing many generated assets, check that each
+  starts with the package tag `C1 83 2A 9E` (the asset registry logs
+  `Package is unloadable ... PACKAGE_FILE_TAG` otherwise).
+- `UGameplayStatics::SaveGameToSlot/Memory` write every `UPROPERTY` (no
+  `SaveGame` flag needed: that filter is only for archives with
+  `ArIsSaveGame`).
+- With `-game -nullrhi`, `-ExecCmds` run before the first actor tick: values
+  computed in `Tick` still show their defaults.

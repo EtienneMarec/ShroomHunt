@@ -272,6 +272,56 @@ still shows a forest. Megascans Trees packs exist for beech, hornbeam and black
 alder; oak and birch keep their placeholders until a fitting asset is chosen.
 The experimental Procedural Vegetation Editor (UE 5.7+) is left for later.
 
+**D-034 — Seasonal foliage from a leaf calendar per genus** · Accepted · 2026-11-23
+Each tree genus has a leaf calendar in `Vegetation.json` (budburst, coloring,
+leaf fall, dead leaves kept in winter, autumn color), evaluated in real months
+by the pure `SeasonModel`, with a deterministic early or late year (±0.25
+month). The director writes per-genus values and forest averages to
+`MPC_Season`: the Megascans tree materials read their genus (after V1-1), the
+placeholder trees the average. The collection is created by a Python script
+(parameters keep their ids). Fallen leaves got their own surface id so the
+crown material can change without touching them. Ground leaf density does not
+follow the season yet (runtime PCG regeneration would be needed).
+
+**D-035 — Snow from the weather history** · Accepted · 2026-11-23
+Precipitation is snow below 1 °C and rain above 3 °C (sleet between: snow
+often falls at +1–2 °C air temperature). The snow pack is integrated over the
+last 144 game hours of the deterministic weather (degree-hour melt, rain on
+snow), like the wetness: nothing stored, the same time always gives the same
+snow. A game winter lasts five days, so the slow temperature drift could not
+bring snow: winter cold spells on the synoptic time scale (depth 6 °C, only
+in months below a 9 °C mean) give a lowland forest occasional snow (about 2 %
+of winter hours). Snow does not yet affect the mushrooms (the temperature
+trapezoids already stop most species).
+
+**D-036 — The buyer's valuation and the toxic basket rule** · Accepted · 2026-11-23
+Refines D-013 (option B) for M3. Price = price per kg × weight × quality ×
+demand × reputation; quality = age at picking × freshness (half-life 3
+biological days) × worms (decided by the specimen's seed). Demand is a smooth
+factor 1 / (1 + sold today / 1.5 kg) integrated over the item, so splitting a
+sale never changes the price. Only species the player can name (*Identified*)
+are bought, until the identification keys let the player label specimens. The
+buyer inspects every mushroom: a toxic one anywhere in the basket, named or
+not, makes him refuse the whole lot, confiscate it, fine and ban the player
+(as French buyers and pharmacists do): picking unknown mushrooms together with
+edible ones is the mistake the game teaches to avoid.
+
+**D-037 — Field guides are knowledge sources sold at a counter** · Accepted · 2026-11-23
+A book is a knowledge source of kind `Book` (no landmark), sold by the shop of
+the forester's house (`Data/Economy/Shop.json`). The counter is a board on the
+house (a readable tagged `BuyerCounter`); its screen is a C++ UMG widget with
+mouse buttons (D-029 style), opened with the examine key.
+
+**D-038 — One autosave slot, per-domain save structs** · Accepted · 2026-11-23
+`UShroomSaveGame` (versioned, refuses newer versions) gathers one plain save
+struct per domain (foraging, knowledge, economy) plus time, weather overrides
+and the player position; each subsystem exports and imports its own struct.
+One slot, autoload when the first game world starts, autosave each game day
+and when the world closes. A load menu and several slots come with the UI
+polish (M6).
+
 ## Open questions (to the developer)
 
-- None at the moment.
+- The 54 empty F01 partition files (2026-11-23): were they saved during a
+  crash or a forced close of the editor? If it happens again, we look for the
+  cause before committing regenerated partitions.

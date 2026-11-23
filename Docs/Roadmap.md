@@ -31,20 +31,31 @@ lighting pass, Sequencer camera path, README screenshots and demo video.
 Third-party assets stay out of the repository (D-010); placeholders remain the
 fallback.
 
-## M2 — Seasons
+## M2 — Seasons (code ready, `Docs/Milestones/M2.md`)
 Season-driven temperature/weather, foliage color & leaf fall (`MPC_Season`),
 litter/moss/snow layers, phenology fully active, winter species
 (e.g. wood blewit, oyster mushroom), spring morels & St George's mushroom.
+*Written ahead:* leaf calendar per genus, `MPC_Season`, snow and frost, snow
+particles, wood blewit, yellowfoot, St George's mushroom. *Left:* editor steps
+of M2.md, Megascans tree materials per genus (after V1-1), morels (honeycomb
+cap), seasonal density of the ground leaves.
 
-## M3 — Base & economy
+## M3 — Base & economy (first part ready, `Docs/Milestones/M3.md`)
 Forester's house (spawn, storage, encyclopedia desk), selling with
 quality/freshness, shop (books, kits), identification keys UI, pharmacist
 check, chosen error consequences.
+*Written ahead:* market model, money, reputation, toxic basket rule, buyer's
+counter with the shop, field guides as knowledge sources. *Left:*
+identification keys and kits, pharmacist, storage, encyclopedia desk.
 
-## M4 — Save & content
+## M4 — Save & content (first part ready, `Docs/Milestones/M4.md`)
 Complete save/load (all systems, versioned), 12–15 species including the
 key dangerous confusions (death cap / green russulas, jack-o'-lantern /
 chanterelle, bitter bolete / cep), more landmarks.
+*Written ahead:* save game and autosave, 11 species with death cap / green
+brittlegill, false chanterelle / chanterelle (more common in the north than the
+jack-o'-lantern), bitter bolete / cep, panther cap. *Left:* morels and
+wood-growing species, more landmarks, load menu.
 
 ## M5 — Second forest
 Mountain beech–fir forest (Vosges/Jura): second `ForestDefinition`, climate,
