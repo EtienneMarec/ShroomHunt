@@ -25,6 +25,17 @@ Cooked/
 # ---------------------------------------------------------------
 Content/Fab/
 Content/Megascans/
+# Packs added from the launcher land at the root of Content/ under their own
+# name (Content/EuropeanBeech/, Content/MSPresets/...): only the project's own
+# top-level folders are versioned.
+/Content/*
+!/Content/ShroomHunt/
+!/Content/FirstPerson/
+!/Content/Characters/
+!/Content/Input/
+!/Content/LevelPrototyping/
+!/Content/__ExternalActors__/
+!/Content/__ExternalObjects__/
 
 # ---------------------------------------------------------------
 # IDE and generated project files (regenerated from the .uproject)
