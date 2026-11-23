@@ -260,6 +260,18 @@ a dark sky back to a normal image. Clouds follow `MPC_Environment.CloudCover`
 in a project copy of the cloud material (`M_VolumetricCloud`), not through a
 dynamic material instance (crash, M1e).
 
+**D-033 — Visual pass before the seasons** · Accepted · 2026-11-23
+Part of the M6 polish (real vegetation, forest floor, lighting, capture) moves
+right after M1 as milestone V1: the demo matters for the portfolio, and M2's
+seasonal leaf colors must be built on the final tree materials (the Megascans
+tree shader already has seasonal controls). Megascans is free again on Fab
+(November 2026) but its assets are still not redistributed: they are mapped
+through `UVegetationSettings::MeshOverrides`, and a mapped asset that is not in
+the project falls back to the placeholder, so a clone of the public repository
+still shows a forest. Megascans Trees packs exist for beech, hornbeam and black
+alder; oak and birch keep their placeholders until a fitting asset is chosen.
+The experimental Procedural Vegetation Editor (UE 5.7+) is left for later.
+
 ## Open questions (to the developer)
 
 - None at the moment.

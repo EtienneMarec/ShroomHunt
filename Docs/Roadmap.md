@@ -23,6 +23,14 @@ world generation, progression, roadmap, decisions).
 | M1g-2 Knowledge ✅ (`Docs/Milestones/M1g.md`, part 2) | poster + torn page, names of known species, minimal encyclopedia | identify |
 | M1h Rain polish ✅ (`Docs/Milestones/M1h.md`) | wind heading, rain slanted by the wind, streak material, ground splashes (CPU collision events), less rain and dripping leaves under the canopy, rain sound, wet materials (`MF_Wetness`) | walk from a clearing into a dense stand in the rain |
 
+## V1 — Visual pass (brought forward from M6, `Docs/Milestones/V1.md`)
+Semi-realistic look for the demo before M2 (D-033): Megascans trees mapped onto
+the vegetation palette (beech, hornbeam, alder first), forest floor materials,
+PCG ground debris (leaves, twigs, small plants, stones), understory assets,
+lighting pass, Sequencer camera path, README screenshots and demo video.
+Third-party assets stay out of the repository (D-010); placeholders remain the
+fallback.
+
 ## M2 — Seasons
 Season-driven temperature/weather, foliage color & leaf fall (`MPC_Season`),
 litter/moss/snow layers, phenology fully active, winter species
