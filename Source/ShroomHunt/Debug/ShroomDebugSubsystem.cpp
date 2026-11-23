@@ -119,4 +119,17 @@ void UShroomDebugSubsystem::Tick(float DeltaTime)
 		FString::Printf(TEXT("Rain last game day %.1f mm | last %.2f game days (=15 bio days) %.1f mm -> R_eq %.0f mm"),
 			CachedRain24h, ReferenceRainWindowRealDays / Config.BiologicalDaysPerGameDay, CachedRainWindow,
 			CachedRainWindow * Config.BiologicalDaysPerGameDay));
+
+	// Seasons (M2): forest-average foliage and the ground.
+	FString SeasonText;
+	if (const AEnvironmentDirector* Director = AEnvironmentDirector::Find(GetWorld()))
+	{
+		const FFoliageState& Foliage = Director->GetForestFoliage();
+		SeasonText = FString::Printf(TEXT("Foliage (month %.2f%s): leaves %.2f  coloring %.2f  fresh %.2f  fresh litter %.2f | "),
+			Director->GetSeasonMonth(), FMath::Abs(Director->GetSeasonMonth() - Calendar->GetDate().Month) > 0.01f ? TEXT(" preview") : TEXT(""),
+			Foliage.LeafAmount, Foliage.Coloring, Foliage.Freshness, Foliage.FreshLitter);
+	}
+	GEngine->AddOnScreenDebugMessage(KeyBase + 0, Duration, Body,
+		FString::Printf(TEXT("%sSnow %.1f mm (cover %.2f, falling as snow %.0f%%)  frost %.2f  dryness %.2f"),
+			*SeasonText, Weather->GetSnowWaterMm(), Weather->GetSnowCover(), Weather->GetSnowFraction() * 100.0f, Weather->GetFrost(), Weather->GetDryness()));
 }

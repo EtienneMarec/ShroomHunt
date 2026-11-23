@@ -29,11 +29,21 @@
 #include "Time/CalendarMath.h"
 #include "Time/CalendarSubsystem.h"
 #include "Time/TimeSettings.h"
+#include "Vegetation/VegetationDefinition.h"
+#include "Weather/SnowModel.h"
 #include "Weather/WeatherSubsystem.h"
+#include "HAL/IConsoleManager.h"
 
 namespace
 {
 	using ShroomMath::SmoothStep01;
+
+	TAutoConsoleVariable<float> CVarSeasonPreviewMonth(
+		TEXT("sh.Season.PreviewMonth"),
+		0.0f,
+		TEXT("Shows the foliage of a real month (1 = January ... 12.99 = end of December; 10.8 = late October) ")
+		TEXT("instead of the calendar's. 0 = off. Only the foliage: weather and mushrooms keep the calendar."),
+		ECVF_Cheat);
 
 	FRotator LightRotationFor(const FCelestialPosition& Position, float NorthYawDeg)
 	{
@@ -72,6 +82,14 @@ AEnvironmentDirector::AEnvironmentDirector()
 	WeatherPostProcess->SetupAttachment(Root);
 	WeatherPostProcess->bUnbound = true;
 	WeatherPostProcess->Priority = 100.0f; // above the level's volumes; only overrides exposure bias and saturation
+
+	SnowParticles = CreateDefaultSubobject<UNiagaraComponent>(TEXT("SnowParticles"));
+	SnowParticles->SetupAttachment(Root);
+	SnowParticles->SetAutoActivate(false);
+	SnowParticles->SetUsingAbsoluteLocation(true);
+	SnowParticles->SetUsingAbsoluteRotation(true);
+
+	SeasonParameters = TSoftObjectPtr<UMaterialParameterCollection>(FSoftObjectPath(TEXT("/Game/ShroomHunt/Environment/MPC_Season.MPC_Season")));
 
 	RainAudio = CreateDefaultSubobject<UAudioComponent>(TEXT("RainAudio"));
 	RainAudio->SetupAttachment(Root);
@@ -193,6 +211,7 @@ void AEnvironmentDirector::Tick(float DeltaSeconds)
 
 	ApplyEnvironment(Calendar->GetDate(), Calendar->GetTotalGameSeconds(), SmoothedWeather, Weather->GetWetness(),
 		Calendar->GetLatitudeDeg(), Calendar->GetLunarCycleGameDays(), true);
+	UpdateSeason(Calendar->GetDate());
 	UpdateRain(SmoothedWeather, Weather->GetWetness(), DeltaSeconds);
 
 	OnEnvironmentUpdated(SmoothedWeather, Weather->GetWetness(), Calendar->GetDate());
@@ -493,7 +512,7 @@ float AEnvironmentDirector::GetLevelExposureBias(const FVector& Location) const
 	return Bias;
 }
 
-float AEnvironmentDirector::SampleCanopy(const FVector& WorldLocation)
+bool AEnvironmentDirector::EnsureField()
 {
 	if (!bFieldLoaded)
 	{
@@ -507,12 +526,178 @@ float AEnvironmentDirector::SampleCanopy(const FVector& WorldLocation)
 			Field.Reset(); // not a forest map: open-sky rain
 		}
 	}
-	if (!Field)
+	return Field.IsValid();
+}
+
+float AEnvironmentDirector::SampleCanopy(const FVector& WorldLocation)
+{
+	if (!EnsureField())
 	{
 		return 0.0f;
 	}
 	const FVector FieldM = FieldToWorld.InverseTransformPosition(WorldLocation);
-	return FMath::Clamp(Field->Sample(static_cast<float>(FieldM.X), static_cast<float>(FieldM.Y)).Canopy, 0.0f, 1.0f);
+	const FForestSample Sample = Field->Sample(static_cast<float>(FieldM.X), static_cast<float>(FieldM.Y));
+	// Bare winter branches still catch a little rain; the leaves catch the rest.
+	float Leaves = 1.0f;
+	if (FoliageNow.Num() > 0)
+	{
+		Leaves = 0.0f;
+		float Total = 0.0f;
+		for (int32 Genus = 0; Genus < Sample.StandWeights.Num(); ++Genus)
+		{
+			const int32 Index = FieldGenusToPhenology.IsValidIndex(Genus) ? FieldGenusToPhenology[Genus] : INDEX_NONE;
+			const float Amount = FoliageNow.IsValidIndex(Index) ? FoliageNow[Index].LeafAmount : 1.0f; // evergreens, unknown genera
+			Leaves += Sample.StandWeights[Genus] * Amount;
+			Total += Sample.StandWeights[Genus];
+		}
+		Leaves = Total > 0.0f ? Leaves / Total : 1.0f;
+	}
+	const float Cover = BareBranchCanopy + (1.0f - BareBranchCanopy) * Leaves;
+	return FMath::Clamp(Sample.Canopy * Cover, 0.0f, 1.0f);
+}
+
+const FFoliageState* AEnvironmentDirector::GetFoliage(FName Genus) const
+{
+	const int32 Index = Phenologies.IndexOfByPredicate([Genus](const FTreePhenology& P) { return P.Genus == Genus; });
+	return FoliageNow.IsValidIndex(Index) ? &FoliageNow[Index] : nullptr;
+}
+
+void AEnvironmentDirector::UpdateSeason(const FGameDate& Date)
+{
+	if (!bSeasonLoaded)
+	{
+		bSeasonLoaded = true;
+		SeasonCollection = SeasonParameters.LoadSynchronous();
+		if (!SeasonCollection)
+		{
+			UE_LOG(LogShroomEnvironment, Warning, TEXT("Environment director: no season collection at %s (run Tools/Python/create_season_collection.py)."),
+				*SeasonParameters.ToString());
+		}
+		TArray<FString> Errors;
+		if (const TSharedPtr<const FVegetationDefinition> Vegetation = ForestFieldCache::GetVegetation(Errors))
+		{
+			for (const FTreeArchetype& Tree : Vegetation->Trees)
+			{
+				Phenologies.Add(SeasonModel::FromArchetype(Tree));
+			}
+		}
+		ForestWeights.Init(1.0f, Phenologies.Num());
+		if (EnsureField())
+		{
+			// Forest composition on a coarse grid: weights of the placeholder averages.
+			ForestWeights.Init(0.0f, Phenologies.Num());
+			const TArray<FName>& Genera = Field->GetGenera();
+			FieldGenusToPhenology.Init(INDEX_NONE, Genera.Num());
+			for (int32 Genus = 0; Genus < Genera.Num(); ++Genus)
+			{
+				const FName Name = Genera[Genus];
+				FieldGenusToPhenology[Genus] = Phenologies.IndexOfByPredicate([Name](const FTreePhenology& P) { return P.Genus == Name; });
+			}
+			constexpr int32 Grid = 24;
+			const float Size = Field->GetSizeM();
+			for (int32 Y = 0; Y < Grid; ++Y)
+			{
+				for (int32 X = 0; X < Grid; ++X)
+				{
+					const FForestSample Sample = Field->Sample((X + 0.5f) * Size / Grid, (Y + 0.5f) * Size / Grid);
+					for (int32 Genus = 0; Genus < Sample.StandWeights.Num(); ++Genus)
+					{
+						const int32 Index = FieldGenusToPhenology.IsValidIndex(Genus) ? FieldGenusToPhenology[Genus] : INDEX_NONE;
+						if (ForestWeights.IsValidIndex(Index))
+						{
+							ForestWeights[Index] += Sample.StandWeights[Genus] * Sample.Canopy;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	const float Preview = CVarSeasonPreviewMonth.GetValueOnGameThread();
+	SeasonMonth = Preview >= 1.0f ? FMath::Clamp(Preview, 1.0f, 12.999f) : Date.Month;
+	const uint32 Seed = Field ? static_cast<uint32>(Field->GetDefinition().Seed) : 0u;
+	FoliageNow.SetNum(Phenologies.Num());
+	for (int32 Index = 0; Index < Phenologies.Num(); ++Index)
+	{
+		const FTreePhenology& P = Phenologies[Index];
+		FoliageNow[Index] = SeasonModel::Evaluate(P, SeasonMonth, SeasonModel::YearShiftMonths(Seed, Date.Year, P.Genus));
+		const FString Genus = P.Genus.ToString();
+		SetSeasonParameter(*(Genus + TEXT("LeafAmount")), FoliageNow[Index].LeafAmount);
+		SetSeasonParameter(*(Genus + TEXT("Coloring")), FoliageNow[Index].Coloring);
+		SetSeasonParameter(*(Genus + TEXT("Freshness")), FoliageNow[Index].Freshness);
+		SetSeasonVector(*(Genus + TEXT("FoliageColor")), FoliageNow[Index].Color);
+	}
+	ForestFoliage = SeasonModel::Blend(FoliageNow, ForestWeights);
+	SetSeasonParameter(TEXT("LeafAmount"), ForestFoliage.LeafAmount);
+	SetSeasonParameter(TEXT("Coloring"), ForestFoliage.Coloring);
+	SetSeasonParameter(TEXT("Freshness"), ForestFoliage.Freshness);
+	SetSeasonParameter(TEXT("FreshLitter"), ForestFoliage.FreshLitter);
+	SetSeasonVector(TEXT("FoliageColor"), ForestFoliage.Color);
+	SetSeasonParameter(TEXT("Month"), SeasonMonth);
+
+	if (const UWeatherSubsystem* Weather = GetWorld()->GetSubsystem<UWeatherSubsystem>())
+	{
+		SetSeasonParameter(TEXT("SnowCover"), Weather->GetSnowCover());
+		SetSeasonParameter(TEXT("Frost"), Weather->GetFrost());
+		SetSeasonParameter(TEXT("Dryness"), Weather->GetDryness());
+	}
+	SetSeasonParameter(TEXT("SnowFalling"), SnowAtCamera);
+}
+
+void AEnvironmentDirector::SetSeasonParameter(FName Name, float Value) const
+{
+	if (SeasonCollection)
+	{
+		if (UMaterialParameterCollectionInstance* Instance = GetWorld()->GetParameterCollectionInstance(SeasonCollection))
+		{
+			Instance->SetScalarParameterValue(Name, Value);
+		}
+	}
+}
+
+void AEnvironmentDirector::SetSeasonVector(FName Name, const FLinearColor& Value) const
+{
+	if (SeasonCollection)
+	{
+		if (UMaterialParameterCollectionInstance* Instance = GetWorld()->GetParameterCollectionInstance(SeasonCollection))
+		{
+			Instance->SetVectorParameterValue(Name, Value);
+		}
+	}
+}
+
+void AEnvironmentDirector::UpdateSnowParticles(const FWeatherSample& Weather, const FVector& CameraLocation)
+{
+	if (!SnowParticles || !SnowParticles->GetAsset())
+	{
+		return;
+	}
+	const bool bShouldSnow = SnowAtCamera > 0.01f;
+	if (bShouldSnow != SnowParticles->IsActive())
+	{
+		if (bShouldSnow)
+		{
+			SnowParticles->Activate(true);
+		}
+		else
+		{
+			SnowParticles->Deactivate();
+		}
+	}
+	if (!bShouldSnow)
+	{
+		return;
+	}
+	const FVector2D Heading = Weather.GetWindDirection();
+	const FVector WindDirection = FieldToWorld.GetRotation().RotateVector(FVector(Heading.X, Heading.Y, 0.0)).GetSafeNormal2D();
+	// Flakes follow the wind almost fully, but are slowed down under the trees.
+	const FVector Wind = WindDirection * (Weather.WindSpeed * 100.0f * LocalRainNow.WindFactor);
+	const float FallSeconds = FMath::Max(0.0f, static_cast<float>(SnowOffsetFromCamera.Z)) / SnowFallSpeed;
+	// Slow flakes would come from far upwind: keep the emitter within 15 m.
+	const FVector Upwind = (Wind * FallSeconds).GetClampedToMaxSize(1500.0);
+	SnowParticles->SetWorldLocation(CameraLocation + SnowOffsetFromCamera - Upwind);
+	SnowParticles->SetVariableFloat(SnowIntensityParameter, SnowAtCamera);
+	SnowParticles->SetVariableVec3(WindParameter, Wind);
 }
 
 void AEnvironmentDirector::UpdateRain(const FWeatherSample& Weather, float Wetness, float DeltaSeconds)
@@ -528,8 +713,14 @@ void AEnvironmentDirector::UpdateRain(const FWeatherSample& Weather, float Wetne
 	FLocalRainParams Params;
 	Params.CanopyInterception = CanopyInterception;
 	Params.CanopyWindReduction = CanopyWindReduction;
-	const float Intensity = FMath::Clamp(Weather.PrecipitationMmPerHour / RainRateForFullIntensity, 0.0f, 1.5f);
+	const float Precipitation = FMath::Clamp(Weather.PrecipitationMmPerHour / RainRateForFullIntensity, 0.0f, 1.5f);
+	// Cold air: the precipitation falls as snow (sleet in between), through bare branches.
+	const float SnowShare = SnowModel::SnowFraction(Weather.TemperatureC);
+	const float Intensity = Precipitation * (1.0f - SnowShare);
+	// Flakes are slow and light: a small rate of snow water looks like a lot of snow.
+	SnowAtCamera = FMath::Clamp(3.0f * Precipitation * SnowShare * (1.0f - 0.5f * CanopyAtCamera), 0.0f, 1.5f);
 	LocalRainNow = LocalRain::Compute(Intensity, Wetness, CanopyAtCamera, Params);
+	UpdateSnowParticles(Weather, CameraLocation);
 
 	// Sound: rain on the leaves sounds louder under the trees.
 	if (RainAudio && RainAudio->Sound)

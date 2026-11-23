@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Environment/LocalRain.h"
+#include "Environment/SeasonModel.h"
 #include "Environment/SkyMood.h"
 #include "GameFramework/Actor.h"
 #include "Materials/MaterialParameters.h"
@@ -26,6 +27,9 @@ class UNiagaraComponent;
  * intensities, sky light, height fog, volumetric cloud coverage, rain particles
  * (slanted by the wind, thinner under the canopy, drops falling from wet leaves),
  * the rain sound and a Material Parameter Collection read by materials (wetness, rain...).
+ * Seasons (M2): foliage of each tree genus (leaf-out, autumn colors, leaf fall), snow, frost
+ * and dryness go to a second collection, MPC_Season; snow particles replace the rain when
+ * it is cold, and bare trees let more rain through.
  *
  * Place one per map (a Blueprint subclass, BP_EnvironmentDirector). Light, fog and
  * cloud actors are found automatically if not assigned. Their initial values in
@@ -57,6 +61,14 @@ public:
 	float GetCanopyAtCamera() const { return CanopyAtCamera; }
 	const FSkyMood& GetSkyMood() const { return MoodNow; }
 
+	/** Forest-wide average foliage (placeholder trees) and per genus (debug HUD, sh.Season.Status). */
+	const FFoliageState& GetForestFoliage() const { return ForestFoliage; }
+	const FFoliageState* GetFoliage(FName Genus) const;
+	const TArray<FTreePhenology>& GetPhenologies() const { return Phenologies; }
+	/** Continuous month used for the foliage (the calendar's, or sh.Season.PreviewMonth). */
+	float GetSeasonMonth() const { return SeasonMonth; }
+	float GetSnowAtCamera() const { return SnowAtCamera; }
+
 	/** The director of a world, if any. */
 	static AEnvironmentDirector* Find(const UWorld* World);
 
@@ -76,6 +88,10 @@ protected:
 	 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment")
 	TObjectPtr<UPostProcessComponent> WeatherPostProcess;
+
+	/** Snow particles (M2), kept above the camera like the rain. Assign NS_Snow in the Blueprint. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment")
+	TObjectPtr<UNiagaraComponent> SnowParticles;
 
 	/** Rain sound loop (optional): assign a looping Sound in the Blueprint; volume follows the rain. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment")
@@ -251,6 +267,33 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Rain", meta = (ClampMin = "0"))
 	float RainSoundVolume = 1.0f;
 
+	// --- Seasons (M2) ------------------------------------------------------------------
+
+	/**
+	 * Collection receiving the seasonal values (created by Tools/Python/create_season_collection.py):
+	 * forest averages LeafAmount, Coloring, Freshness, FreshLitter, FoliageColor (vector) and per
+	 * genus <Genus>LeafAmount, <Genus>Coloring, <Genus>Freshness, <Genus>FoliageColor; ground
+	 * SnowCover, SnowFalling, Frost, Dryness; Month.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Seasons")
+	TSoftObjectPtr<UMaterialParameterCollection> SeasonParameters;
+
+	/** Niagara user parameter (float) of the snow system: snow intensity in [0, 1.5]. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Seasons")
+	FName SnowIntensityParameter = TEXT("SnowIntensity");
+
+	/** Offset of the snow emitter relative to the camera (cm); it is also moved upwind. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Seasons")
+	FVector SnowOffsetFromCamera = FVector(0.0, 0.0, 500.0);
+
+	/** Speed at which the flakes fall (cm/s), as set in the Niagara system. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Seasons", meta = (ClampMin = "20"))
+	float SnowFallSpeed = 150.0f;
+
+	/** Part of the canopy's rain interception left on bare winter branches. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Seasons", meta = (ClampMin = "0", ClampMax = "1"))
+	float BareBranchCanopy = 0.25f;
+
 	// --- Editor preview -------------------------------------------------------------
 
 	/** Rotates the sun and moon in the editor viewport to preview a season and hour (not in game).
@@ -286,6 +329,12 @@ private:
 		float LatitudeDeg, float LunarCycleGameDays, bool bInGame);
 	void UpdateRain(const FWeatherSample& Weather, float Wetness, float DeltaSeconds);
 	float SampleCanopy(const FVector& WorldLocation);
+	/** Loads the forest field and its genera weights once (false outside a forest map). */
+	bool EnsureField();
+	void UpdateSeason(const FGameDate& Date);
+	void UpdateSnowParticles(const FWeatherSample& Weather, const FVector& CameraLocation);
+	void SetSeasonParameter(FName Name, float Value) const;
+	void SetSeasonVector(FName Name, const FLinearColor& Value) const;
 	/** Exposure compensation the level gives at a point (its post process volumes, or the engine default). */
 	float GetLevelExposureBias(const FVector& Location) const;
 	void SetEnvironmentParameter(FName Name, float Value) const;
@@ -311,4 +360,17 @@ private:
 	bool bHasCanopy = false;
 	FLocalRain LocalRainNow;
 	FSkyMood MoodNow;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UMaterialParameterCollection> SeasonCollection;
+	bool bSeasonLoaded = false;
+	TArray<FTreePhenology> Phenologies;
+	TArray<FFoliageState> FoliageNow;
+	/** Mean stand weight of each phenology genus over the forest (placeholder averages). */
+	TArray<float> ForestWeights;
+	/** For each genus of the forest field, its index in Phenologies (INDEX_NONE if absent). */
+	TArray<int32> FieldGenusToPhenology;
+	FFoliageState ForestFoliage;
+	float SeasonMonth = 1.0f;
+	float SnowAtCamera = 0.0f;
 };
