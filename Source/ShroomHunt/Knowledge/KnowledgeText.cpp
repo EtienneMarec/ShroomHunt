@@ -57,7 +57,14 @@ namespace KnowledgeText
 			{
 				bLandmarkFound |= Source.Landmark == ForestLandmarks::KindName(static_cast<EForestLandmarkKind>(Kind));
 			}
-			if (!bLandmarkFound)
+			if (Source.Kind == EKnowledgeSourceKind::Book)
+			{
+				if (!Source.Landmark.IsEmpty())
+				{
+					OutErrors.Add(FString::Printf(TEXT("Sources.json: %s: a Book hangs on no landmark"), *Name));
+				}
+			}
+			else if (!bLandmarkFound)
 			{
 				OutErrors.Add(FString::Printf(TEXT("Sources.json: %s: unknown Landmark '%s'"), *Name, *Source.Landmark));
 			}

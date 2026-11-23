@@ -22,6 +22,8 @@ enum class EKnowledgeSourceKind : uint8
 	Poster,
 	/** Taken when read (it leaves the world). */
 	Page,
+	/** A field guide bought at the forester's house (no landmark). */
+	Book,
 };
 
 /** Something that teaches species: a poster, a guide page, later books. Data/Knowledge/Sources.json. */
@@ -36,7 +38,7 @@ struct SHROOMHUNT_API FKnowledgeSource
 	UPROPERTY(BlueprintReadOnly, Category = "ShroomHunt|Knowledge")
 	EKnowledgeSourceKind Kind = EKnowledgeSourceKind::Poster;
 
-	/** Landmark kind it hangs on (ForesterHouse, HuntingHut...), see ForestLandmarks::KindName. */
+	/** Landmark kind it hangs on (ForesterHouse, HuntingHut...), see ForestLandmarks::KindName; empty for books. */
 	UPROPERTY(BlueprintReadOnly, Category = "ShroomHunt|Knowledge")
 	FString Landmark;
 

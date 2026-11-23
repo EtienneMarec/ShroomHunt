@@ -93,8 +93,19 @@ bool FKnowledgeTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
+	// The buyer's counter (M3) hangs on the forester's house.
+	{
+		const FForestLandmark* House = Field->GetLandmarks().FindByPredicate([](const FForestLandmark& L) { return L.Kind == EForestLandmarkKind::ForesterHouse; });
+		FTransform Mount;
+		FVector2D Size;
+		TestTrue(TEXT("The buyer's counter hangs on the forester's house"), House && LandmarkMeshBuilder::GetCounterMount(House->Kind, Mount, Size));
+	}
 	for (const FKnowledgeSource& Source : Sources.Sources)
 	{
+		if (Source.Kind == EKnowledgeSourceKind::Book)
+		{
+			continue; // sold at the counter
+		}
 		const FForestLandmark* Host = Field->GetLandmarks().FindByPredicate([&Source](const FForestLandmark& L) { return Source.Landmark == ForestLandmarks::KindName(L.Kind); });
 		FTransform Mount;
 		FVector2D Size;

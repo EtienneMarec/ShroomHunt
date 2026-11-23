@@ -15,6 +15,41 @@
       "Title": "Torn guide page: Boletes",
       "Intro": "A page torn from an old field guide, nailed to the hut wall. Someone has circled one species.",
       "Species": ["BoletusEdulis"]
+    },
+    {
+      "Id": "BookBoletes",
+      "Kind": "Book",
+      "Title": "Field guide: Boletes",
+      "Intro": "Pores instead of gills: the cep and its bitter double. Look at the network on the stem and the color of the pores.",
+      "Species": ["BoletusEdulis", "TylopilusFelleus"]
+    },
+    {
+      "Id": "BookChanterelles",
+      "Kind": "Book",
+      "Title": "Field guide: Chanterelles and allies",
+      "Intro": "Blunt veins, not true gills. The false chanterelle has real, forked gills: check under the cap.",
+      "Species": ["CantharellusCibarius", "CraterellusTubaeformis", "HygrophoropsisAurantiaca"]
+    },
+    {
+      "Id": "BookAmanitas",
+      "Kind": "Book",
+      "Title": "Field guide: Amanitas",
+      "Intro": "The most dangerous group: a ring on the stem and a volva at its base. Always dig up the whole mushroom.",
+      "Species": ["AmanitaMuscaria", "AmanitaPhalloides", "AmanitaPantherina"]
+    },
+    {
+      "Id": "BookRussulas",
+      "Kind": "Book",
+      "Title": "Field guide: Brittlegills",
+      "Intro": "Chalky, brittle flesh that snaps like a stick of chalk; no ring, no volva.",
+      "Species": ["RussulaVirescens"]
+    },
+    {
+      "Id": "BookTricholomas",
+      "Kind": "Book",
+      "Title": "Field guide: Tricholomas, blewits and spring mushrooms",
+      "Intro": "Fleshy gilled mushrooms of the litter and the meadows, from the first spring rings to the last blewits of winter.",
+      "Species": ["LepistaNuda", "CalocybeGambosa"]
     }
   ]
 }
