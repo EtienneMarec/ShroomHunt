@@ -71,9 +71,9 @@
   ],
 
   "Ground": [
-    { "Kind": "LeafLitter", "PerHa": { "ClearCut": 700, "Regeneration": 1200, "Pole": 2600, "Mature": 2800, "Old": 2800 },
+    { "Kind": "Leaf", "PerHa": { "ClearCut": 30000, "Regeneration": 50000, "Pole": 110000, "Mature": 120000, "Old": 120000 },
       "Moisture": [0.0, 0.0, 0.85, 1.0], "PH": [0.0, 0.0, 14.0, 14.0], "Light": [0.0, 0.0, 0.6, 1.0],
-      "SpacingFactor": 0.3, "WaterMarginM": 1.0, "ScaleJitter": 0.2, "PathFactor": [0.0, 0.8, 0.6], "Variants": 3 },
+      "SpacingFactor": 0.0, "WaterMarginM": 1.0, "ScaleJitter": 0.15, "PathFactor": [0.0, 0.6, 0.4], "Variants": 4 },
     { "Kind": "Twigs", "PerHa": { "ClearCut": 100, "Regeneration": 150, "Pole": 300, "Mature": 350, "Old": 450 },
       "Moisture": [0.0, 0.0, 1.0, 1.0], "PH": [0.0, 0.0, 14.0, 14.0], "Light": [0.0, 0.0, 0.7, 1.0],
       "SpacingFactor": 0.4, "WaterMarginM": 1.0, "ScaleJitter": 0.3, "PathFactor": [0.0, 0.4, 0.3], "Variants": 3 },
