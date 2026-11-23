@@ -130,7 +130,7 @@ bool FVegetationMeshTest::RunTest(const FString& Parameters)
 		{
 			TestTrue(FString::Printf(TEXT("%s lies flat on the ground (%.1f to %.1f cm)"), *Key, Bounds.Min.Z, Bounds.Max.Z),
 				Bounds.Min.Z < 2.0 && Bounds.Max.Z > 0.3 && Bounds.Max.Z < 40.0);
-			TestTrue(Key + TEXT(" stays small (< 2 m wide)"), Bounds.Width() < 200.0 && Bounds.Height() < 200.0);
+			TestTrue(Key + TEXT(" stays small (< 2.5 m wide: 2 m leaf squares plus overhang)"), Bounds.Width() < 250.0 && Bounds.Height() < 250.0);
 			TestTrue(Key + TEXT(" is light (< 5k triangles: many instances)"), Mesh.TriangleCount() < 5000);
 		}
 		else
@@ -230,17 +230,19 @@ bool FVegetationScatterTest::RunTest(const FString& Parameters)
 		else if (Layer == EVegetationLayer::Ground)
 		{
 			TMap<EVegetationKind, int32> Counts;
-			int32 OnPath = 0, ForeignLeaves = 0, Litter = 0;
+			int32 OnRoad = 0, ForeignLeaves = 0, Litter = 0, LitterOnTracks = 0;
 			double StoneSlope = 0.0, AllSlope = 0.0;
 			int32 Stones = 0;
 			for (const FVegetationInstance& I : All)
 			{
 				++Counts.FindOrAdd(I.Kind);
 				const FForestSample S = Field->Sample(static_cast<float>(I.PositionM.X), static_cast<float>(I.PositionM.Y));
-				OnPath += (S.PathRank >= 0 && S.PathDistanceM < ForestPaths::HalfWidthM(static_cast<EForestPathRank>(S.PathRank), Field->GetDefinition())) ? 1 : 0;
+				const bool bOnPath = S.PathRank >= 0 && S.PathDistanceM < ForestPaths::HalfWidthM(static_cast<EForestPathRank>(S.PathRank), Field->GetDefinition());
+				OnRoad += (bOnPath && S.PathRank == static_cast<int32>(EForestPathRank::Road)) ? 1 : 0;
 				if (I.Kind == EVegetationKind::LeafLitter)
 				{
 					++Litter;
+					LitterOnTracks += bOnPath ? 1 : 0;
 					const int32 GenusIndex = Field->GetGenera().IndexOfByKey(I.Genus);
 					ForeignLeaves += (GenusIndex == INDEX_NONE || !S.StandWeights.IsValidIndex(GenusIndex) || S.StandWeights[GenusIndex] <= 0.0f) ? 1 : 0;
 				}
@@ -261,7 +263,8 @@ bool FVegetationScatterTest::RunTest(const FString& Parameters)
 				TestTrue(FString::Printf(TEXT("%s present"), VegetationData::KindName(Kind)), Counts.FindRef(Kind) > 0);
 			}
 			TestTrue(TEXT("Plausible amount of ground debris for 1 km2 (20k - 400k)"), All.Num() > 20000 && All.Num() < 400000);
-			TestEqual(TEXT("No debris on the path surfaces"), OnPath, 0);
+			TestEqual(TEXT("No debris on the gravel roads"), OnRoad, 0);
+			TestTrue(FString::Printf(TEXT("Leaves also cover rides and footpaths (%d)"), LitterOnTracks), LitterOnTracks > 0);
 			TestEqual(TEXT("Fallen leaves come from the genera of the stand"), ForeignLeaves, 0);
 			if (Stones > 0 && All.Num() > 0)
 			{

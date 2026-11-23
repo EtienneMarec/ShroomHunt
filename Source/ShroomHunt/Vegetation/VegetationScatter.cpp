@@ -340,9 +340,19 @@ namespace VegetationScatter
 				[&](const FVector2d& P, uint32 Hash, float& OutDensity, FCandidate& C)
 				{
 					const FForestSample Sample = Field.Sample(static_cast<float>(P.X), static_cast<float>(P.Y));
-					if (Sample.bWater || Sample.bNearLandmark || Sample.WaterDistanceM < Rule.WaterMarginM || IsOnPath(Field, Sample, PathClearance))
+					if (Sample.bWater || Sample.bNearLandmark || Sample.WaterDistanceM < Rule.WaterMarginM)
 					{
 						return false;
+					}
+					// On a path: excluded, or thinned by the rule's factor for that path rank (leaves).
+					float PathMultiplier = 1.0f;
+					if (IsOnPath(Field, Sample, PathClearance))
+					{
+						PathMultiplier = Rule.PathFactor.Num() == 3 ? Rule.PathFactor[FMath::Clamp(static_cast<int32>(Sample.PathRank), 0, 2)] : 0.0f;
+						if (PathMultiplier <= 0.0f)
+						{
+							return false;
+						}
 					}
 					C.Kind = Rule.Kind;
 					if (Rule.Kind == EVegetationKind::Log && FineSlope(Field, P) > 0.15f)
@@ -359,7 +369,7 @@ namespace VegetationScatter
 						}
 						C.Genus = Genera[GenusIndex];
 					}
-					OutDensity = UnderstoryDensityPerHa(Rule, Sample);
+					OutDensity = UnderstoryDensityPerHa(Rule, Sample) * PathMultiplier;
 					if (bBoosted)
 					{
 						OutDensity *= HabitatBoost(Rule, Sample, FineSlope(Field, P));

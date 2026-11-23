@@ -243,6 +243,10 @@ namespace VegetationData
 				{
 					Error(Field, TEXT("SpacingFactor in [0, 1], Variants >= 1 and SlopeBoost, BankBoost >= 0 required"));
 				}
+				if (Rule.PathFactor.Num() != 0 && (Rule.PathFactor.Num() != 3 || Rule.PathFactor.ContainsByPredicate([](float F) { return F < 0.0f || F > 1.0f; })))
+				{
+					Error(Field + TEXT(".PathFactor"), TEXT("expected [road, ride, footpath] in [0, 1]"));
+				}
 				for (int32 Other = 0; Other < Index; ++Other)
 				{
 					if (Rules[Other].Kind == Rule.Kind)

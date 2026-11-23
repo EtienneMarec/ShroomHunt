@@ -649,15 +649,18 @@ namespace VegetationMeshDetail
 
 	// --- Ground debris (V1-3) ------------------------------------------------------------
 
-	/** A patch of fallen leaves of one genus: double-sided leaf blades, curled up at the edges. */
+	/**
+	 * Fallen leaves of one genus spread evenly over a 2 m square (no visible patch outline:
+	 * overlapping squares add relief on top of the leaf carpet of the ground material).
+	 * Double-sided blades, curled up at the edges.
+	 */
 	void BuildLeafLitter(const FTreeArchetype& Arch, uint32 Seed, FMeshAccumulator& Acc)
 	{
 		FRandomStream Rng(static_cast<int32>(Seed));
 		const FLinearColor Base = VegetationData::ToColor(Arch.Litter, Srgb(0.45, 0.30, 0.14));
 		const FLinearColor Decayed = Srgb(0.17, 0.12, 0.07);
-		// A dense carpet: about three quarters of the patch covered by leaves.
-		const double PatchRadius = Rng.FRandRange(0.45f, 0.65f);
-		const int32 Leaves = Rng.RandRange(85, 110);
+		constexpr double HalfSide = 1.0;
+		const int32 Leaves = Rng.RandRange(24, 32);
 		constexpr int32 MaxOutline = 12;
 		const int32 Outline = Arch.LeafLobes > 0 ? 12 : 8;
 
@@ -665,9 +668,7 @@ namespace VegetationMeshDetail
 		{
 			const double Length = Arch.LeafSizeCm / 100.0 * Rng.FRandRange(0.8f, 1.2f);
 			const double Width = Length * (Arch.LeafLobes > 0 ? 0.62 : Rng.FRandRange(0.5f, 0.62f));
-			const double Distance = PatchRadius * FMath::Pow(Rng.FRand(), 0.6f);
-			const double Angle = Rng.FRandRange(0.0f, UE_TWO_PI);
-			const FVector3d Center(Distance * FMath::Cos(Angle), Distance * FMath::Sin(Angle), 0.0);
+			const FVector3d Center(Rng.FRandRange(-HalfSide, HalfSide), Rng.FRandRange(-HalfSide, HalfSide), 0.0);
 			const double Yaw = Rng.FRandRange(0.0f, UE_TWO_PI);
 			const FVector3d U(FMath::Cos(Yaw), FMath::Sin(Yaw), 0.0);
 			const FVector3d V(-U.Y, U.X, 0.0);

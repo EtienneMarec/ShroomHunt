@@ -177,6 +177,11 @@ struct FUnderstoryRule
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") float SlopeBoost = 0.0f;
 	/** Density multiplier up to 1 + BankBoost within a few meters of water (stones along streams). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") float BankBoost = 0.0f;
+	/**
+	 * Density multiplier on the path surfaces [road, ride, footpath] (leaves cover rides and
+	 * footpaths too). Empty: never on a path.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") TArray<float> PathFactor;
 	/** Mesh variants (saplings use the Sapling tree form instead; leaf litter has them per genus). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") int32 Variants = 2;
 };
