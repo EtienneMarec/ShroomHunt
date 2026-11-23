@@ -64,6 +64,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "ShroomHunt|Foraging")
 	void EmptyBasket() { Basket.Reset(); }
 
+	/** Takes specimens out of the basket (sold, discarded), by fruit seed. Returns how many. */
+	int32 RemoveFromBasket(const TSet<int64>& Seeds);
+
 private:
 	UPROPERTY()
 	TArray<FBasketItem> Basket;

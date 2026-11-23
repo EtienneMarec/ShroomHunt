@@ -9,5 +9,6 @@ DEFINE_LOG_CATEGORY(LogShroomMycology);
 DEFINE_LOG_CATEGORY(LogShroomSpawn);
 DEFINE_LOG_CATEGORY(LogShroomMesh);
 DEFINE_LOG_CATEGORY(LogShroomKnowledge);
+DEFINE_LOG_CATEGORY(LogShroomEconomy);
 DEFINE_LOG_CATEGORY(LogShroomSave);
 DEFINE_LOG_CATEGORY(LogShroomDebug);

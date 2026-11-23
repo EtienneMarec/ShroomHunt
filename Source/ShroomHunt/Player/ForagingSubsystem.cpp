@@ -49,3 +49,8 @@ float UForagingSubsystem::GetBasketWeightGrams() const
 	}
 	return Total;
 }
+
+int32 UForagingSubsystem::RemoveFromBasket(const TSet<int64>& Seeds)
+{
+	return Basket.RemoveAll([&Seeds](const FBasketItem& Item) { return Seeds.Contains(Item.Seed); });
+}

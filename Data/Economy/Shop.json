@@ -1,0 +1,40 @@
+{
+  "_comment": "Buyer rules and shop of the forester's house (M3, Docs/Progression.md sections 3, 4 and 6; D-013). Prices in euros.",
+
+  "Market": {
+    "StartMoney": 20,
+    "StartReputation": 50,
+    "FreshnessHalfLifeBioDays": 3.0,
+    "MinQuality": 0.25,
+    "WormyQuality": 0.5,
+    "DemandKgPerDay": 1.5,
+    "ReputationPerKg": 2.0,
+    "ReputationInedible": 3,
+    "ReputationToxic": 20, "FineToxic": 30, "BanGameDaysToxic": 1,
+    "ReputationDeadly": 45, "FineDeadly": 250, "BanGameDaysDeadly": 3
+  },
+
+  "Items": [
+    { "Id": "BookBoletes", "Kind": "Book", "Source": "BookBoletes", "Price": 40,
+      "Title": "Field guide: Boletes",
+      "Description": "The cep and the bitter bolete that spoils a whole dish." },
+    { "Id": "BookChanterelles", "Kind": "Book", "Source": "BookChanterelles", "Price": 30,
+      "Title": "Field guide: Chanterelles and allies",
+      "Description": "Chanterelle, yellowfoot, and the false chanterelle." },
+    { "Id": "BookAmanitas", "Kind": "Book", "Source": "BookAmanitas", "Price": 60,
+      "Title": "Field guide: Amanitas",
+      "Description": "Death cap, panther cap, fly agaric: the group every forager must know." },
+    { "Id": "BookRussulas", "Kind": "Book", "Source": "BookRussulas", "Price": 50,
+      "Title": "Field guide: Brittlegills",
+      "Description": "The green-cracking russula, and how not to confuse it with a death cap." },
+    { "Id": "BookTricholomas", "Kind": "Book", "Source": "BookTricholomas", "Price": 35,
+      "Title": "Field guide: Tricholomas, blewits and spring mushrooms",
+      "Description": "Wood blewit for the winter, St George's mushroom for the spring." },
+    { "Id": "KitSporePrint", "Kind": "Kit", "Uses": 5, "Price": 2,
+      "Title": "Spore print kit (5 uses)",
+      "Description": "Black and white cards: leave a cap on them for an hour to see the spore color." },
+    { "Id": "KitReagents", "Kind": "Kit", "Uses": 5, "Price": 6,
+      "Title": "Reagent kit (5 uses)",
+      "Description": "Potash and iron salts: color reactions of the flesh for some groups." }
+  ]
+}
