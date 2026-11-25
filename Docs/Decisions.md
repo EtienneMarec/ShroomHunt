@@ -367,6 +367,18 @@ evergreen whose leaves use the *Frond* surface so the seasonal material leaves
 them alone. Crown bases also vary more (×0.7–1.12). F01 goes from about 15,000
 to 22,500 trees plus 3,900 shrubs; Nanite keeps the cost low.
 
+**D-042 — Ground textures drawn by code** · Accepted · 2026-11-25
+Follows D-039 for the landscape: no scanned surfaces. `GroundTextures` draws a
+tileable stylized texture per paint layer from `Data/Environment/GroundTextures.json`
+(base color, periodic noise, then fallen leaves using the leaf shapes and
+litter colors of `Vegetation.json`, moss bumps, grass blades, pebbles, twigs,
+puddles), with the height in the albedo alpha for a height blend and a normal
+map from that height. Random draws hash a counter: `FRandomStream`'s successive
+values are correlated and drew a visible pattern. Like the meshes (D-040), the
+textures are build output rebuilt at editor startup (7 s for six 1024² layers);
+the material function `MF_GroundLayers` is created by a Python script and
+versioned, so the landscape material only calls it.
+
 ## Open questions (to the developer)
 
 - The 54 empty F01 partition files (2026-11-23): were they saved during a

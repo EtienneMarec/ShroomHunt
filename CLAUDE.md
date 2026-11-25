@@ -67,6 +67,7 @@ ShroomHunt/
 │  ├─ Forests/             one JSON file per forest definition
 │  ├─ Knowledge/           knowledge sources (posters, pages, books)
 │  ├─ Economy/             shop items and buyer rules (Shop.json)
+│  ├─ Environment/         generated ground textures (GroundTextures.json)
 │  └─ Vegetation/          tree archetypes, densities, understory rules
 ├─ Docs/                   design docs, decision log, milestone notes
 ├─ Source/ShroomHunt/      C++ runtime module (see §5)
@@ -173,7 +174,9 @@ Always check the log for `Result: Succeeded`, not only the exit code.
   when one is missing or `Data/Vegetation/Vegetation.json` changed (stamp in
   `Saved/VegetationBake.txt`). **Bump `VegetationMeshBuilder::BuilderVersion`
   whenever the builder or `TreeGrowth` output changes.** `sh.Vegetation.BakeMeshes`
-  forces a rebuild.
+  forces a rebuild. Same for the ground textures (D-042,
+  `Environment/Landscape/Generated/T_Ground_*`, `GroundTextures::GeneratorVersion`,
+  `sh.Ground.BakeTextures`; PNG previews with `sh.Ground.Preview`).
 
 ## 8. Asset naming (Content/)
 
@@ -210,6 +213,9 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   weather to lights, fog, clouds, rain FX and `MPC_Environment`. Rain under the
   canopy from the forest field (`LocalRain`, D-031) → Niagara user parameters
   `RainIntensity`, `DripIntensity`, `Wind`; materials get wet through `MF_Wetness`.
+- **Ground** (D-042): `Environment/GroundTextures` draws the landscape layer
+  textures; `MF_GroundLayers` (from `Tools/Python/create_ground_material.py`)
+  height-blends them inside `M_Landscape_Forest`.
 - **Debug**: `sh.*` console commands (`Debug/ShroomConsoleCommands.cpp`) and
   the on-screen HUD (`UShroomDebugSubsystem`, `sh.Debug.HUD`).
 - **Weather** (`FWeatherModel` pure + `UWeatherSubsystem`): deterministic,
