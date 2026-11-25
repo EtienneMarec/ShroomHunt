@@ -384,6 +384,9 @@ namespace TreeGrowthDetail
 			}
 			const double Spacing = FMath::Max(Total / Budget, 0.03);
 			const double LeafLength = Arch.LeafSizeCm / 100.0 * Arch.LeafScale * (bSapling ? 0.7 : 1.0);
+			// Only some plants bear fruit (holly: the female ones).
+			const bool bFruiting = Arch.FruitClustersPerLeaf > 0.0f
+				&& ShroomHash::ToUnitFloat(ShroomHash::Hash(Seed, 0xF2117u)) < Arch.FruitingShare;
 			double Carry = Spacing * Rng.FRand();
 			double Side = 1.0;
 			for (const FStretch& Stretch : Stretches)
@@ -412,8 +415,28 @@ namespace TreeGrowthDetail
 					Leaf.Width = Leaf.Length * Arch.LeafWidth * Rng.FRandRange(0.9f, 1.1f);
 					Leaf.Random = Rng.FRand();
 					Leaf.Light = LightAt(Leaf.Base);
+					if (bFruiting && Rng.FRand() < Arch.FruitClustersPerLeaf)
+					{
+						AddFruitCluster(P.Position, P.Direction);
+					}
 				}
 				Carry = 0.0;
+			}
+		}
+
+		/** A tight cluster of 3-6 berries just below a twig. */
+		void AddFruitCluster(const FVector3d& Where, const FVector3d& TwigDirection)
+		{
+			const double Radius = FMath::Max(Arch.FruitSizeCm, 0.2f) / 200.0;
+			const int32 Count = 3 + Rng.RandRange(0, 3);
+			const FVector3d Lateral = LateralOf(TwigDirection, Rng.FRandRange(0.0f, UE_TWO_PI));
+			for (int32 K = 0; K < Count; ++K)
+			{
+				FTreeFruit& Fruit = Out.Fruits.AddDefaulted_GetRef();
+				const FVector3d Offset = Lateral * Rng.FRandRange(-1.2f, 1.2f) + FVector3d::CrossProduct(TwigDirection, Lateral) * Rng.FRandRange(-1.2f, 1.2f);
+				Fruit.Center = Where + Offset * Radius * 1.4 - SkyUp * Radius * Rng.FRandRange(0.8f, 2.0f);
+				Fruit.Radius = Radius * Rng.FRandRange(0.85f, 1.15f);
+				Fruit.Shade = Rng.FRandRange(0.85f, 1.1f);
 			}
 		}
 
@@ -485,7 +508,7 @@ namespace TreeGrowth
 		case EVegetationKind::Sapling: return 600;
 		case EVegetationKind::Young: return 2500;
 		case EVegetationKind::Hazel: return 2200;
-		case EVegetationKind::Holly: return 2600;
+		case EVegetationKind::Holly: return 2400;
 		case EVegetationKind::Pole: return 5000;
 		case EVegetationKind::Mature: return 10000;
 		case EVegetationKind::Old: return 13000;

@@ -18,6 +18,8 @@ enum class EVegetationSurface : uint8
 	Cane = 4,
 	/** Fallen leaves on the ground (kept apart from the living Foliage for the seasons, M2). */
 	Litter = 5,
+	/** Berries (holly): never colored nor dropped by the seasonal material. */
+	Fruit = 6,
 };
 
 /** Simple collision of a vegetation mesh: one capsule (centimeters, mesh space). */
@@ -66,7 +68,7 @@ namespace VegetationMeshBuilder
 	 * Bump whenever the meshes this builder (or TreeGrowth) produces change for the same data:
 	 * the editor then rebuilds the baked vegetation meshes at its next start (D-040).
 	 */
-	constexpr int32 BuilderVersion = 4;
+	constexpr int32 BuilderVersion = 5;
 
 	/** Returns false when the spec refers to a genus or form missing from the definition. */
 	SHROOMHUNT_API bool Build(const FVegetationDefinition& Definition, const FVegetationMeshSpec& Spec, UE::Geometry::FDynamicMesh3& OutMesh, FVegetationCollision* OutCollision = nullptr);

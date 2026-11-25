@@ -104,6 +104,14 @@ struct FTreeArchetype
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Branching") float LeafScale = 4.0f;
 	/** Stems from the ground (hazel coppice: 5-8). 1 = a single trunk. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Branching") int32 Stems = 1;
+	/** Spines on each side of a leaf (holly: 2-3): a wavy, spiny outline. 0 = smooth edge. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Branching") int32 LeafSpines = 0;
+	/** Clusters of berries per leaf (holly), on the plants that bear fruit (FruitingShare of them). 0 = none. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Branching") float FruitClustersPerLeaf = 0.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Branching") float FruitingShare = 0.6f;
+	/** Berry diameter (stylized, like the leaves) and color (sRGB). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Branching") float FruitSizeCm = 2.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Branching") TArray<float> Fruit;
 	/** Keeps its leaves in winter (holly): they are neither colored nor dropped by the seasonal material. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Branching") bool bEvergreen = false;
 	/** How well the genus grows in the shade of the canopy (0 birch - 1 beech): weights its saplings and young trees. */

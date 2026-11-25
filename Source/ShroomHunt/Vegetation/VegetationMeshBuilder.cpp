@@ -231,7 +231,7 @@ namespace VegetationMeshDetail
 	/**
 	 * One leaf blade, both faces: base, rows of (left edge, raised midrib, right edge), tip.
 	 * The outline follows the genus (widest point and tip from LeafTip, a sinus for lobed oak
-	 * leaves), the tip bends down.
+	 * leaves, wavy spines for holly), the tip bends down.
 	 */
 	void AddLeafBlade(FMeshAccumulator& Acc, const FTreeArchetype& Arch, const FTreeLeaf& Leaf, const FLinearColor& Front, const FLinearColor& Back)
 	{
@@ -243,11 +243,38 @@ namespace VegetationMeshDetail
 		const double Exponent = FMath::Loge(0.5) / FMath::Loge(Peak);
 		const double Sharpness = 0.7 + 0.5 * FMath::Max(Tip, 0.0);
 		const bool bLobed = Arch.LeafLobes > 0;
-		// One row (a folded diamond: 4 triangles per face) for plain leaves, two for lobed ones.
-		const double PlainRows[1] = { Peak };
-		static const double LobedRows[2] = { 0.38, 0.72 };
-		const double* RowT = bLobed ? LobedRows : PlainRows;
-		const int32 Rows = bLobed ? 2 : 1;
+		const int32 Spines = FMath::Clamp(Arch.LeafSpines, 0, 4);
+		// One row (a folded diamond: 4 triangles per face) for plain leaves, two for lobed ones,
+		// alternate spine tips and sinuses for spiny ones.
+		constexpr int32 MaxRows = 8;
+		double RowT[MaxRows];
+		double RowScale[MaxRows];
+		double RowLift[MaxRows];
+		int32 Rows = 1;
+		RowT[0] = Peak;
+		RowScale[0] = 1.0;
+		RowLift[0] = 0.0;
+		if (Spines > 0)
+		{
+			Rows = 2 * Spines;
+			for (int32 Row = 0; Row < Rows; ++Row)
+			{
+				const bool bSpine = Row % 2 == 0;
+				RowT[Row] = 0.12 + 0.8 * Row / (Rows - 1);
+				RowScale[Row] = bSpine ? 1.08 : 0.62;
+				// Wavy blade: spine tips up, sinuses down.
+				RowLift[Row] = (bSpine ? 0.14 : -0.06) * Leaf.Width;
+			}
+		}
+		else if (bLobed)
+		{
+			Rows = 2;
+			RowT[0] = 0.38;
+			RowT[1] = 0.72;
+			RowScale[0] = 1.0;
+			RowScale[1] = 0.75;
+			RowLift[0] = RowLift[1] = 0.0;
+		}
 		constexpr double Curl = 0.12;
 		const double Fold = 0.08 * Leaf.Width;
 
@@ -258,8 +285,7 @@ namespace VegetationMeshDetail
 		auto HalfWidth = [&](int32 Row)
 		{
 			const double T = RowT[Row];
-			const double W = 0.5 * Leaf.Width * FMath::Pow(FMath::Sin(UE_DOUBLE_PI * FMath::Pow(T, Exponent)), Sharpness);
-			return bLobed && Row == 1 ? W * 0.75 : W;
+			return 0.5 * Leaf.Width * FMath::Pow(FMath::Sin(UE_DOUBLE_PI * FMath::Pow(T, Exponent)), Sharpness) * RowScale[Row];
 		};
 		auto Uv = [&](double T, double Y) { return FVector2f(static_cast<float>(T), static_cast<float>(0.5 + Y / FMath::Max(Leaf.Width, 1e-3))); };
 
@@ -269,13 +295,13 @@ namespace VegetationMeshDetail
 			const FLinearColor& Color = bBack ? Back : Front;
 			const int32 Base = AddVertexM(Acc, At(0.0, 0.0, 0.0), Color);
 			const int32 TipId = AddVertexM(Acc, At(1.0, 0.0, 0.0), Color);
-			int32 L[2], M[2], R[2];
+			int32 L[MaxRows], M[MaxRows], R[MaxRows];
 			for (int32 Row = 0; Row < Rows; ++Row)
 			{
 				const double W = HalfWidth(Row);
-				L[Row] = AddVertexM(Acc, At(RowT[Row], W, 0.0), Color);
+				L[Row] = AddVertexM(Acc, At(RowT[Row], W, RowLift[Row]), Color);
 				M[Row] = AddVertexM(Acc, At(RowT[Row], 0.0, Fold), Color);
-				R[Row] = AddVertexM(Acc, At(RowT[Row], -W, 0.0), Color);
+				R[Row] = AddVertexM(Acc, At(RowT[Row], -W, RowLift[Row]), Color);
 			}
 			// Seen from the normal side (axis forward, Side to the left) these run counter-clockwise.
 			auto Tri = [&](int32 A, int32 B, int32 C, const FVector2f& UA, const FVector2f& UB, const FVector2f& UC)
@@ -416,6 +442,20 @@ namespace VegetationMeshDetail
 		}
 
 		const bool bCollides = Form.Kind == EVegetationKind::Pole || Form.Kind == EVegetationKind::Mature || Form.Kind == EVegetationKind::Old || Form.Kind == EVegetationKind::Young;
+		// Berries: small spheres on the Fruit surface (never colored nor dropped by the seasons).
+		const FLinearColor Berry = VegetationData::ToColor(Arch.Fruit, Srgb(0.72, 0.05, 0.04));
+		for (const FTreeFruit& Fruit : Skeleton.Fruits)
+		{
+			AddBlob(Acc, 1,
+				[&](const FVector3d& D) { return Fruit.Center + D * Fruit.Radius; },
+				[&](const FVector3d& D, const FVector3d&)
+				{
+					// A bright highlight on top, darker below: reads as glossy from afar.
+					return ScaleSRGB(Berry, Fruit.Shade * FMath::Lerp(0.6f, 1.25f, static_cast<float>(0.5 + 0.5 * D.Z)));
+				},
+				EVegetationSurface::Fruit);
+		}
+
 		if (OutCollision && bCollides)
 		{
 			const double Radius = Shape.TrunkRadiusM * 1.25;

@@ -38,11 +38,20 @@ struct SHROOMHUNT_API FTreeFill
 	float Light = 0.5f;
 };
 
+/** A berry (holly). */
+struct SHROOMHUNT_API FTreeFruit
+{
+	FVector3d Center = FVector3d::ZeroVector;
+	double Radius = 0.01;
+	float Shade = 1.0f;
+};
+
 struct SHROOMHUNT_API FTreeSkeleton
 {
 	TArray<FTreeBranch> Branches;
 	TArray<FTreeLeaf> Leaves;
 	TArray<FTreeFill> Fills;
+	TArray<FTreeFruit> Fruits;
 
 	int32 CountBranches(int32 Level) const;
 };

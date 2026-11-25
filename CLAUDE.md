@@ -226,7 +226,7 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   `SeasonModel` → `MPC_Season` (per genus + forest averages, snow, frost),
   written by the Environment Director; `sh.Season.PreviewMonth`. The collection
   is created by `Tools/Python/create_season_collection.py`. Placeholder surface
-  ids (UV1): Bark 0, Wood 1, Foliage 2, Frond 3, Cane 4, Litter 5.
+  ids (UV1): Bark 0, Wood 1, Foliage 2, Frond 3, Cane 4, Litter 5, Fruit 6.
 - **Forest field** (`FForestField`, from `Data/Forests/<Id>.json`): terrain
   (1 m), hydrology/moisture/soil/pH/parcels/stands/canopy (4 m cells), path
   network (roads, rides, footpaths; graded into the terrain, D-025),
