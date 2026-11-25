@@ -15,9 +15,19 @@ class SHROOMHUNT_API UVegetationSettings : public UDeveloperSettings
 	GENERATED_BODY()
 
 public:
-	/** Content folder of the baked placeholder meshes (sh.Vegetation.BakeMeshes writes SM_<Key> there). */
+	/**
+	 * Content folder of the baked vegetation meshes (sh.Vegetation.BakeMeshes writes SM_<Key> there).
+	 * Build output, not versioned: the editor rebuilds them at startup when needed (D-040).
+	 */
 	UPROPERTY(Config, EditAnywhere, Category = "Meshes")
 	FString GeneratedMeshFolder = TEXT("/Game/ShroomHunt/Environment/Vegetation/Generated");
+
+	/**
+	 * Rebuild the vegetation meshes when the editor starts (before the startup map loads) if one is
+	 * missing or Data/Vegetation/Vegetation.json / the builder version changed since the last bake.
+	 */
+	UPROPERTY(Config, EditAnywhere, Category = "Meshes")
+	bool bBakeOnEditorStartup = true;
 
 	/** Material of the placeholder meshes (vertex color albedo). */
 	UPROPERTY(Config, EditAnywhere, Category = "Meshes")

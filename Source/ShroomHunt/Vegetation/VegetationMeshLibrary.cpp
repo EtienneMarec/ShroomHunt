@@ -15,7 +15,10 @@
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInterface.h"
 #include "MeshDescription.h"
+#include "Misc/FileHelper.h"
 #include "Misc/PackageName.h"
+#include "Misc/Paths.h"
+#include "Misc/ScopedSlowTask.h"
 #include "PhysicsEngine/BodySetup.h"
 #include "UObject/Package.h"
 #include "UObject/SavePackage.h"
@@ -26,6 +29,22 @@ namespace VegetationMeshLibraryDetail
 	const FName MaterialSlot(TEXT("Vegetation"));
 
 #if WITH_EDITOR
+	FString GetBakeStampPath()
+	{
+		return FPaths::ProjectSavedDir() / TEXT("VegetationBake.txt");
+	}
+
+	/** What the baked meshes depend on: the vegetation data, the builder version, the material and the folder. */
+	FString ComputeBakeStamp()
+	{
+		FString Json;
+		FFileHelper::LoadFileToString(Json, *FPaths::Combine(FPaths::ProjectDir(), TEXT("Data"), TEXT("Vegetation"), TEXT("Vegetation.json")));
+		Json.ReplaceInline(TEXT("\r"), TEXT("")); // same stamp whatever the line endings of the checkout
+		const UVegetationSettings* Settings = GetDefault<UVegetationSettings>();
+		return FString::Printf(TEXT("builder %d, data %08x, material %s, folder %s"), VegetationMeshBuilder::BuilderVersion,
+			FCrc::StrCrc32(*Json), *Settings->VegetationMaterial.ToString(), *Settings->GeneratedMeshFolder);
+	}
+
 	/** Builds one palette mesh and saves it as a Nanite static mesh asset (created or updated in place). */
 	bool BakeOne(const FVegetationDefinition& Definition, const FVegetationMeshSpec& Spec, const FString& PackageName, UMaterialInterface* Material, int32& OutTriangles, FString& OutError)
 	{
@@ -131,8 +150,12 @@ FString UVegetationMeshLibrary::BakeVegetationMeshes(const FString& Folder)
 	const double Start = FPlatformTime::Seconds();
 	int32 Baked = 0;
 	int64 Triangles = 0;
-	for (const FVegetationMeshSpec& Spec : VegetationData::ListMeshes(*Definition))
+	const TArray<FVegetationMeshSpec> Specs = VegetationData::ListMeshes(*Definition);
+	FScopedSlowTask Progress(static_cast<float>(Specs.Num()), NSLOCTEXT("ShroomHunt", "BakeVegetation", "Building the vegetation meshes"));
+	Progress.MakeDialog();
+	for (const FVegetationMeshSpec& Spec : Specs)
 	{
+		Progress.EnterProgressFrame(1.0f, FText::FromString(Spec.GetKey()));
 		FString PackageName = Settings->GetGeneratedPackageName(Spec);
 		if (!Folder.IsEmpty())
 		{
@@ -159,10 +182,59 @@ FString UVegetationMeshLibrary::BakeVegetationMeshes(const FString& Folder)
 	{
 		return TEXT("FAILED: ") + Summary + TEXT("\n") + FString::Join(Errors, TEXT("\n"));
 	}
+	if (Folder.IsEmpty())
+	{
+		FFileHelper::SaveStringToFile(ComputeBakeStamp(), *GetBakeStampPath());
+	}
 	return TEXT("OK: ") + Summary;
 #else
 	return TEXT("FAILED: baking meshes needs the editor");
 #endif
+}
+
+bool UVegetationMeshLibrary::IsBakeUpToDate(FString& OutReason)
+{
+#if WITH_EDITOR
+	using namespace VegetationMeshLibraryDetail;
+	TArray<FString> Errors;
+	const TSharedPtr<const FVegetationDefinition> Definition = ForestFieldCache::GetVegetation(Errors);
+	if (!Definition)
+	{
+		// Nothing sensible to bake: the data errors are reported where the data is used.
+		OutReason = TEXT("vegetation data invalid: ") + FString::Join(Errors, TEXT("; "));
+		return true;
+	}
+	const UVegetationSettings* Settings = GetDefault<UVegetationSettings>();
+	for (const FVegetationMeshSpec& Spec : VegetationData::ListMeshes(*Definition))
+	{
+		const FString PackageName = Settings->GetGeneratedPackageName(Spec);
+		if (!FPackageName::DoesPackageExist(PackageName))
+		{
+			OutReason = PackageName + TEXT(" is missing");
+			return false;
+		}
+	}
+	FString Stamp;
+	if (!FFileHelper::LoadFileToString(Stamp, *GetBakeStampPath()) || Stamp != ComputeBakeStamp())
+	{
+		OutReason = TEXT("the vegetation data or the builder changed since the last bake");
+		return false;
+	}
+	return true;
+#else
+	return true;
+#endif
+}
+
+void UVegetationMeshLibrary::BakeIfNeeded()
+{
+	FString Reason;
+	if (IsBakeUpToDate(Reason))
+	{
+		return;
+	}
+	UE_LOG(LogShroomVegetation, Display, TEXT("Rebuilding the vegetation meshes: %s"), *Reason);
+	UE_LOG(LogShroomVegetation, Display, TEXT("%s"), *BakeVegetationMeshes(FString()).Left(400));
 }
 
 FString UVegetationMeshLibrary::ScatterReport(const FString& ForestName)

@@ -23,6 +23,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "ShroomHunt|Vegetation")
 	static FString BakeVegetationMeshes(const FString& Folder);
 
+	/**
+	 * True when every vegetation mesh exists in the generated folder and was baked from the current
+	 * Data/Vegetation/Vegetation.json and builder version (stamp in Saved/VegetationBake.txt).
+	 * Otherwise OutReason says why.
+	 */
+	static bool IsBakeUpToDate(FString& OutReason);
+
+	/** Bakes the vegetation meshes if IsBakeUpToDate is false (editor startup, D-040). */
+	static void BakeIfNeeded();
+
 	/** Instance counts per kind for a whole forest (to tune densities). */
 	UFUNCTION(BlueprintCallable, Category = "ShroomHunt|Vegetation")
 	static FString ScatterReport(const FString& ForestName);
