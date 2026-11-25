@@ -165,6 +165,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Sky", meta = (ClampMin = "0.05"))
 	float VisualResponse = 0.8f;
 
+	/**
+	 * Real seconds over which the snow cover and frost shown on the ground follow the weather: the snow
+	 * pack can change within minutes at high time scales, the ground should whiten and thaw gradually.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Seasons", meta = (ClampMin = "0"))
+	float GroundVisualSeconds = 25.0f;
+
 	// --- Bad weather darkening (values at full gloom: storm under a black sky) ------
 
 	/** Exposure compensation (EV) at full gloom; auto exposure would otherwise brighten a dark sky back. */
@@ -373,4 +380,7 @@ private:
 	FFoliageState ForestFoliage;
 	float SeasonMonth = 1.0f;
 	float SnowAtCamera = 0.0f;
+	/** Snow cover and frost as shown (smoothed); negative until the first update. */
+	float ShownSnowCover = -1.0f;
+	float ShownFrost = -1.0f;
 };

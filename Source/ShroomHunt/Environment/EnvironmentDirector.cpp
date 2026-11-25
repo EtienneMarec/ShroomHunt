@@ -657,8 +657,15 @@ void AEnvironmentDirector::UpdateSeason(const FGameDate& Date)
 
 	if (const UWeatherSubsystem* Weather = GetWorld()->GetSubsystem<UWeatherSubsystem>())
 	{
-		SetSeasonParameter(TEXT("SnowCover"), Weather->GetSnowCover());
-		SetSeasonParameter(TEXT("Frost"), Weather->GetFrost());
+		// Gradual whitening and thaw: exponential approach over GroundVisualSeconds of real time.
+		const float Alpha = GroundVisualSeconds > 0.0f ? 1.0f - FMath::Exp(-GetWorld()->GetDeltaSeconds() / GroundVisualSeconds) : 1.0f;
+		auto Follow = [Alpha](float& Shown, float Target)
+		{
+			Shown = Shown < 0.0f ? Target : FMath::Lerp(Shown, Target, Alpha);
+			return Shown;
+		};
+		SetSeasonParameter(TEXT("SnowCover"), Follow(ShownSnowCover, Weather->GetSnowCover()));
+		SetSeasonParameter(TEXT("Frost"), Follow(ShownFrost, Weather->GetFrost()));
 		SetSeasonParameter(TEXT("Dryness"), Weather->GetDryness());
 	}
 	SetSeasonParameter(TEXT("SnowFalling"), SnowAtCamera);
