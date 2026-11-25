@@ -41,10 +41,9 @@ struct SHROOMHUNT_API FTreeShape
 	float CrownRadiusM = 5.0f;
 	float LeanX = 0.0f;
 	float LeanY = 0.0f;
+	/** Dark foliage masses inside the crown (FTreeFill). */
 	int32 Clumps = 12;
 	int32 RadialSegments = 12;
-	/** Foliage sphere subdivision (2 = 320 triangles, 1 = 80). */
-	int32 ClumpDetail = 2;
 
 	static FTreeShape Sample(const FTreeArchetype& Archetype, const FTreeFormDefinition& Form, uint32 Seed);
 };
@@ -52,8 +51,10 @@ struct SHROOMHUNT_API FTreeShape
 /**
  * Builds the placeholder vegetation meshes (pure, deterministic, D-024).
  *
- * Trees: a tapered trunk with root flare, bark ridges or fluting, foliage clumps spread
- * in the crown envelope of the genus and one branch from the trunk to each outer clump.
+ * Trees (stylized, D-039): the skeleton of TreeGrowth (trunk with root flare, bark ridges or
+ * fluting, branches down to the twigs) as tapered tubes, leaf blades shaped per genus and a
+ * few dark fill masses inside the crown. Leaves and fills carry a per-leaf random value in the
+ * vertex color alpha (leaf fall order for the seasonal material).
  * Understory: bracken (double-sided fronds), bramble mounds with canes, fallen logs and
  * stumps. Ground debris: single fallen leaves of a genus (double-sided blades), twigs,
  * stones and moss cushions. Vertex colors carry the sRGB albedo, UV1 the surface id.

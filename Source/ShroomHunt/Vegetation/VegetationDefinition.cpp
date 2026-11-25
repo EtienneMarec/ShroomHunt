@@ -190,6 +190,14 @@ namespace VegetationData
 			{
 				Error(Field, TEXT("LeafSizeCm > 0 and LeafLobes >= 0 required"));
 			}
+			if (Tree.Excurrent < 0.0f || Tree.Excurrent > 1.0f || Tree.BranchesPerM <= 0.0f || Tree.Tortuosity < 0.0f || Tree.Tortuosity > 1.0f)
+			{
+				Error(Field, TEXT("Excurrent and Tortuosity in [0, 1], BranchesPerM > 0 required"));
+			}
+			if (Tree.LeafWidth <= 0.05f || Tree.LeafWidth > 1.5f || Tree.LeafTip < -1.0f || Tree.LeafTip > 1.0f || Tree.LeafScale <= 0.0f)
+			{
+				Error(Field, TEXT("LeafWidth in (0.05, 1.5], LeafTip in [-1, 1] and LeafScale > 0 required"));
+			}
 			CheckColor(Field + TEXT(".AutumnFoliage"), Tree.AutumnFoliage, true);
 			auto CheckMonths = [&Error](const FString& MonthsField, const TArray<float>& Months)
 			{
@@ -213,9 +221,9 @@ namespace VegetationData
 			{
 				Error(TEXT("Forms"), FString::Printf(TEXT("missing form %s"), KindName(Kind)));
 			}
-			else if (Form->Height <= 0.0f || Form->TrunkRadius <= 0.0f || Form->Crown <= 0.0f || Form->Clumps < 1 || Form->Variants < 1)
+			else if (Form->Height <= 0.0f || Form->TrunkRadius <= 0.0f || Form->Crown <= 0.0f || Form->Clumps < 0 || Form->Variants < 1)
 			{
-				Error(FString::Printf(TEXT("Forms.%s"), KindName(Kind)), TEXT("Height, TrunkRadius, Crown > 0 and Clumps, Variants >= 1 required"));
+				Error(FString::Printf(TEXT("Forms.%s"), KindName(Kind)), TEXT("Height, TrunkRadius, Crown > 0, Clumps >= 0 and Variants >= 1 required"));
 			}
 		}
 		for (const FTreeFormDefinition& Form : Out.Forms)

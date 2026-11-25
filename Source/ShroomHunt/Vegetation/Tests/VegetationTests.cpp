@@ -122,7 +122,7 @@ bool FVegetationMeshTest::RunTest(const FString& Parameters)
 		}
 		VegetationMeshBuilder::Build(Definition, Spec, Again);
 		TestEqual(Key + TEXT(" is deterministic"), HashMesh(Mesh), HashMesh(Again));
-		TestTrue(Key + TEXT(" stays under 40k triangles"), Mesh.TriangleCount() < 40000);
+		TestTrue(FString::Printf(TEXT("%s stays under 200k triangles (%d)"), *Key, Mesh.TriangleCount()), Mesh.TriangleCount() < 200000);
 
 		const UE::Geometry::FAxisAlignedBox3d Bounds = Mesh.GetBounds();
 		const bool bGround = VegetationData::GetLayer(Spec.Kind) == EVegetationLayer::Ground;

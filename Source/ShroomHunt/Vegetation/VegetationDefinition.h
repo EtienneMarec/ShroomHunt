@@ -81,6 +81,23 @@ struct FTreeArchetype
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") float LeafSizeCm = 7.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") int32 LeafLobes = 0;
 
+	// --- Branching (stylized procedural trees, D-039) ------------------------------------------
+
+	/** Apical dominance: 1 = the trunk runs to the top (birch, alder), 0 = it splits into limbs at the crown base (oak). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Branching") float Excurrent = 0.6f;
+	/** Main branches per meter of trunk inside the crown. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Branching") float BranchesPerM = 1.4f;
+	/** How strongly branch tips turn toward the sky (beech fans) along their length. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Branching") float UpCurve = 0.4f;
+	/** Random kinks of the branches (0 straight, 1 crooked oak limbs). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Branching") float Tortuosity = 0.2f;
+	/** Foliage leaf width / length. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Branching") float LeafWidth = 0.6f;
+	/** Leaf tip: 1 pointed (birch, hornbeam), 0 rounded, -1 blunt with the widest part near the tip (alder). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Branching") float LeafTip = 0.5f;
+	/** Size of the crown leaves relative to LeafSizeCm: the stylized trees carry fewer, larger leaves. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Branching") float LeafScale = 4.0f;
+
 	// --- Phenology (M2 seasons), in continuous real months (10.5 = mid October) ---------------
 
 	/** Budburst: the new leaves come out over the following ~3 weeks. */
@@ -106,6 +123,7 @@ struct FTreeFormDefinition
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") float TrunkRadius = 1.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") float Crown = 1.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") float ClearBole = 1.0f;
+	/** Dark foliage masses inside the crown (0 for saplings: their small crown fills with leaves). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") int32 Clumps = 12;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") int32 Variants = 2;
 };

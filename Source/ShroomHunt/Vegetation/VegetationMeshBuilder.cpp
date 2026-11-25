@@ -5,6 +5,7 @@
 #include "Core/ShroomMath.h"
 #include "DynamicMesh/DynamicMesh3.h"
 #include "Math/RandomStream.h"
+#include "Vegetation/TreeGrowth.h"
 
 using namespace UE::Geometry;
 
@@ -224,62 +225,98 @@ namespace VegetationMeshDetail
 		}
 	}
 
-	FVector3d QuadraticBezier(const FVector3d& A, const FVector3d& Control, const FVector3d& B, double T)
+
+	// --- Trees (stylized, grown from a skeleton: D-039) ----------------------------------
+
+	/**
+	 * One leaf blade, both faces: base, rows of (left edge, raised midrib, right edge), tip.
+	 * The outline follows the genus (widest point and tip from LeafTip, a sinus for lobed oak
+	 * leaves), the tip bends down.
+	 */
+	void AddLeafBlade(FMeshAccumulator& Acc, const FTreeArchetype& Arch, const FTreeLeaf& Leaf, const FLinearColor& Front, const FLinearColor& Back)
 	{
-		const double U = 1.0 - T;
-		return A * (U * U) + Control * (2.0 * U * T) + B * (T * T);
+		const FVector3d Side = FVector3d::CrossProduct(Leaf.Normal, Leaf.Axis).GetSafeNormal();
+		const double Tip = FMath::Clamp(Arch.LeafTip, -1.0f, 1.0f);
+		const double Peak = 0.45 - 0.17 * Tip;
+		const double Exponent = FMath::Loge(0.5) / FMath::Loge(Peak);
+		const double Sharpness = 0.7 + 0.5 * FMath::Max(Tip, 0.0);
+		const bool bLobed = Arch.LeafLobes > 0;
+		// One row (a folded diamond: 4 triangles per face) for plain leaves, two for lobed ones.
+		const double PlainRows[1] = { Peak };
+		static const double LobedRows[2] = { 0.38, 0.72 };
+		const double* RowT = bLobed ? LobedRows : PlainRows;
+		const int32 Rows = bLobed ? 2 : 1;
+		constexpr double Curl = 0.12;
+		const double Fold = 0.08 * Leaf.Width;
+
+		auto At = [&](double T, double Y, double Lift)
+		{
+			return Leaf.Base + Leaf.Axis * (Leaf.Length * T) + Side * Y + Leaf.Normal * (Lift - Curl * Leaf.Length * T * T);
+		};
+		auto HalfWidth = [&](int32 Row)
+		{
+			const double T = RowT[Row];
+			const double W = 0.5 * Leaf.Width * FMath::Pow(FMath::Sin(UE_DOUBLE_PI * FMath::Pow(T, Exponent)), Sharpness);
+			return bLobed && Row == 1 ? W * 0.75 : W;
+		};
+		auto Uv = [&](double T, double Y) { return FVector2f(static_cast<float>(T), static_cast<float>(0.5 + Y / FMath::Max(Leaf.Width, 1e-3))); };
+
+		for (int32 Face = 0; Face < 2; ++Face)
+		{
+			const bool bBack = Face == 1;
+			const FLinearColor& Color = bBack ? Back : Front;
+			const int32 Base = AddVertexM(Acc, At(0.0, 0.0, 0.0), Color);
+			const int32 TipId = AddVertexM(Acc, At(1.0, 0.0, 0.0), Color);
+			int32 L[2], M[2], R[2];
+			for (int32 Row = 0; Row < Rows; ++Row)
+			{
+				const double W = HalfWidth(Row);
+				L[Row] = AddVertexM(Acc, At(RowT[Row], W, 0.0), Color);
+				M[Row] = AddVertexM(Acc, At(RowT[Row], 0.0, Fold), Color);
+				R[Row] = AddVertexM(Acc, At(RowT[Row], -W, 0.0), Color);
+			}
+			// Seen from the normal side (axis forward, Side to the left) these run counter-clockwise.
+			auto Tri = [&](int32 A, int32 B, int32 C, const FVector2f& UA, const FVector2f& UB, const FVector2f& UC)
+			{
+				if (bBack)
+				{
+					Acc.AddTriangle(A, C, B, UA, UC, UB, EVegetationSurface::Foliage);
+				}
+				else
+				{
+					Acc.AddTriangle(A, B, C, UA, UB, UC, EVegetationSurface::Foliage);
+				}
+			};
+			const FVector2f UvBase = Uv(0.0, 0.0);
+			const FVector2f UvTip = Uv(1.0, 0.0);
+			Tri(Base, M[0], L[0], UvBase, Uv(RowT[0], 0.0), Uv(RowT[0], HalfWidth(0)));
+			Tri(Base, R[0], M[0], UvBase, Uv(RowT[0], -HalfWidth(0)), Uv(RowT[0], 0.0));
+			for (int32 Row = 0; Row + 1 < Rows; ++Row)
+			{
+				const double T0 = RowT[Row];
+				const double T1 = RowT[Row + 1];
+				const double W0 = HalfWidth(Row);
+				const double W1 = HalfWidth(Row + 1);
+				Tri(M[Row], M[Row + 1], L[Row + 1], Uv(T0, 0.0), Uv(T1, 0.0), Uv(T1, W1));
+				Tri(M[Row], L[Row + 1], L[Row], Uv(T0, 0.0), Uv(T1, W1), Uv(T0, W0));
+				Tri(R[Row], R[Row + 1], M[Row + 1], Uv(T0, -W0), Uv(T1, -W1), Uv(T1, 0.0));
+				Tri(R[Row], M[Row + 1], M[Row], Uv(T0, -W0), Uv(T1, 0.0), Uv(T0, 0.0));
+			}
+			const int32 Last = Rows - 1;
+			const double TL = RowT[Last];
+			const double WL = HalfWidth(Last);
+			Tri(M[Last], TipId, L[Last], Uv(TL, 0.0), UvTip, Uv(TL, WL));
+			Tri(R[Last], TipId, M[Last], Uv(TL, -WL), UvTip, Uv(TL, 0.0));
+		}
 	}
-
-	// --- Trees ---------------------------------------------------------------------
-
-	struct FClump
-	{
-		FVector3d Center = FVector3d::ZeroVector;
-		double Radius = 1.0;
-		/** Relative height in the crown (0 base - 1 top). */
-		double CrownT = 0.5;
-		FLinearColor Tint = FLinearColor::Green;
-		bool bTop = false;
-	};
 
 	void BuildTree(const FTreeArchetype& Arch, const FTreeFormDefinition& Form, uint32 Seed, FMeshAccumulator& Acc, FVegetationCollision* OutCollision)
 	{
 		const FTreeShape Shape = FTreeShape::Sample(Arch, Form, Seed);
+		const FTreeSkeleton Skeleton = TreeGrowth::Grow(Arch, Form, Shape, Seed);
 		FRandomStream Rng(static_cast<int32>(ShroomHash::Hash(Seed, 0xC1u)));
 		const double H = Shape.HeightM;
-		const double R0 = Shape.TrunkRadiusM;
-		const double TrunkTop = H * 0.93;
 		const uint32 NoiseSeed = ShroomHash::Hash(Seed, 0xBA4Cu);
-
-		auto Axis = [&](double Z)
-		{
-			const double T = Z / H;
-			const double Wobble = 0.006 * H;
-			return FVector3d(
-				Shape.LeanX * H * T * T + Wobble * ShroomHash::GradientNoise2D(NoiseSeed, Z / (0.25 * H), 0.5),
-				Shape.LeanY * H * T * T + Wobble * ShroomHash::GradientNoise2D(NoiseSeed ^ 0x77u, Z / (0.25 * H), 3.5),
-				Z);
-		};
-		const double FlareLength = 2.5 * R0;
-		const double BreastZ = FMath::Min(1.3, TrunkTop * 0.3);
-		const double TaperNorm = (1.08 - 0.96 * BreastZ / TrunkTop) * (1.0 + 0.5 * FMath::Exp(-BreastZ / FlareLength));
-		auto TrunkRadius = [&](double Z)
-		{
-			const double Taper = 1.08 - 0.96 * FMath::Clamp(Z / TrunkTop, 0.0, 1.0);
-			const double Flare = 1.0 + 0.5 * FMath::Exp(-FMath::Max(Z, 0.0) / FlareLength);
-			return FMath::Max(R0 * Taper * Flare / TaperNorm, 0.004);
-		};
-
-		// Trunk: rings denser near the base where the flare changes quickly.
-		const int32 TrunkRings = FMath::Clamp(FMath::RoundToInt(H / 0.6), 6, 48);
-		TArray<FVector3d> TrunkPath;
-		TArray<double> TrunkZ;
-		for (int32 K = 0; K <= TrunkRings; ++K)
-		{
-			const double Z = -0.15 + (TrunkTop + 0.15) * FMath::Pow(static_cast<double>(K) / TrunkRings, 1.4);
-			TrunkZ.Add(Z);
-			TrunkPath.Add(Axis(Z));
-		}
 
 		const FLinearColor Bark = VegetationData::ToColor(Arch.Bark, Srgb(0.4, 0.38, 0.34));
 		const bool bPatches = Arch.BarkPatch.Num() == 3 && Arch.BarkPatchShare > 0.0f;
@@ -309,133 +346,77 @@ namespace VegetationMeshDetail
 			return LerpSRGB(C, Moss, MossAlpha);
 		};
 
-		AddTube(Acc, TrunkPath, Shape.RadialSegments,
-			[&](int32 Ring, double Theta)
-			{
-				const double Z = TrunkZ[Ring];
-				const double Flute = Arch.Fluting * FMath::Cos(5.0 * Theta + FlutePhase) * (1.0 - FMath::Clamp(Z / H, 0.0, 1.0));
-				return TrunkRadius(Z) * (1.0 + Arch.BarkRidges * Ridge(Theta, Z) + Flute);
-			},
-			[&](int32 Ring, double Theta, const FVector3d& Radial) { return BarkColor(Theta, TrunkZ[Ring], Radial, 1.0); },
-			EVegetationSurface::Bark, false, true, Bark, Bark, EVegetationSurface::Bark);
-
-		// Crown: clumps spread in the genus envelope, outer ones fed by a branch.
-		const double CrownBase = Shape.ClearBoleM;
-		const double CrownDepth = FMath::Max(H - CrownBase, 0.5);
-		const double CrownR = Shape.CrownRadiusM;
-		const double Peak = FMath::Clamp(Arch.CrownPeak, 0.05f, 0.95f);
-		const double Exponent = FMath::Max(Arch.CrownExponent, 0.5f);
-		auto Envelope = [&](double T)
+		// Wood: trunk and branches as tapered tubes (they start inside their parent: no joint caps).
+		for (const FTreeBranch& Branch : Skeleton.Branches)
 		{
-			const double U = FMath::Clamp(T < Peak ? (Peak - T) / Peak : (T - Peak) / (1.0 - Peak), 0.0, 1.0);
-			return CrownR * FMath::Pow(FMath::Max(0.0, 1.0 - FMath::Pow(U, Exponent)), 1.0 / Exponent);
-		};
-		const double ClumpR = FMath::Min(Arch.ClumpScale * CrownR * 0.42, CrownDepth * 0.32);
-		const FLinearColor Foliage = VegetationData::ToColor(Arch.Foliage, Srgb(0.2, 0.35, 0.1));
-
-		TArray<FClump> Clumps;
-		{
-			FClump& Top = Clumps.AddDefaulted_GetRef();
-			Top.Radius = ClumpR * 0.9;
-			Top.Center = Axis(H - Top.Radius * 0.85);
-			Top.CrownT = 1.0;
-			Top.bTop = true;
-		}
-		const int32 Outer = FMath::Max(Shape.Clumps - 1, 1);
-		for (int32 Index = 0; Index < Outer; ++Index)
-		{
-			FClump& C = Clumps.AddDefaulted_GetRef();
-			const double T = 0.06 + 0.86 * (Index + 0.25 + 0.5 * Rng.FRand()) / Outer;
-			const double Azimuth = Index * 2.39996 + Rng.FRandRange(-0.4f, 0.4f);
-			C.Radius = ClumpR * Rng.FRandRange(0.8f, 1.15f);
-			// Mostly on the outer shell of the envelope (a crown is hollow-ish, leaves seek light).
-			const double Rho = FMath::Max(0.0, Envelope(T) - C.Radius * 0.55) * Rng.FRandRange(0.82f, 1.0f);
-			const double Z = CrownBase + T * CrownDepth - Arch.Droop * Rho * 0.6;
-			C.Center = Axis(Z) + FVector3d(FMath::Cos(Azimuth), FMath::Sin(Azimuth), 0.0) * Rho;
-			C.CrownT = T;
-		}
-		for (FClump& C : Clumps)
-		{
-			const float Shift = Arch.FoliageVariation * Rng.FRandRange(-1.0f, 1.0f);
-			const float GreenShift = Arch.FoliageVariation * 0.5f * Rng.FRandRange(-1.0f, 1.0f);
-			C.Tint = FLinearColor(
-				FMath::Clamp(Foliage.R * (1.0f + Shift), 0.0f, 1.0f),
-				FMath::Clamp(Foliage.G * (1.0f + Shift + GreenShift), 0.0f, 1.0f),
-				FMath::Clamp(Foliage.B * (1.0f + Shift), 0.0f, 1.0f), 1.0f);
-		}
-
-		// Branches (drawn before the foliage, hidden inside it at the tips).
-		const int32 BranchSegments = FMath::Max(4, Shape.RadialSegments / 2);
-		for (const FClump& C : Clumps)
-		{
-			const FVector3d AxisPoint = Axis(C.Center.Z);
-			const double Rho = FVector2d(C.Center.X - AxisPoint.X, C.Center.Y - AxisPoint.Y).Size();
-			if (C.bTop || Rho < 0.25 * CrownR)
-			{
-				continue;
-			}
-			const double Angle = FMath::DegreesToRadians(Arch.BranchAngleDeg + 20.0 * (C.CrownT - 0.5) + Rng.FRandRange(-8.0f, 8.0f));
-			const double AttachZ = FMath::Clamp(C.Center.Z - Rho * FMath::Tan(Angle), FMath::Max(CrownBase - 0.5, 0.5), FMath::Max(C.Center.Z - 0.1, 0.6));
-			const FVector3d Start = Axis(FMath::Min(AttachZ, TrunkTop - 0.2));
-			const FVector3d ToClump = C.Center - Start;
-			const FVector3d End = C.Center - ToClump.GetSafeNormal() * C.Radius * 0.35;
-			const double Length = (End - Start).Size();
-			const FVector3d Control = (Start + End) * 0.5 + FVector3d(0, 0, (0.12 - 0.25 * Arch.Droop) * Length);
-			TArray<FVector3d> Path;
-			for (int32 K = 0; K <= 5; ++K)
-			{
-				Path.Add(QuadraticBezier(Start, Control, End, K / 5.0));
-			}
-			const double BaseRadius = FMath::Max(TrunkRadius(Start.Z) * 0.55, 0.006);
-			AddTube(Acc, Path, BranchSegments,
-				[&](int32 Ring, double) { return BaseRadius * FMath::Lerp(1.0, 0.35, Ring / 5.0); },
-				[&](int32 Ring, double Theta, const FVector3d& Radial) { return BarkColor(Theta, Path[Ring].Z, Radial, 1.08); },
+			const double BaseRadius = Branch.Radii[0];
+			const int32 Segments = Branch.Level == 0 ? Shape.RadialSegments
+				: (BaseRadius > 0.12 ? 8 : (BaseRadius > 0.05 ? 6 : (BaseRadius > 0.018 ? 4 : 3)));
+			const bool bTrunk = Branch.Level == 0;
+			AddTube(Acc, Branch.Points, Segments,
+				[&](int32 Ring, double Theta)
+				{
+					const double R = Branch.Radii[Ring];
+					if (!bTrunk)
+					{
+						return R;
+					}
+					const double Z = Branch.Points[Ring].Z;
+					const double Flute = Arch.Fluting * FMath::Cos(5.0 * Theta + FlutePhase) * (1.0 - FMath::Clamp(Z / H, 0.0, 1.0));
+					return R * (1.0 + Arch.BarkRidges * Ridge(Theta, Z) + Flute);
+				},
+				[&](int32 Ring, double Theta, const FVector3d& Radial) { return BarkColor(Theta, Branch.Points[Ring].Z, Radial, 1.0 + 0.04 * Branch.Level); },
 				EVegetationSurface::Bark, false, true, Bark, Bark, EVegetationSurface::Bark);
 		}
 
-		// Foliage clumps and their smaller sub-clumps.
+		// Foliage: dark masses inside the crown, then the leaves. Vertex alpha = per leaf random (leaf fall order).
+		const FLinearColor Foliage = VegetationData::ToColor(Arch.Foliage, Srgb(0.2, 0.35, 0.1));
 		const uint32 LeafSeed = ShroomHash::Hash(Seed, 0x1EAFu);
-		auto AddClump = [&](const FVector3d& Center, double Radius, int32 Level, const FLinearColor& Tint, double CrownT, uint32 BlobSeed)
+		auto Tint = [&](uint32 Key, float Light)
 		{
-			AddBlob(Acc, Level,
+			const float Shift = Arch.FoliageVariation * ShroomHash::ToSignedFloat(ShroomHash::Hash(LeafSeed, Key, 1u));
+			const float GreenShift = Arch.FoliageVariation * 0.5f * ShroomHash::ToSignedFloat(ShroomHash::Hash(LeafSeed, Key, 2u));
+			const FLinearColor C(
+				FMath::Clamp(Foliage.R * (1.0f + Shift), 0.0f, 1.0f),
+				FMath::Clamp(Foliage.G * (1.0f + Shift + GreenShift), 0.0f, 1.0f),
+				FMath::Clamp(Foliage.B * (1.0f + Shift), 0.0f, 1.0f), 1.0f);
+			return ScaleSRGB(C, FMath::Lerp(0.58f, 1.1f, Light));
+		};
+		for (int32 Index = 0; Index < Skeleton.Fills.Num(); ++Index)
+		{
+			const FTreeFill& Fill = Skeleton.Fills[Index];
+			const uint32 BlobSeed = ShroomHash::Hash(LeafSeed, static_cast<uint32>(Index), 0xF111u);
+			FLinearColor Color = Tint(0x10000u + Index, Fill.Light);
+			Color.A = Fill.Random;
+			AddBlob(Acc, 1,
 				[&](const FVector3d& D)
 				{
-					const double Bump = 1.0 + Arch.Lumpiness * DirectionNoise(BlobSeed, D, 1.6);
-					return Center + FVector3d(D.X, D.Y, D.Z * 0.82) * (Radius * Bump);
+					const double Bump = 1.0 + 0.3 * DirectionNoise(BlobSeed, D, 1.8);
+					return Fill.Center + FVector3d(D.X, D.Y, D.Z * 0.75) * (Fill.Radius * Bump);
 				},
-				[&](const FVector3d& D, const FVector3d& P)
+				[&](const FVector3d& D, const FVector3d&)
 				{
-					const FVector3d AxisP = Axis(FMath::Clamp(P.Z, 0.0, H));
-					const double Outside = FMath::Clamp(FVector2d(P.X - AxisP.X, P.Y - AxisP.Y).Size() / FMath::Max(CrownR, 0.1), 0.0, 1.0);
-					const float Ao = FMath::Lerp(0.6f, 1.0f, static_cast<float>(0.5 + 0.5 * D.Z))
-						* FMath::Lerp(0.78f, 1.0f, static_cast<float>(Outside))
-						* FMath::Lerp(0.85f, 1.0f, static_cast<float>(CrownT));
-					return ScaleSRGB(Tint, Ao * (1.0f + 0.06f * DirectionNoise(BlobSeed ^ 0x2u, D, 4.0)));
+					FLinearColor C = ScaleSRGB(Color, FMath::Lerp(0.7f, 1.0f, static_cast<float>(0.5 + 0.5 * D.Z)));
+					C.A = Fill.Random;
+					return C;
 				},
 				EVegetationSurface::Foliage);
-		};
-		for (int32 Index = 0; Index < Clumps.Num(); ++Index)
+		}
+		for (int32 Index = 0; Index < Skeleton.Leaves.Num(); ++Index)
 		{
-			const FClump& C = Clumps[Index];
-			const uint32 BlobSeed = ShroomHash::Hash(LeafSeed, static_cast<uint32>(Index));
-			AddClump(C.Center, C.Radius, Shape.ClumpDetail, C.Tint, C.CrownT, BlobSeed);
-
-			const FVector3d AxisPoint = Axis(C.Center.Z);
-			const FVector3d Outward = FVector3d(C.Center.X - AxisPoint.X, C.Center.Y - AxisPoint.Y, 0.0).GetSafeNormal();
-			const int32 SubClumps = Shape.ClumpDetail >= 2 ? 3 : 1;
-			for (int32 Sub = 0; Sub < SubClumps; ++Sub)
-			{
-				const FVector3d Random(Rng.FRandRange(-1.0f, 1.0f), Rng.FRandRange(-1.0f, 1.0f), Rng.FRandRange(-0.5f, 1.0f));
-				const FVector3d Dir = (Outward + FVector3d(0, 0, 0.6) + Random * 0.8).GetSafeNormal();
-				AddClump(C.Center + Dir * C.Radius * 0.85, C.Radius * Rng.FRandRange(0.38f, 0.5f), Shape.ClumpDetail - 1,
-					ScaleSRGB(C.Tint, Rng.FRandRange(0.95f, 1.08f)), C.CrownT, ShroomHash::Hash(BlobSeed, static_cast<uint32>(Sub) + 1u));
-			}
+			const FTreeLeaf& Leaf = Skeleton.Leaves[Index];
+			FLinearColor Front = Tint(static_cast<uint32>(Index), Leaf.Light);
+			// The underside is paler and duller.
+			FLinearColor Back = LerpSRGB(ScaleSRGB(Front, 0.85f), Srgb(0.42, 0.46, 0.30), 0.25f);
+			Front.A = Leaf.Random;
+			Back.A = Leaf.Random;
+			AddLeafBlade(Acc, Arch, Leaf, Front, Back);
 		}
 
 		if (OutCollision && Form.Kind != EVegetationKind::Sapling)
 		{
-			const double Radius = R0 * 1.25;
-			const double TotalLength = FMath::Max(FMath::Min(CrownBase, 3.5), 2.0 * Radius + 0.1);
+			const double Radius = Shape.TrunkRadiusM * 1.25;
+			const double TotalLength = FMath::Max(FMath::Min(Shape.ClearBoleM, 3.5), 2.0 * Radius + 0.1);
 			OutCollision->bHasCapsule = true;
 			OutCollision->Radius = static_cast<float>(Radius * CmPerM);
 			OutCollision->Length = static_cast<float>((TotalLength - 2.0 * Radius) * CmPerM);
@@ -849,9 +830,9 @@ FTreeShape FTreeShape::Sample(const FTreeArchetype& Archetype, const FTreeFormDe
 	const float LeanAmount = Rng.FRandRange(0.0f, 0.04f);
 	S.LeanX = LeanAmount * FMath::Cos(LeanAngle);
 	S.LeanY = LeanAmount * FMath::Sin(LeanAngle);
-	S.Clumps = FMath::Max(3, Form.Clumps + Rng.RandRange(-1, 2));
+	const int32 ClumpJitter = Rng.RandRange(-1, 2);
+	S.Clumps = Form.Clumps > 0 ? FMath::Max(0, Form.Clumps + ClumpJitter) : 0;
 	S.RadialSegments = S.TrunkRadiusM > 0.2f ? 14 : (S.TrunkRadiusM > 0.06f ? 10 : 6);
-	S.ClumpDetail = Form.Kind == EVegetationKind::Sapling ? 1 : 2;
 	return S;
 }
 
