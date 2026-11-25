@@ -168,9 +168,12 @@ Always check the log for `Result: Succeeded`, not only the exit code.
   (stdlib-only renderer) produce a PNG Claude can look at. Use it after any
   change to the mesh builder or to morphology data. Vegetation:
   `sh.Vegetation.ExportObj` + the same script with `--grid`.
-- Vegetation meshes are assets baked from data: after changing
-  `Data/Vegetation/Vegetation.json` or the builder, run `sh.Vegetation.BakeMeshes`
-  (editor or headless) and commit the regenerated `SM_*` as `content:`.
+- Vegetation meshes are **build output, not versioned** (D-040): the editor
+  rebuilds `Content/ShroomHunt/Environment/Vegetation/Generated/SM_*` at startup
+  when one is missing or `Data/Vegetation/Vegetation.json` changed (stamp in
+  `Saved/VegetationBake.txt`). **Bump `VegetationMeshBuilder::BuilderVersion`
+  whenever the builder or `TreeGrowth` output changes.** `sh.Vegetation.BakeMeshes`
+  forces a rebuild.
 
 ## 8. Asset naming (Content/)
 

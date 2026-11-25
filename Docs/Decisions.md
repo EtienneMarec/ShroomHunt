@@ -340,6 +340,17 @@ repository and RAM footprint (the three Megascans packs weighed 26 GB),
 deterministic shapes, nothing to download for a clone. `MeshOverrides` stays
 available. Understory and ground debris follow the same way later (V1-4).
 
+**D-040 — Baked vegetation meshes are build output** · Accepted · 2026-11-25
+With detailed procedural trees (D-039) the 84 baked meshes weigh about
+120 MB, and every tuning pass would add as much to the Git LFS quota. They are
+derived data: the folder `Generated/` is git-ignored, and the game module
+rebuilds the meshes when the editor starts (`FCoreDelegates::OnPostEngineInit`,
+before the startup map loads) if one is missing or the stamp (vegetation data
+hash, `VegetationMeshBuilder::BuilderVersion`, material, folder) changed: about
+2.5 minutes once after a clone or a change, nothing otherwise. The PCG
+partition actors keep referencing the same asset paths. Option in *Project
+Settings > ShroomHunt > Vegetation > Bake On Editor Startup*.
+
 ## Open questions (to the developer)
 
 - The 54 empty F01 partition files (2026-11-23): were they saved during a
