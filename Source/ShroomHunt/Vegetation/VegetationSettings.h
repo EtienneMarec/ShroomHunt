@@ -29,6 +29,13 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Meshes")
 	bool bBakeOnEditorStartup = true;
 
+	/**
+	 * Content folder of the generated ground textures T_Ground_<Layer>_D / _N (D-042). Build output like
+	 * the meshes: rebuilt at editor startup from Data/Environment/GroundTextures.json when needed.
+	 */
+	UPROPERTY(Config, EditAnywhere, Category = "Ground Textures")
+	FString GroundTextureFolder = TEXT("/Game/ShroomHunt/Environment/Landscape/Generated");
+
 	/** Material of the placeholder meshes (vertex color albedo). */
 	UPROPERTY(Config, EditAnywhere, Category = "Meshes")
 	TSoftObjectPtr<UMaterialInterface> VegetationMaterial = TSoftObjectPtr<UMaterialInterface>(FSoftObjectPath(TEXT("/Game/ShroomHunt/Environment/Vegetation/M_Vegetation.M_Vegetation")));

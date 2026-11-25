@@ -3,10 +3,11 @@
 #include "ShroomHunt.h"
 #include "Misc/CoreDelegates.h"
 #include "Modules/ModuleManager.h"
+#include "Environment/GroundTextureLibrary.h"
 #include "Vegetation/VegetationMeshLibrary.h"
 #include "Vegetation/VegetationSettings.h"
 
-/** Game module: in the editor, rebuilds the baked vegetation meshes before the startup map loads (D-040). */
+/** Game module: in the editor, rebuilds the vegetation meshes and ground textures before the startup map loads (D-040, D-042). */
 class FShroomHuntModule : public FDefaultGameModuleImpl
 {
 public:
@@ -19,6 +20,7 @@ public:
 			if (GIsEditor && !IsRunningCommandlet() && GetDefault<UVegetationSettings>()->bBakeOnEditorStartup)
 			{
 				UVegetationMeshLibrary::BakeIfNeeded();
+				UGroundTextureLibrary::BakeIfNeeded();
 			}
 		});
 #endif

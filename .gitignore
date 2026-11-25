@@ -40,6 +40,7 @@ Content/Megascans/
 # Vegetation meshes are build output (D-040): the editor rebuilds them at
 # startup from Data/Vegetation/Vegetation.json (stamp in Saved/VegetationBake.txt).
 /Content/ShroomHunt/Environment/Vegetation/Generated/
+/Content/ShroomHunt/Environment/Landscape/Generated/
 
 # ---------------------------------------------------------------
 # IDE and generated project files (regenerated from the .uproject)
