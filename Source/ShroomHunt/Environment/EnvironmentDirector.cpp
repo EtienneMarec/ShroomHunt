@@ -107,6 +107,22 @@ AEnvironmentDirector* AEnvironmentDirector::Find(const UWorld* World)
 	return It ? *It : nullptr;
 }
 
+namespace EnvironmentDirectorLights
+{
+	/**
+	 * Sun first for forward shading, translucency, water and volumetric fog: with two atmosphere
+	 * lights of equal priority the engine warns on screen whenever both are above the horizon.
+	 */
+	void SetForwardShadingPriority(ADirectionalLight* Light, int32 Priority)
+	{
+		UDirectionalLightComponent* Component = Light ? Cast<UDirectionalLightComponent>(Light->GetLightComponent()) : nullptr;
+		if (Component && Component->ForwardShadingPriority != Priority)
+		{
+			Component->SetForwardShadingPriority(Priority);
+		}
+	}
+}
+
 void AEnvironmentDirector::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
@@ -118,6 +134,8 @@ void AEnvironmentDirector::OnConstruction(const FTransform& Transform)
 	}
 
 	AutoFindActors();
+	EnvironmentDirectorLights::SetForwardShadingPriority(SunLight, 1);
+	EnvironmentDirectorLights::SetForwardShadingPriority(MoonLight, 0);
 	const UTimeSettings* Settings = GetDefault<UTimeSettings>();
 	const FCalendarConfig Config = Settings->MakeCalendarConfig();
 	const int32 MidSeasonDay = Config.SeasonLengthDays[static_cast<int32>(PreviewSeason)] / 2;
@@ -145,6 +163,8 @@ void AEnvironmentDirector::BeginPlay()
 	SetupCloudMaterial();
 	WarnIfNotMovable(SunLight, TEXT("Sun"));
 	WarnIfNotMovable(MoonLight, TEXT("Moon"));
+	EnvironmentDirectorLights::SetForwardShadingPriority(SunLight, 1);
+	EnvironmentDirectorLights::SetForwardShadingPriority(MoonLight, 0);
 
 	if (MoonLight)
 	{
