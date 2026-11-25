@@ -57,11 +57,21 @@ void FMeshAccumulator::Emit(FDynamicMesh3& Out) const
 		ColorOverlay->AppendElement(FVector4f(C.R, C.G, C.B, C.A));
 	}
 
-	int32 SurfaceElements[MaxSurfaces];
-	for (int32 Surface = 0; Surface < MaxSurfaces; ++Surface)
+	// UV1 elements per (vertex, surface): an overlay element belongs to one vertex only, so one shared
+	// element per surface made SetTriangle fail silently and left UV1 at zero (the seasonal material
+	// could not find the leaves).
+	TMap<uint64, int32> SurfaceElements;
+	auto GetSurfaceElement = [&](int32 Vertex, uint8 Surface)
 	{
-		SurfaceElements[Surface] = UV1->AppendElement(FVector2f((Surface + 0.5f) / MaxSurfaces, 0.5f));
-	}
+		const uint64 Key = (static_cast<uint64>(Vertex) << 8) | Surface;
+		if (const int32* Found = SurfaceElements.Find(Key))
+		{
+			return *Found;
+		}
+		const int32 Element = UV1->AppendElement(FVector2f((Surface + 0.5f) / MaxSurfaces, 0.5f));
+		SurfaceElements.Add(Key, Element);
+		return Element;
+	};
 
 	// UV0 elements are shared between triangles when (vertex, uv) match, split at seams.
 	TMap<FIntVector, int32> UvElements;
@@ -85,8 +95,8 @@ void FMeshAccumulator::Emit(FDynamicMesh3& Out) const
 			continue; // non-manifold edge (two triangles sharing an edge the same way): skipped
 		}
 		UV0->SetTriangle(TriangleId, FIndex3i(GetUvElement(Tri.Vertices.X, Tri.UVs[0]), GetUvElement(Tri.Vertices.Y, Tri.UVs[1]), GetUvElement(Tri.Vertices.Z, Tri.UVs[2])));
-		const int32 SurfaceElement = SurfaceElements[Tri.Surface];
-		UV1->SetTriangle(TriangleId, FIndex3i(SurfaceElement, SurfaceElement, SurfaceElement));
+		UV1->SetTriangle(TriangleId, FIndex3i(GetSurfaceElement(Tri.Vertices.X, Tri.Surface), GetSurfaceElement(Tri.Vertices.Y, Tri.Surface),
+			GetSurfaceElement(Tri.Vertices.Z, Tri.Surface)));
 		ColorOverlay->SetTriangle(TriangleId, FIndex3i(Tri.Vertices.X, Tri.Vertices.Y, Tri.Vertices.Z));
 	}
 

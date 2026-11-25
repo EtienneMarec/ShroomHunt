@@ -316,6 +316,10 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   inside out (back faces culled: we saw mushroom gills through the caps).
   `FMeshAccumulator::AddTriangle` swaps B/C; tests check the volume with the
   engine formula, and the preview renderer culls back faces like UE.
+- An `FDynamicMesh3` **overlay element belongs to one vertex**: sharing one UV element
+  between vertices makes `SetTriangle` fail without any error and the converted
+  UVs stay 0 (our UV1 surface ids were lost until 2026-11-25;
+  `ShroomHunt.Vegetation.SurfaceIds` checks them now).
 - Using `FDynamicMesh3::Attributes()` needs `DynamicMesh/DynamicMeshAttributeSet.h`
   (forward-declared in `DynamicMesh3.h`).
 - `UStaticMesh::BuildFromMeshDescriptions` matches sections to materials by
