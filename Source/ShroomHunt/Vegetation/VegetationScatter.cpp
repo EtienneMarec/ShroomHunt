@@ -279,45 +279,113 @@ namespace VegetationScatter
 			const int32 Index = PickWeighted(Sample.StandWeights, ShroomHash::ToUnitFloat(Hash));
 			return Index == INDEX_NONE ? INDEX_NONE : Index;
 		};
+		// Under the canopy, young trees and saplings are mostly shade-tolerant genera (beech, hornbeam).
+		TArray<float> ShadeTolerance;
+		for (const FName Genus : Genera)
+		{
+			const FTreeArchetype* Tree = Definition.FindTree(Genus);
+			ShadeTolerance.Add(Tree ? Tree->ShadeTolerance : 0.5f);
+		}
+		auto PickShadeGenus = [&ShadeTolerance](const FForestSample& Sample, uint32 Hash)
+		{
+			TArray<float, TInlineAllocator<8>> Weights;
+			for (int32 Index = 0; Index < Sample.StandWeights.Num(); ++Index)
+			{
+				const float Tolerance = ShadeTolerance.IsValidIndex(Index) ? ShadeTolerance[Index] : 0.5f;
+				Weights.Add(Sample.StandWeights[Index] * FMath::Lerp(1.0f, Tolerance, Sample.Canopy));
+			}
+			return PickWeighted(Weights, ShroomHash::ToUnitFloat(Hash));
+		};
 
 		if (Layer == EVegetationLayer::Trees)
 		{
 			const FTreeDensityDefinition& Trees = Definition.TreeDensity;
+			auto EvaluateCanopy = [&](const FVector2d& P, uint32 Hash, float& OutDensity, FCandidate& C)
+			{
+				const FForestSample Sample = Field.Sample(static_cast<float>(P.X), static_cast<float>(P.Y));
+				if (Sample.bWater || Sample.bNearLandmark || IsOnPath(Field, Sample, 1.5f))
+				{
+					return false;
+				}
+				const int32 GenusIndex = PickGenus(Sample, ShroomHash::Hash(Hash, 10u));
+				if (GenusIndex == INDEX_NONE)
+				{
+					return false;
+				}
+				const float Margin = Riparian[GenusIndex] > 0.5f ? Trees.RiparianMarginM : Trees.WaterMarginM;
+				if (Sample.WaterDistanceM < Margin)
+				{
+					return false;
+				}
+				const FTreeFormMix& Mix = Trees.FormMix.Get(Sample.AgeClass);
+				const float FormWeights[3] = { Mix.Pole, Mix.Mature, Mix.Old };
+				const int32 Form = PickWeighted(FormWeights, ShroomHash::ToUnitFloat(ShroomHash::Hash(Hash, 11u)));
+				if (Form == INDEX_NONE)
+				{
+					return false;
+				}
+				C.Kind = Form == 0 ? EVegetationKind::Pole : (Form == 1 ? EVegetationKind::Mature : EVegetationKind::Old);
+				C.Genus = Genera[GenusIndex];
+				OutDensity = TreeDensityPerHa(Definition, Sample);
+				return true;
+			};
+			auto MakeCanopyTree = [&](const FCandidate& C)
+			{
+				// Old trunks reach ~0.7 m radius at the flare.
+				return MakeInstance(Field, Definition, C, Trees.ScaleJitter, 0.15f, 2.0f, C.Kind == EVegetationKind::Old ? 0.8f : 0.5f);
+			};
+			const uint32 CanopySeed = ShroomHash::Hash(ForestSeed, 0x7EEu);
+			const double CanopyCell = CellSizeFor(Trees.PerHa.GetMax());
 			TArray<FCandidate> Kept;
-			RunProcess(Field, ShroomHash::Hash(ForestSeed, 0x7EEu), CellSizeFor(Trees.PerHa.GetMax()), Trees.SpacingFactor, BoundsM,
+			RunProcess(Field, CanopySeed, CanopyCell, Trees.SpacingFactor, BoundsM, EvaluateCanopy, Kept);
+			for (const FCandidate& C : Kept)
+			{
+				Out.Add(MakeCanopyTree(C));
+			}
+			if (Trees.YoungPerHa.GetMax() <= 0.0f)
+			{
+				return;
+			}
+
+			// Middle layer (D-041): young trees between the canopy trunks, crowns low on the stem.
+			// The canopy trees of a slightly larger region keep them off the big trunks (same answer in every partition).
+			FVegetationObstacleGrid CanopyTrunks;
+			{
+				TArray<FCandidate> Around;
+				RunProcess(Field, CanopySeed, CanopyCell, Trees.SpacingFactor, FBox2d(BoundsM.Min - FVector2d(6.0), BoundsM.Max + FVector2d(6.0)), EvaluateCanopy, Around);
+				TArray<FVegetationInstance> AroundTrees;
+				for (const FCandidate& C : Around)
+				{
+					AroundTrees.Add(MakeCanopyTree(C));
+				}
+				CanopyTrunks.AddInstances(Definition, AroundTrees);
+			}
+			TArray<FCandidate> YoungKept;
+			RunProcess(Field, ShroomHash::Hash(ForestSeed, 0x7EFu), CellSizeFor(Trees.YoungPerHa.GetMax()), Trees.SpacingFactor, BoundsM,
 				[&](const FVector2d& P, uint32 Hash, float& OutDensity, FCandidate& C)
 				{
 					const FForestSample Sample = Field.Sample(static_cast<float>(P.X), static_cast<float>(P.Y));
-					if (Sample.bWater || Sample.bNearLandmark || IsOnPath(Field, Sample, 1.5f))
+					if (Sample.bWater || Sample.bNearLandmark || IsOnPath(Field, Sample, 1.5f) || Sample.WaterDistanceM < Trees.WaterMarginM)
 					{
 						return false;
 					}
-					const int32 GenusIndex = PickGenus(Sample, ShroomHash::Hash(Hash, 10u));
+					const int32 GenusIndex = PickShadeGenus(Sample, ShroomHash::Hash(Hash, 10u));
 					if (GenusIndex == INDEX_NONE)
 					{
 						return false;
 					}
-					const float Margin = Riparian[GenusIndex] > 0.5f ? Trees.RiparianMarginM : Trees.WaterMarginM;
-					if (Sample.WaterDistanceM < Margin)
-					{
-						return false;
-					}
-					const FTreeFormMix& Mix = Trees.FormMix.Get(Sample.AgeClass);
-					const float FormWeights[3] = { Mix.Pole, Mix.Mature, Mix.Old };
-					const int32 Form = PickWeighted(FormWeights, ShroomHash::ToUnitFloat(ShroomHash::Hash(Hash, 11u)));
-					if (Form == INDEX_NONE)
-					{
-						return false;
-					}
-					C.Kind = Form == 0 ? EVegetationKind::Pole : (Form == 1 ? EVegetationKind::Mature : EVegetationKind::Old);
+					C.Kind = EVegetationKind::Young;
 					C.Genus = Genera[GenusIndex];
-					OutDensity = TreeDensityPerHa(Definition, Sample);
+					OutDensity = Trees.YoungPerHa.Get(Sample.AgeClass);
 					return true;
-				}, Kept);
-			for (const FCandidate& C : Kept)
+				}, YoungKept);
+			for (const FCandidate& C : YoungKept)
 			{
-				// Old trunks reach ~0.7 m radius at the flare.
-				Out.Add(MakeInstance(Field, Definition, C, Trees.ScaleJitter, 0.15f, 2.0f, C.Kind == EVegetationKind::Old ? 0.8f : 0.5f));
+				const FVegetationInstance Instance = MakeInstance(Field, Definition, C, Trees.ScaleJitter * 1.5f, 0.1f, 3.0f, 0.3f);
+				if (!CanopyTrunks.Overlaps(FVector2f(static_cast<float>(Instance.PositionM.X), static_cast<float>(Instance.PositionM.Y)), 1.2f))
+				{
+					Out.Add(Instance);
+				}
 			}
 			return;
 		}
@@ -367,8 +435,8 @@ namespace VegetationScatter
 					}
 					if (bByGenus)
 					{
-						// Saplings and fallen leaves of the stand's trees.
-						const int32 GenusIndex = PickGenus(Sample, ShroomHash::Hash(Hash, 10u));
+						// Saplings (shade-tolerant first under the canopy) and fallen leaves of the stand's trees.
+						const int32 GenusIndex = bSapling ? PickShadeGenus(Sample, ShroomHash::Hash(Hash, 10u)) : PickGenus(Sample, ShroomHash::Hash(Hash, 10u));
 						if (GenusIndex == INDEX_NONE)
 						{
 							return false;

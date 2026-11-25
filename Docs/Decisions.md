@@ -351,6 +351,22 @@ hash, `VegetationMeshBuilder::BuilderVersion`, material, folder) changed: about
 partition actors keep referencing the same asset paths. Option in *Project
 Settings > ShroomHunt > Vegetation > Bake On Editor Startup*.
 
+**D-041 — A middle layer: young trees and shrubs** · Accepted · 2026-11-25
+In F01 every tree started high and the view ran far between bare trunks,
+unlike a real beech or oak wood where foliage fills every height. A new tree
+form *Young* (a third of the archetype height, crown from 40 % of the
+genus clear bole) is scattered by the Trees layer under and between the
+canopy trees (`TreeDensity.YoungPerHa`, ~170/ha in mature stands), kept
+1.2 m off the canopy trunks; it collides like the other trees. Saplings and
+young trees pick their genus by stand weight × shade tolerance under the canopy
+(`ShadeTolerance`: beech 0.95, hornbeam 0.9, oak 0.3, birch 0.05), so the
+understory is mostly beech and hornbeam, as in managed lowland forests. A
+shrub layer (understory kinds *Hazel* and *Holly*) is grown by the tree code
+from archetypes in `Shrubs`: hazel as a coppice of 6 stems, holly as a dense
+evergreen whose leaves use the *Frond* surface so the seasonal material leaves
+them alone. Crown bases also vary more (×0.7–1.12). F01 goes from about 15,000
+to 22,500 trees plus 3,900 shrubs; Nanite keeps the cost low.
+
 ## Open questions (to the developer)
 
 - The 54 empty F01 partition files (2026-11-23): were they saved during a

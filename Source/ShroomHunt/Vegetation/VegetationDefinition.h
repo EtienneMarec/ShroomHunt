@@ -23,16 +23,21 @@ enum class EVegetationKind : uint8
 	Leaf,
 	Twigs,
 	Stones,
-	Moss
+	Moss,
+	/** Middle layer (D-041): a young or suppressed tree under the canopy, crown low on the stem. A tree form. */
+	Young,
+	/** Shrubs (D-041), grown like the trees from an archetype of FVegetationDefinition::Shrubs. */
+	Hazel,
+	Holly
 };
 
 /** Which group of kinds a PCG node outputs (separate spawners: collision and cull distances differ). */
 UENUM(BlueprintType)
 enum class EVegetationLayer : uint8
 {
-	/** Pole, mature and old trees. */
+	/** Pole, mature, old and young trees. */
 	Trees,
-	/** Saplings, bracken, brambles, dead wood. */
+	/** Saplings, shrubs, bracken, brambles, dead wood. */
 	Understory,
 	/** Small ground debris: many instances, no collision, short cull distance. */
 	Ground
@@ -97,6 +102,12 @@ struct FTreeArchetype
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Branching") float LeafTip = 0.5f;
 	/** Size of the crown leaves relative to LeafSizeCm: the stylized trees carry fewer, larger leaves. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Branching") float LeafScale = 4.0f;
+	/** Stems from the ground (hazel coppice: 5-8). 1 = a single trunk. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Branching") int32 Stems = 1;
+	/** Keeps its leaves in winter (holly): they are neither colored nor dropped by the seasonal material. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation|Branching") bool bEvergreen = false;
+	/** How well the genus grows in the shade of the canopy (0 birch - 1 beech): weights its saplings and young trees. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") float ShadeTolerance = 0.5f;
 
 	// --- Phenology (M2 seasons), in continuous real months (10.5 = mid October) ---------------
 
@@ -186,6 +197,8 @@ struct FTreeDensityDefinition
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") float RiparianMarginM = 0.6f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") float ScaleJitter = 0.12f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") FAgeClassFormMix FormMix;
+	/** Young trees of the middle layer per hectare (Young form, shade-tolerant genera first, D-041). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") FAgeClassValues YoungPerHa;
 };
 
 /** One understory kind: density per age class times its habitat response. JSON trapezoids are [min, optLow, optHigh, max]. */
@@ -215,6 +228,8 @@ struct FUnderstoryRule
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") TArray<float> PathFactor;
 	/** Mesh variants (saplings use the Sapling tree form instead; leaf litter has them per genus). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") int32 Variants = 2;
+	/** Shrub kinds (Hazel, Holly): the archetype of FVegetationDefinition::Shrubs they grow from. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") FName Archetype;
 };
 
 /** Vegetation palette shared by the forests. Source of truth: Data/Vegetation/Vegetation.json. */
@@ -224,6 +239,8 @@ struct SHROOMHUNT_API FVegetationDefinition
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") TArray<FTreeArchetype> Trees;
+	/** Shrub archetypes (hazel, holly), grown by the tree code; placed by the understory rules that name them. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") TArray<FTreeArchetype> Shrubs;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") TArray<FTreeFormDefinition> Forms;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") FTreeDensityDefinition TreeDensity;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") TArray<FUnderstoryRule> Understory;
@@ -235,6 +252,9 @@ struct SHROOMHUNT_API FVegetationDefinition
 	const FUnderstoryRule* FindRule(EVegetationKind Kind) const;
 
 	const FTreeArchetype* FindTree(FName Genus) const { return Trees.FindByPredicate([Genus](const FTreeArchetype& T) { return T.Genus == Genus; }); }
+	const FTreeArchetype* FindShrub(FName Genus) const { return Shrubs.FindByPredicate([Genus](const FTreeArchetype& T) { return T.Genus == Genus; }); }
+	/** Archetype of a shrub kind (through its understory rule), nullptr for other kinds. */
+	const FTreeArchetype* FindShrubFor(EVegetationKind Kind) const;
 	const FTreeFormDefinition* FindForm(EVegetationKind Kind) const { return Forms.FindByPredicate([Kind](const FTreeFormDefinition& F) { return F.Kind == Kind; }); }
 	int32 GetVariantCount(EVegetationKind Kind) const;
 };
@@ -255,6 +275,8 @@ struct SHROOMHUNT_API FVegetationMeshSpec
 namespace VegetationData
 {
 	SHROOMHUNT_API bool IsTreeKind(EVegetationKind Kind);
+	/** Hazel and holly: grown from a shrub archetype, no genus in their mesh key. */
+	SHROOMHUNT_API bool IsShrubKind(EVegetationKind Kind);
 	/** Kinds with one mesh set per genus: tree forms and leaf litter. */
 	SHROOMHUNT_API bool HasGenus(EVegetationKind Kind);
 	SHROOMHUNT_API EVegetationLayer GetLayer(EVegetationKind Kind);

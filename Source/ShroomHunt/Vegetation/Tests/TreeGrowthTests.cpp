@@ -89,6 +89,26 @@ bool FTreeGrowthTest::RunTest(const FString& Parameters)
 			}
 		}
 	}
+
+	// Shrubs (D-041): hazel coppice with several stems, evergreen holly.
+	for (const EVegetationKind Kind : { EVegetationKind::Hazel, EVegetationKind::Holly })
+	{
+		const FTreeArchetype* Arch = Definition.FindShrubFor(Kind);
+		if (!TestNotNull(FString::Printf(TEXT("%s has a shrub archetype"), VegetationData::KindName(Kind)), Arch))
+		{
+			continue;
+		}
+		FTreeFormDefinition Form;
+		Form.Kind = Kind;
+		const FTreeShape Shape = FTreeShape::Sample(*Arch, Form, 7u);
+		const FTreeSkeleton Skeleton = TreeGrowth::Grow(*Arch, Form, Shape, 7u);
+		const FString Key = VegetationData::KindName(Kind);
+		TestTrue(FString::Printf(TEXT("%s stems or main branches (%d)"), *Key, Skeleton.CountBranches(1)), Skeleton.CountBranches(1) >= FMath::Max(Arch->Stems, 3));
+		TestTrue(FString::Printf(TEXT("%s leaves (%d)"), *Key, Skeleton.Leaves.Num()), Skeleton.Leaves.Num() > TreeGrowth::GetLeafBudget(Kind) / 4);
+		TestTrue(Key + TEXT(" stays shrub-sized"), Shape.HeightM < 8.0f);
+	}
+	const FTreeArchetype* Holly = Definition.FindShrub(TEXT("Ilex"));
+	TestTrue(TEXT("Holly is evergreen (bEvergreen read from the JSON)"), Holly && Holly->bEvergreen);
 	return true;
 }
 

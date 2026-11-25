@@ -241,7 +241,8 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   (engine subsystem: works in the editor too); the inspected specimen gets a
   unique mesh. `AMushroomGarden` previews them.
 - **Vegetation** (D-024, D-039: all procedural, stylized, no scanned assets):
-  `Data/Vegetation/Vegetation.json` → `TreeGrowth` (branching skeleton per genus)
+  `Data/Vegetation/Vegetation.json` → `TreeGrowth` (branching skeleton per genus;
+  forms Sapling/Young/Pole/Mature/Old; shrubs Hazel/Holly from `Shrubs`, D-041)
   → `VegetationMeshBuilder` (wood tubes, leaf blades with a per-leaf random in the
   vertex alpha; understory; baked to Nanite assets by `sh.Vegetation.BakeMeshes`) and `VegetationScatter` (deterministic placement from
   the field, partition-independent) → PCG node *Forest Scatter* → Static Mesh

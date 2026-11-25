@@ -18,6 +18,7 @@ bool FVegetationObstacleGrid::MakeObstacle(const FVegetationDefinition& Definiti
 	switch (Instance.Kind)
 	{
 	case EVegetationKind::Sapling:
+	case EVegetationKind::Young:
 	case EVegetationKind::Pole:
 	case EVegetationKind::Mature:
 	case EVegetationKind::Old:

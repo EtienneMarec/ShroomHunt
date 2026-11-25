@@ -47,6 +47,12 @@ const FUnderstoryRule* FVegetationDefinition::FindRule(EVegetationKind Kind) con
 	return Rule ? Rule : Ground.FindByPredicate([Kind](const FUnderstoryRule& R) { return R.Kind == Kind; });
 }
 
+const FTreeArchetype* FVegetationDefinition::FindShrubFor(EVegetationKind Kind) const
+{
+	const FUnderstoryRule* Rule = VegetationData::IsShrubKind(Kind) ? FindRule(Kind) : nullptr;
+	return Rule ? FindShrub(Rule->Archetype) : nullptr;
+}
+
 TArray<const FUnderstoryRule*> FVegetationDefinition::GetRules(EVegetationLayer Layer) const
 {
 	TArray<const FUnderstoryRule*> Rules;
@@ -81,7 +87,12 @@ namespace VegetationData
 {
 	bool IsTreeKind(EVegetationKind Kind)
 	{
-		return Kind <= EVegetationKind::Old;
+		return Kind <= EVegetationKind::Old || Kind == EVegetationKind::Young;
+	}
+
+	bool IsShrubKind(EVegetationKind Kind)
+	{
+		return Kind == EVegetationKind::Hazel || Kind == EVegetationKind::Holly;
 	}
 
 	bool HasGenus(EVegetationKind Kind)
@@ -91,11 +102,21 @@ namespace VegetationData
 
 	EVegetationLayer GetLayer(EVegetationKind Kind)
 	{
-		if (Kind == EVegetationKind::Pole || Kind == EVegetationKind::Mature || Kind == EVegetationKind::Old)
+		switch (Kind)
 		{
+		case EVegetationKind::Pole:
+		case EVegetationKind::Mature:
+		case EVegetationKind::Old:
+		case EVegetationKind::Young:
 			return EVegetationLayer::Trees;
+		case EVegetationKind::Leaf:
+		case EVegetationKind::Twigs:
+		case EVegetationKind::Stones:
+		case EVegetationKind::Moss:
+			return EVegetationLayer::Ground;
+		default:
+			return EVegetationLayer::Understory;
 		}
-		return Kind >= EVegetationKind::Leaf ? EVegetationLayer::Ground : EVegetationLayer::Understory;
 	}
 
 	const TCHAR* KindName(EVegetationKind Kind)
@@ -114,6 +135,9 @@ namespace VegetationData
 		case EVegetationKind::Twigs: return TEXT("Twigs");
 		case EVegetationKind::Stones: return TEXT("Stones");
 		case EVegetationKind::Moss: return TEXT("Moss");
+		case EVegetationKind::Young: return TEXT("Young");
+		case EVegetationKind::Hazel: return TEXT("Hazel");
+		case EVegetationKind::Holly: return TEXT("Holly");
 		}
 		return TEXT("Unknown");
 	}
@@ -162,10 +186,19 @@ namespace VegetationData
 		{
 			Error(TEXT("Trees"), TEXT("needs at least one genus"));
 		}
+		TArray<TPair<FString, const FTreeArchetype*>> Archetypes;
 		for (int32 Index = 0; Index < Out.Trees.Num(); ++Index)
 		{
-			const FTreeArchetype& Tree = Out.Trees[Index];
-			const FString Field = FString::Printf(TEXT("Trees[%d]"), Index);
+			Archetypes.Add({ FString::Printf(TEXT("Trees[%d]"), Index), &Out.Trees[Index] });
+		}
+		for (int32 Index = 0; Index < Out.Shrubs.Num(); ++Index)
+		{
+			Archetypes.Add({ FString::Printf(TEXT("Shrubs[%d]"), Index), &Out.Shrubs[Index] });
+		}
+		for (const TPair<FString, const FTreeArchetype*>& Entry : Archetypes)
+		{
+			const FTreeArchetype& Tree = *Entry.Value;
+			const FString& Field = Entry.Key;
 			if (Tree.Genus.IsNone())
 			{
 				Error(Field + TEXT(".Genus"), TEXT("missing"));
@@ -198,6 +231,10 @@ namespace VegetationData
 			{
 				Error(Field, TEXT("LeafWidth in (0.05, 1.5], LeafTip in [-1, 1] and LeafScale > 0 required"));
 			}
+			if (Tree.Stems < 1 || Tree.ShadeTolerance < 0.0f || Tree.ShadeTolerance > 1.0f)
+			{
+				Error(Field, TEXT("Stems >= 1 and ShadeTolerance in [0, 1] required"));
+			}
 			CheckColor(Field + TEXT(".AutumnFoliage"), Tree.AutumnFoliage, true);
 			auto CheckMonths = [&Error](const FString& MonthsField, const TArray<float>& Months)
 			{
@@ -214,7 +251,7 @@ namespace VegetationData
 			}
 		}
 
-		for (const EVegetationKind Kind : { EVegetationKind::Sapling, EVegetationKind::Pole, EVegetationKind::Mature, EVegetationKind::Old })
+		for (const EVegetationKind Kind : { EVegetationKind::Sapling, EVegetationKind::Young, EVegetationKind::Pole, EVegetationKind::Mature, EVegetationKind::Old })
 		{
 			const FTreeFormDefinition* Form = Out.FindForm(Kind);
 			if (!Form)
@@ -269,6 +306,10 @@ namespace VegetationData
 				{
 					Error(Field + TEXT(".PathFactor"), TEXT("expected [road, ride, footpath] in [0, 1]"));
 				}
+				if (IsShrubKind(Rule.Kind) && !Out.FindShrub(Rule.Archetype))
+				{
+					Error(Field + TEXT(".Archetype"), FString::Printf(TEXT("no shrub archetype '%s' in Shrubs"), *Rule.Archetype.ToString()));
+				}
 				for (int32 Other = 0; Other < Index; ++Other)
 				{
 					if (Rules[Other].Kind == Rule.Kind)
@@ -278,7 +319,7 @@ namespace VegetationData
 				}
 			}
 		};
-		CheckRules(Out.Understory, TEXT("Understory"), EVegetationLayer::Understory, TEXT("Sapling, Bracken, Bramble, Log or Stump"));
+		CheckRules(Out.Understory, TEXT("Understory"), EVegetationLayer::Understory, TEXT("Sapling, Hazel, Holly, Bracken, Bramble, Log or Stump"));
 		CheckRules(Out.Ground, TEXT("Ground"), EVegetationLayer::Ground, TEXT("Leaf, Twigs, Stones or Moss"));
 		return OutErrors.Num() == ErrorsBefore;
 	}

@@ -66,7 +66,7 @@ namespace VegetationMeshBuilder
 	 * Bump whenever the meshes this builder (or TreeGrowth) produces change for the same data:
 	 * the editor then rebuilds the baked vegetation meshes at its next start (D-040).
 	 */
-	constexpr int32 BuilderVersion = 2;
+	constexpr int32 BuilderVersion = 3;
 
 	/** Returns false when the spec refers to a genus or form missing from the definition. */
 	SHROOMHUNT_API bool Build(const FVegetationDefinition& Definition, const FVegetationMeshSpec& Spec, UE::Geometry::FDynamicMesh3& OutMesh, FVegetationCollision* OutCollision = nullptr);

@@ -138,10 +138,10 @@ bool FVegetationMeshTest::RunTest(const FString& Parameters)
 			TestTrue(Key + TEXT(" stands on the ground"), Bounds.Min.Z < 5.0 && Bounds.Max.Z > 5.0);
 		}
 
-		const bool bTree = Spec.Kind == EVegetationKind::Pole || Spec.Kind == EVegetationKind::Mature || Spec.Kind == EVegetationKind::Old;
+		const bool bTree = Spec.Kind == EVegetationKind::Pole || Spec.Kind == EVegetationKind::Mature || Spec.Kind == EVegetationKind::Old || Spec.Kind == EVegetationKind::Young;
 		TestEqual(Key + TEXT(" collision: capsule for trees and dead wood only"), Collision.bHasCapsule,
 			bTree || Spec.Kind == EVegetationKind::Log || Spec.Kind == EVegetationKind::Stump);
-		if (Spec.Kind != EVegetationKind::Bracken && Spec.Kind != EVegetationKind::Leaf)
+		if (Spec.Kind != EVegetationKind::Bracken && Spec.Kind != EVegetationKind::Leaf && !VegetationData::IsShrubKind(Spec.Kind))
 		{
 			// Every part is a closed or nearly closed surface facing outward (bracken and leaves are double-sided).
 			TestTrue(Key + TEXT(" faces outward (positive volume)"), SignedVolume(Mesh) > 0.0);

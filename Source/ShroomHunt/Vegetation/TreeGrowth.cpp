@@ -95,6 +95,7 @@ namespace TreeGrowthDetail
 			CrownBase = Shape.ClearBoleM;
 			Step = FMath::Clamp(H / 45.0, 0.1, 0.6);
 			bExcurrent = Arch.Excurrent >= 0.5f;
+			bMultiStem = Arch.Stems > 1;
 			bSapling = Form.Kind == EVegetationKind::Sapling;
 			TwigLevel = bSapling ? 2 : 3;
 			LumpSeed = ShroomHash::Hash(Seed, 0x1B9u);
@@ -126,6 +127,7 @@ namespace TreeGrowthDetail
 		double CrownBase = 8.0;
 		double Step = 0.4;
 		bool bExcurrent = true;
+		bool bMultiStem = false;
 		bool bSapling = false;
 		int32 TwigLevel = 3;
 		uint32 LumpSeed = 0;
@@ -136,9 +138,11 @@ namespace TreeGrowthDetail
 		/** Horizontal reach of the crown at a height and azimuth (the envelope, made irregular by Lumpiness). */
 		double Reach(double Z, double Azimuth) const
 		{
-			const double T = (Z - CrownBase) / FMath::Max(H - CrownBase, 0.5);
+			// Below the crown, the crown base width: coppice stems and low branches start there.
+			const double ZInCrown = FMath::Max(Z, CrownBase);
+			const double T = (ZInCrown - CrownBase) / FMath::Max(H - CrownBase, 0.5);
 			const float Noise = ShroomHash::GradientNoise2D(LumpSeed, FMath::Cos(Azimuth) * 1.4 + T * 2.2, FMath::Sin(Azimuth) * 1.4 - T * 1.7);
-			return TreeGrowth::CrownRadiusAt(Arch, Shape, Z) * (1.0 + Arch.Lumpiness * 0.8 * Noise);
+			return TreeGrowth::CrownRadiusAt(Arch, Shape, ZInCrown) * (1.0 + Arch.Lumpiness * 0.8 * Noise);
 		}
 
 		bool IsOutside(const FVector3d& P, double Slack) const
@@ -213,8 +217,38 @@ namespace TreeGrowthDetail
 			return Out.Branches.Add(MoveTemp(Branch));
 		}
 
+		/** Coppice (hazel): a short stool and several stems leaning out from it, each branching like a trunk. */
+		void GrowStems()
+		{
+			{
+				FTreeBranch Stool;
+				Stool.Level = 0;
+				for (int32 K = 0; K <= 2; ++K)
+				{
+					const double Z = -0.1 + 0.25 * K;
+					Stool.Points.Add(Axis(Z));
+					Stool.Radii.Add(Shape.TrunkRadiusM * (2.2 - 0.4 * K));
+				}
+				Out.Branches.Add(MoveTemp(Stool));
+			}
+			const double Azimuth0 = Rng.FRandRange(0.0f, UE_TWO_PI);
+			for (int32 S = 0; S < Arch.Stems; ++S)
+			{
+				const double Az = Azimuth0 + S * GoldenAngle + Rng.FRandRange(-0.3f, 0.3f);
+				const double Lean = FMath::DegreesToRadians(Rng.FRandRange(6.0f, 28.0f));
+				const FVector3d Dir(FMath::Cos(Az) * FMath::Sin(Lean), FMath::Sin(Az) * FMath::Sin(Lean), FMath::Cos(Lean));
+				const FVector3d Start = Axis(0.1) + FVector3d(FMath::Cos(Az), FMath::Sin(Az), 0.0) * Shape.TrunkRadiusM;
+				GrowBranch(Start, Dir, H * Rng.FRandRange(0.75f, 1.0f), Shape.TrunkRadiusM * Rng.FRandRange(0.7f, 1.0f), 1, 0);
+			}
+		}
+
 		void GrowTrunk()
 		{
+			if (bMultiStem)
+			{
+				GrowStems();
+				return;
+			}
 			const double CrownDepth = FMath::Max(H - CrownBase, 0.5);
 			TrunkTop = bExcurrent ? H * 0.9 : CrownBase + CrownDepth * FMath::Lerp(0.08, 0.35, Arch.Excurrent * 2.0);
 			const double TaperHeight = bExcurrent ? TrunkTop : H * 0.93;
@@ -449,6 +483,9 @@ namespace TreeGrowth
 		switch (Kind)
 		{
 		case EVegetationKind::Sapling: return 600;
+		case EVegetationKind::Young: return 2500;
+		case EVegetationKind::Hazel: return 2200;
+		case EVegetationKind::Holly: return 2600;
 		case EVegetationKind::Pole: return 5000;
 		case EVegetationKind::Mature: return 10000;
 		case EVegetationKind::Old: return 13000;

@@ -235,6 +235,8 @@ namespace VegetationMeshDetail
 	 */
 	void AddLeafBlade(FMeshAccumulator& Acc, const FTreeArchetype& Arch, const FTreeLeaf& Leaf, const FLinearColor& Front, const FLinearColor& Back)
 	{
+		// Evergreen leaves (holly) use the Frond surface: the seasonal material neither colors nor drops them.
+		const EVegetationSurface Surface = Arch.bEvergreen ? EVegetationSurface::Frond : EVegetationSurface::Foliage;
 		const FVector3d Side = FVector3d::CrossProduct(Leaf.Normal, Leaf.Axis).GetSafeNormal();
 		const double Tip = FMath::Clamp(Arch.LeafTip, -1.0f, 1.0f);
 		const double Peak = 0.45 - 0.17 * Tip;
@@ -280,11 +282,11 @@ namespace VegetationMeshDetail
 			{
 				if (bBack)
 				{
-					Acc.AddTriangle(A, C, B, UA, UC, UB, EVegetationSurface::Foliage);
+					Acc.AddTriangle(A, C, B, UA, UC, UB, Surface);
 				}
 				else
 				{
-					Acc.AddTriangle(A, B, C, UA, UB, UC, EVegetationSurface::Foliage);
+					Acc.AddTriangle(A, B, C, UA, UB, UC, Surface);
 				}
 			};
 			const FVector2f UvBase = Uv(0.0, 0.0);
@@ -413,7 +415,8 @@ namespace VegetationMeshDetail
 			AddLeafBlade(Acc, Arch, Leaf, Front, Back);
 		}
 
-		if (OutCollision && Form.Kind != EVegetationKind::Sapling)
+		const bool bCollides = Form.Kind == EVegetationKind::Pole || Form.Kind == EVegetationKind::Mature || Form.Kind == EVegetationKind::Old || Form.Kind == EVegetationKind::Young;
+		if (OutCollision && bCollides)
 		{
 			const double Radius = Shape.TrunkRadiusM * 1.25;
 			const double TotalLength = FMath::Max(FMath::Min(Shape.ClearBoleM, 3.5), 2.0 * Radius + 0.1);
@@ -824,7 +827,8 @@ FTreeShape FTreeShape::Sample(const FTreeArchetype& Archetype, const FTreeFormDe
 	const float SizeJitter = Rng.FRandRange(0.9f, 1.1f);
 	S.HeightM = Archetype.HeightM * Form.Height * SizeJitter;
 	S.TrunkRadiusM = Archetype.TrunkRadiusM * Form.TrunkRadius * FMath::Sqrt(SizeJitter) * Rng.FRandRange(0.9f, 1.12f);
-	S.ClearBoleM = S.HeightM * FMath::Clamp(Archetype.ClearBole * Form.ClearBole * Rng.FRandRange(0.88f, 1.12f), 0.05f, 0.8f);
+	// Wide spread of crown bases: some trees keep low branches (more foliage at eye level).
+	S.ClearBoleM = S.HeightM * FMath::Clamp(Archetype.ClearBole * Form.ClearBole * Rng.FRandRange(0.7f, 1.12f), 0.02f, 0.8f);
 	S.CrownRadiusM = Archetype.CrownRadiusM * Form.Crown * Rng.FRandRange(0.85f, 1.15f);
 	const float LeanAngle = Rng.FRandRange(0.0f, UE_TWO_PI);
 	const float LeanAmount = Rng.FRandRange(0.0f, 0.04f);
@@ -870,6 +874,20 @@ namespace VegetationMeshBuilder
 				return false;
 			}
 			BuildLeaf(*Archetype, Seed, Acc);
+		}
+		else if (VegetationData::IsShrubKind(Spec.Kind))
+		{
+			const FTreeArchetype* Archetype = Definition.FindShrubFor(Spec.Kind);
+			if (!Archetype)
+			{
+				return false;
+			}
+			// A shrub is its archetype at full size: a neutral form of its own kind (leaf budget, no collision).
+			FTreeFormDefinition Form;
+			Form.Kind = Spec.Kind;
+			Form.Clumps = 0;
+			Form.Variants = Definition.GetVariantCount(Spec.Kind);
+			BuildTree(*Archetype, Form, Seed, Acc, nullptr);
 		}
 		else if (VegetationData::IsTreeKind(Spec.Kind))
 		{
