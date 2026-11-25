@@ -74,8 +74,8 @@ git clone https://github.com/EtienneMarec/ShroomHunt.git
 2. Open `ShroomHunt.sln`, select *Development Editor | Win64*, build.
 3. Open `ShroomHunt.uproject`.
 
-Third-party environment assets (Fab / Megascans) are not included in the
-repository; the list of required free assets will be documented here.
+No third-party asset is needed: trees, plants, mushrooms and ground debris
+are generated from the data in `Data/` (D-039).
 
 ## License
 

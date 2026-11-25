@@ -320,6 +320,26 @@ One slot, autoload when the first game world starts, autosave each game day
 and when the world closes. A load menu and several slots come with the UI
 polish (M6).
 
+**D-039 — Stylized procedural vegetation instead of scanned assets** · Accepted · 2026-11-25
+Supersedes the tree part of D-033 (V1-1). No free scanned oak or birch exists
+(the free Quixel *Megaplants* need the experimental Procedural Vegetation
+Editor and export skeletal meshes that PCG cannot place), and the developer
+does not want to buy assets for this project. A forest that mixes scans and
+placeholders looks wrong, so every plant stays generated from data, in a
+stylized but detailed look: `TreeGrowth` grows a skeleton per genus (excurrent
+trunk or decurrent limbs, main and secondary branches, twigs; upward curve,
+droop, tortuosity; the crown envelope clips the branches), the mesh builder
+turns it into tapered tubes and opaque leaf blades shaped per genus (a folded
+diamond, two rows for lobed oak leaves), with oversized leaves (`LeafScale`
+about 5) and a leaf budget per form (10,000 for a mature tree, 60 % for lobed
+leaves). Bare winter trees now show real branches. A mature tree costs about
+100k triangles (Nanite, ~45 unique meshes). Each leaf carries a random value
+in the vertex color alpha, so the seasonal material can drop leaves one by one.
+Gains: one coherent art style with the procedural mushrooms, a light
+repository and RAM footprint (the three Megascans packs weighed 26 GB),
+deterministic shapes, nothing to download for a clone. `MeshOverrides` stays
+available. Understory and ground debris follow the same way later (V1-4).
+
 ## Open questions (to the developer)
 
 - The 54 empty F01 partition files (2026-11-23): were they saved during a

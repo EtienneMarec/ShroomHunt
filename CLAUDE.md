@@ -237,15 +237,16 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   button to rot, D-028) in `UMushroomMeshSubsystem`
   (engine subsystem: works in the editor too); the inspected specimen gets a
   unique mesh. `AMushroomGarden` previews them.
-- **Vegetation** (D-024): `Data/Vegetation/Vegetation.json` →
-  `VegetationMeshBuilder` (placeholder trees/understory, baked to Nanite assets by
-  `sh.Vegetation.BakeMeshes`) and `VegetationScatter` (deterministic placement from
+- **Vegetation** (D-024, D-039: all procedural, stylized, no scanned assets):
+  `Data/Vegetation/Vegetation.json` → `TreeGrowth` (branching skeleton per genus)
+  → `VegetationMeshBuilder` (wood tubes, leaf blades with a per-leaf random in the
+  vertex alpha; understory; baked to Nanite assets by `sh.Vegetation.BakeMeshes`) and `VegetationScatter` (deterministic placement from
   the field, partition-independent) → PCG node *Forest Scatter* → Static Mesh
   Spawner. Field and vegetation data shared through `ForestFieldCache`.
   Three layers: Trees, Understory (static PCG graph `PCG_ForestVegetation`),
   Ground (single leaves per genus, twigs, stones, moss: ~8 M instances, so
-  generated at runtime around the player by `PCG_ForestGround`). Third-party meshes
-  replace placeholders via `MeshOverrides`, falling back when missing (D-033).
+  generated at runtime around the player by `PCG_ForestGround`). `MeshOverrides`
+  can still swap a palette entry for a static mesh asset (empty today).
 - **Foraging** (`Player/`, D-029): `UForagerComponent` (added to the pawn by the
   spawner: aim, examine, pick; runtime Enhanced Input; `UI/UForagingWidget` built
   in C++), `UForagingSubsystem` (basket, picked seeds, patch exhaustion),
