@@ -382,7 +382,7 @@ versioned, so the landscape material only calls it.
 **D-043 — Ground relief by Nanite tessellation** · Accepted · 2026-11-26
 The flat landscape gets volume from the height already stored in the ground
 textures: Nanite on the landscape, tessellation and displacement in its
-material (magnitude 10 cm, center 0.4), plus a snow layer whose thickness
+material (magnitude 0.1 local unit = 10 cm at landscape scale 100, center 0.4), plus a snow layer whose thickness
 follows `MPC_Season.SnowDepthCm`. The height is a sum of layer weights × layer
 heights (Landscape Layer Sample), not a Layer Blend, which flattened
 displacement in early 5.8. 3D grass and moss tufts (runtime, like the 3D

@@ -378,5 +378,8 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
 - `UGameplayStatics::SaveGameToSlot/Memory` write every `UPROPERTY` (no
   `SaveGame` flag needed: that filter is only for archives with
   `ArIsSaveGame`).
+- **Landscape displacement is in local units** and scaled by the actor: at
+  scale 100, a material *Displacement Magnitude* of 10 means 10 m (ground
+  spikes taller than the player). Use 0.1 for 10 cm.
 - With `-game -nullrhi`, `-ExecCmds` run before the first actor tick: values
   computed in `Tick` still show their defaults.
