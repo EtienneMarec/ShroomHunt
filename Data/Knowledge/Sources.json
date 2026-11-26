@@ -50,6 +50,13 @@
       "Title": "Field guide: Tricholomas, blewits and spring mushrooms",
       "Intro": "Fleshy gilled mushrooms of the litter and the meadows, from the first spring rings to the last blewits of winter.",
       "Species": ["LepistaNuda", "CalocybeGambosa"]
+    },
+    {
+      "Id": "BookMorels",
+      "Kind": "Book",
+      "Title": "Field guide: Morels",
+      "Intro": "No gills at all: the cap is a honeycomb of pits. The false morel is folded like a brain and chambered inside: cut every morel lengthwise.",
+      "Species": ["MorchellaEsculenta", "GyromitraEsculenta"]
     }
   ]
 }

@@ -1,0 +1,61 @@
+{
+  "Name": "GyromitraEsculenta",
+  "ScientificName": "Gyromitra esculenta",
+  "CommonNames": { "en": "False morel", "fr": "Gyromitre" },
+  "Genus": "Gyromitra", "Family": "Discinaceae", "GuideGroup": "Morels",
+  "Edibility": "Deadly", "ToxicSyndrome": "Gyromitrin", "PricePerKg": 0.0,
+
+  "Trophic": "Mycorrhizal",
+  "Substrates": ["Soil", "DeadWood"],
+  "Hosts": [
+    { "genus": "Pinus", "affinity": 1.0 }, { "genus": "Picea", "affinity": 0.9 },
+    { "genus": "Larix", "affinity": 0.7 }, { "genus": "Betula", "affinity": 0.8 }
+  ],
+  "pH": [3.5, 4.0, 5.8, 6.8],
+  "AltitudeM": [0, 100, 1600, 2000],
+  "Moisture": [0.20, 0.35, 0.70, 0.85],
+  "Canopy": [0.10, 0.30, 0.85, 1.00],
+  "EdgeAffinity": 0.3,
+  "Soils": [ { "type": "Sandy", "weight": 1.0 }, { "type": "Loam", "weight": 0.5 },
+             { "type": "Peat", "weight": 0.4 }, { "type": "Limestone", "weight": 0.05 } ],
+
+  "FruitingMonths": [2.8, 3.3, 4.6, 5.3],
+  "RainWindowDays": 12, "RainMm": [8, 24],
+  "TempC": [2, 6, 13, 18],
+  "LagDays": [6, 12],
+  "FlushRate": 2.0, "FlushCooldownDays": 8,
+
+  "PatchDensityPerHa": 4.0, "PatchRadiusM": [3, 7],
+  "Clustering": "Scattered", "FruitsPerFlush": 8,
+  "LifetimeDays": 12, "StageSplit": [0.3, 0.75], "WormyChance": 0.05,
+
+  "Cap": {
+    "ShapesByStage": {
+      "young":  [ { "shape": "Cerebriform", "weight": 1.0 } ],
+      "mature": [ { "shape": "Cerebriform", "weight": 1.0 } ],
+      "old":    [ { "shape": "Cerebriform", "weight": 1.0 } ]
+    },
+    "DiameterCm": [4, 9], "MarginType": "Even", "Surface": "Smooth",
+    "Colors": ["#7B3A22", "#95502E"],
+    "Warts": null
+  },
+  "Underside": {
+    "Type": "Pitted", "Attachment": "Adnate",
+    "ColorsByStage": { "young": "#4A2416", "mature": "#552A18", "old": "#3E2014" }
+  },
+  "Stem": {
+    "LengthCm": [2, 5], "ThicknessCm": [1.5, 3], "Shape": "Clavate",
+    "Colors": ["#EDE3DA", "#D9C8BC"],
+    "Reticulation": { "present": false },
+    "Ring": "None", "Volva": "None"
+  },
+  "Flesh": { "Color": "#F1E8E0", "ColorChange": "None", "Odor": "Faint, fruity", "Taste": "Untested" },
+  "SporePrint": "#F5F0E6",
+
+  "Lookalikes": [
+    { "species": "MorchellaEsculenta", "danger": "Excellent",
+      "keyDifferences": ["A true morel is a honeycomb of pits between sharp ridges, never folded like a brain", "Ochre, cream or grey, not reddish brown", "Cut lengthwise, a morel is one single hollow; the false morel is chambered and cottony inside"] }
+  ],
+  "Description": "Irregular, lobed reddish-brown cap folded like a brain, on a short whitish stem; cut lengthwise it is chambered and stuffed with cottony flesh. Its toxin, gyromitrin, attacks the liver and nerves, even in the fumes of cooking.",
+  "HabitatText": "Spring, from March to May, on sandy acidic soils under pines and spruces, also under birch, often on disturbed ground, old stumps and forest tracks."
+}

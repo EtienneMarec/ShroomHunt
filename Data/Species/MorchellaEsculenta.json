@@ -1,0 +1,62 @@
+{
+  "Name": "MorchellaEsculenta",
+  "ScientificName": "Morchella esculenta",
+  "CommonNames": { "en": "Yellow morel", "fr": "Morille commune" },
+  "Genus": "Morchella", "Family": "Morchellaceae", "GuideGroup": "Morels",
+  "Edibility": "Excellent", "ToxicSyndrome": "None", "PricePerKg": 60.0,
+
+  "Trophic": "Mycorrhizal",
+  "Substrates": ["Soil", "Litter"],
+  "Hosts": [
+    { "genus": "Fraxinus", "affinity": 1.0 }, { "genus": "Ulmus", "affinity": 1.0 },
+    { "genus": "Alnus", "affinity": 0.8 }, { "genus": "Populus", "affinity": 0.7 },
+    { "genus": "Malus", "affinity": 0.6 }, { "genus": "Carpinus", "affinity": 0.3 }
+  ],
+  "pH": [4.5, 5.6, 8.2, 8.8],
+  "AltitudeM": [0, 0, 1200, 1700],
+  "Moisture": [0.40, 0.55, 0.90, 1.00],
+  "Canopy": [0.10, 0.25, 0.75, 0.95],
+  "EdgeAffinity": 0.5,
+  "Soils": [ { "type": "Limestone", "weight": 1.0 }, { "type": "Loam", "weight": 0.9 },
+             { "type": "Clay", "weight": 0.6 }, { "type": "Sandy", "weight": 0.2 } ],
+
+  "FruitingMonths": [3.0, 3.6, 4.9, 5.6],
+  "RainWindowDays": 12, "RainMm": [10, 28],
+  "TempC": [4, 8, 15, 20],
+  "LagDays": [6, 12],
+  "FlushRate": 2.2, "FlushCooldownDays": 8,
+
+  "PatchDensityPerHa": 8.0, "PatchRadiusM": [3, 8],
+  "Clustering": "Scattered", "FruitsPerFlush": 10,
+  "LifetimeDays": 14, "StageSplit": [0.3, 0.75], "WormyChance": 0.05,
+
+  "Cap": {
+    "ShapesByStage": {
+      "young":  [ { "shape": "Morchelloid", "weight": 1.0 } ],
+      "mature": [ { "shape": "Morchelloid", "weight": 1.0 } ],
+      "old":    [ { "shape": "Morchelloid", "weight": 1.0 } ]
+    },
+    "DiameterCm": [3, 6], "MarginType": "Even", "Surface": "Smooth",
+    "Colors": ["#D8BE86", "#E6D2A2"],
+    "Warts": null
+  },
+  "Underside": {
+    "Type": "Pitted", "Attachment": "Adnate",
+    "ColorsByStage": { "young": "#7C6A52", "mature": "#A9824A", "old": "#86643A" }
+  },
+  "Stem": {
+    "LengthCm": [3, 7], "ThicknessCm": [1.5, 3], "Shape": "Clavate",
+    "Colors": ["#F3ECDC", "#E6D9BE"],
+    "Reticulation": { "present": false },
+    "Ring": "None", "Volva": "None"
+  },
+  "Flesh": { "Color": "#F4EDDF", "ColorChange": "None", "Odor": "Pleasant, earthy", "Taste": "Mild" },
+  "SporePrint": "#EFDDB4",
+
+  "Lookalikes": [
+    { "species": "GyromitraEsculenta", "danger": "Deadly",
+      "keyDifferences": ["The false morel is folded like a brain, with rounded lobes, not a honeycomb of pits with sharp ridges", "Reddish to chestnut brown, not ochre or grey", "Cut lengthwise: chambered and stuffed with cottony flesh, not one single hollow from cap to stem"] }
+  ],
+  "Description": "Egg-shaped ochre cap made of deep irregular pits between pale ridges, joined to a whitish granular stem; cut lengthwise, cap and stem form one single hollow. Never eaten raw: always well cooked.",
+  "HabitatText": "Spring, from March to early May: under ash, elm and alder along streams, in old orchards and at wood edges on rich, moist, preferably calcareous soils. Rare and very sought after."
+}
