@@ -1,4 +1,4 @@
-#include "Environment/GroundTextureLibrary.h"
+﻿#include "Environment/GroundTextureLibrary.h"
 
 #include "Core/ShroomLog.h"
 #include "Environment/GroundTextures.h"
@@ -145,7 +145,7 @@ namespace GroundTextureLibraryDetail
 #endif
 			const FGroundTextureImage Image = GroundTextures::Generate(Ground, Style, *Vegetation);
 			const FString Folder = GetPreviewFolder();
-			WriteGroundPng(Folder / Style.Layer.ToString() + TEXT("_D.png"), Image.Albedo, Image.Size, false);
+			WriteGroundPng(Folder / Style.Layer.ToString() + TEXT("_D.png"), Image.Albedo, Image.Size, true);
 			WriteGroundPng(Folder / Style.Layer.ToString() + TEXT("_N.png"), Image.Normal, Image.Size, false);
 			WriteGroundPng(Folder / TEXT("preview_") + Style.Layer.ToString() + TEXT(".png"), GroundTextures::MakePreview(Image), Image.Size, false);
 			if (!Visit(Style, Image))

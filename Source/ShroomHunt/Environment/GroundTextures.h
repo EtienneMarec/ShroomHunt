@@ -46,6 +46,8 @@ struct FGroundLayerStyle
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Ground") float Roughness = 0.85f;
 	/** Relief strength of the normal map. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Ground") float NormalStrength = 1.0f;
+	/** Amplitude (cm) of the gentle undulation of the layer (leaf piles, moss mounds) in the displacement height. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Ground") float ReliefCm = 1.0f;
 };
 
 /** The ground texture set. Source of truth: Data/Environment/GroundTextures.json (D-042). */
@@ -56,15 +58,27 @@ struct SHROOMHUNT_API FGroundTexturesDefinition
 
 	/** Texture size in pixels (power of two). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Ground") int32 Resolution = 1024;
+	/**
+	 * Displacement range (cm) of one unit of the albedo alpha: must match the landscape material
+	 * (Magnitude 0.1 at landscape scale 100 = 10 cm, Center 0.4 = ground level). The alpha is a
+	 * physical height: a leaf adds a few millimeters, not a plateau.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Ground") float ReliefRangeCm = 10.0f;
 	/** Genera of the fallen leaves drawn into the textures, with weights (shapes and colors from Vegetation.json). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Ground") TMap<FName, float> LeafGenera;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Ground") TArray<FGroundLayerStyle> Layers;
 };
 
-/** One generated layer: albedo (sRGB, alpha = height for height blending) and a tangent-space normal map (DirectX green). */
+/**
+ * One generated layer: albedo (sRGB; alpha = physical height for the height blend and the displacement,
+ * 0.4 = ground level, one unit = ReliefRangeCm) and a tangent-space normal map (DirectX green) drawn
+ * from an exaggerated shading height.
+ */
 struct SHROOMHUNT_API FGroundTextureImage
 {
 	int32 Size = 0;
+	/** Share of the pixels covered by an object (leaf, pebble, blade, moss bump, twig). */
+	float CoveredShare = 0.0f;
 	TArray<FColor> Albedo;
 	TArray<FColor> Normal;
 };
@@ -73,7 +87,7 @@ struct SHROOMHUNT_API FGroundTextureImage
 namespace GroundTextures
 {
 	/** Bump when the generated pixels change for the same data (the editor then rebakes the textures). */
-	constexpr int32 GeneratorVersion = 2;
+	constexpr int32 GeneratorVersion = 4;
 
 	SHROOMHUNT_API FString GetDefaultPath();
 	SHROOMHUNT_API bool Parse(const FString& JsonText, FGroundTexturesDefinition& Out, TArray<FString>& OutErrors);

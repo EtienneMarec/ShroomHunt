@@ -385,7 +385,10 @@ textures: Nanite on the landscape, tessellation and displacement in its
 material (magnitude 0.1 local unit = 10 cm at landscape scale 100, center 0.4), plus a snow layer whose thickness
 follows `MPC_Season.SnowDepthCm`. The height is a sum of layer weights × layer
 heights (Landscape Layer Sample), not a Layer Blend, which flattened
-displacement in early 5.8. 3D grass and moss tufts (runtime, like the 3D
+displacement in early 5.8. The texture alpha is a physical height (one unit = 10 cm, 0.4 = ground):
+a leaf adds ~1.5 mm, pebbles rise ~0.7 of their radius, and the relief is softened over ~1 cm;
+the first version reused the exaggerated shading height and turned every leaf and pebble into a
+slab several centimeters high. 3D grass and moss tufts (runtime, like the 3D
 leaves) come next for what a heightfield cannot show.
 
 **D-044 — Opaque wood, two-sided masked foliage** · Accepted · 2026-11-26

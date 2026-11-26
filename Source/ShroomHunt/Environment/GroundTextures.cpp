@@ -81,6 +81,8 @@ namespace GroundTexturesDetail
 		{
 			Color.SetNum(Size * Size);
 			Height.SetNum(Size * Size);
+			Relief.SetNum(Size * Size);
+			Covered.Init(false, Size * Size);
 		}
 
 		int32 Index(int32 X, int32 Y) const
@@ -107,8 +109,19 @@ namespace GroundTexturesDetail
 
 		int32 Size;
 		TArray<FRgb> Color;
+		/** Exaggerated height for the normal map: crisp leaf edges and pebbles in the shading. */
 		TArray<float> Height;
+		/** Physical height for the displacement and the height blend (units of ReliefRangeCm, 0.4 = ground). */
+		TArray<float> Relief;
+		/** Physical height of the bare ground, before the objects. */
+		TArray<float> GroundRelief;
+		TBitArray<> Covered;
+		/** Relief units per centimeter (1 / ReliefRangeCm). */
+		float PerCm = 0.1f;
 	};
+
+	/** Ground level of the relief (the landscape material's displacement Center). */
+	constexpr float ReliefGround = 0.4f;
 
 	struct FLeafShape
 	{
@@ -120,7 +133,7 @@ namespace GroundTexturesDetail
 		int32 Lobes = 0;
 	};
 
-	void DrawLeaf(FGroundCanvas& Canvas, const FLeafShape& Shape, double CX, double CY, double Angle, float Brightness, float Curl, float Lift)
+	void DrawLeaf(FGroundCanvas& Canvas, const FLeafShape& Shape, double CX, double CY, double Angle, float Brightness, float Curl, float Lift, float CurlCm)
 	{
 		const double Exponent = FMath::Loge(0.5) / FMath::Loge(Shape.Peak);
 		const double Cos = FMath::Cos(Angle);
@@ -165,10 +178,13 @@ namespace GroundTexturesDetail
 			}
 			Canvas.Color[Pixel] = Shape.Color * Shade;
 			Canvas.Height[Pixel] = Lift + Curl * Edge * Edge;
+			// A leaf is a sheet: it adds ~1.5 mm on what lies below, its edges curl up a few mm.
+			Canvas.Relief[Pixel] += (0.15f + CurlCm * Edge * Edge) * Canvas.PerCm;
+			Canvas.Covered[Pixel] = true;
 		});
 	}
 
-	void DrawDome(FGroundCanvas& Canvas, double CX, double CY, double RX, double RY, double Angle, const FRgb& Color, float Lift, float Bulge, float Rim, uint32 NoiseSeed)
+	void DrawDome(FGroundCanvas& Canvas, double CX, double CY, double RX, double RY, double Angle, const FRgb& Color, float Lift, float Bulge, float Rim, uint32 NoiseSeed, float DomeCm)
 	{
 		const double Cos = FMath::Cos(Angle);
 		const double Sin = FMath::Sin(Angle);
@@ -186,10 +202,12 @@ namespace GroundTexturesDetail
 			const float Shade = (Dome < Rim ? 0.75f : 1.0f) * Speckle;
 			Canvas.Color[Pixel] = Color * Shade;
 			Canvas.Height[Pixel] = FMath::Max(Canvas.Height[Pixel], Lift + Bulge * Dome);
+			Canvas.Relief[Pixel] = FMath::Max(Canvas.Relief[Pixel], Canvas.GroundRelief[Pixel] + DomeCm * Dome * Canvas.PerCm);
+			Canvas.Covered[Pixel] = true;
 		});
 	}
 
-	void DrawStroke(FGroundCanvas& Canvas, double X0, double Y0, double Angle, double Bend, double LengthPx, double WidthPx, const FRgb& Root, const FRgb& Tip, float Lift, float Rise)
+	void DrawStroke(FGroundCanvas& Canvas, double X0, double Y0, double Angle, double Bend, double LengthPx, double WidthPx, const FRgb& Root, const FRgb& Tip, float Lift, float Rise, float LiftCm, float RiseCm)
 	{
 		const int32 Steps = FMath::Max(2, FMath::CeilToInt(LengthPx * 1.5));
 		for (int32 K = 0; K <= Steps; ++K)
@@ -201,12 +219,15 @@ namespace GroundTexturesDetail
 			const double R = FMath::Max(0.5 * WidthPx * (1.0 - 0.8 * S), 0.45);
 			const FRgb Color = Lerp(Root, Tip, static_cast<float>(S));
 			const float H = Lift + Rise * static_cast<float>(S);
+			const float ReliefCm = LiftCm + RiseCm * static_cast<float>(S);
 			Canvas.ForEachAround(CX, CY, R + 0.5, [&](double DX, double DY, int32 Pixel)
 			{
 				if (DX * DX + DY * DY <= R * R)
 				{
 					Canvas.Color[Pixel] = Color;
 					Canvas.Height[Pixel] = FMath::Max(Canvas.Height[Pixel], H);
+					Canvas.Relief[Pixel] = FMath::Max(Canvas.Relief[Pixel], Canvas.GroundRelief[Pixel] + ReliefCm * Canvas.PerCm);
+					Canvas.Covered[Pixel] = true;
 				}
 			});
 		}
@@ -227,6 +248,41 @@ namespace GroundTexturesDetail
 		uint32 Seed;
 		uint32 Counter = 0;
 	};
+
+	/** Box blur of a wrapping square buffer (separable, Passes x radius): softens the relief steps. */
+	void BlurWrapped(TArray<float>& Values, int32 Size, int32 Radius, int32 Passes)
+	{
+		TArray<float> Temp;
+		Temp.SetNumUninitialized(Values.Num());
+		const float Norm = 1.0f / (2 * Radius + 1);
+		for (int32 Pass = 0; Pass < Passes; ++Pass)
+		{
+			for (int32 Y = 0; Y < Size; ++Y)
+			{
+				for (int32 X = 0; X < Size; ++X)
+				{
+					float Sum = 0.0f;
+					for (int32 K = -Radius; K <= Radius; ++K)
+					{
+						Sum += Values[Y * Size + (X + K + Size) % Size];
+					}
+					Temp[Y * Size + X] = Sum * Norm;
+				}
+			}
+			for (int32 Y = 0; Y < Size; ++Y)
+			{
+				for (int32 X = 0; X < Size; ++X)
+				{
+					float Sum = 0.0f;
+					for (int32 K = -Radius; K <= Radius; ++K)
+					{
+						Sum += Temp[((Y + K + Size) % Size) * Size + X];
+					}
+					Values[Y * Size + X] = Sum * Norm;
+				}
+			}
+		}
+	}
 
 	int32 Count(float PerM2, float TileM)
 	{
@@ -307,6 +363,7 @@ namespace GroundTextures
 		const uint32 Seed = ShroomHash::Hash(ShroomHash::HashString(Style.Layer.ToString()), 0x6A0Du);
 		FGroundRng Rng(Seed);
 		FGroundCanvas Canvas(Size);
+		Canvas.PerCm = 1.0f / FMath::Max(Definition.ReliefRangeCm, 0.5f);
 
 		// Ground: base color mottled by large noise, fine grain, gentle relief.
 		const FRgb Base = ToRgb(Style.Base, { 0.3f, 0.2f, 0.1f });
@@ -324,8 +381,11 @@ namespace GroundTextures
 				const int32 Pixel = Y * Size + X;
 				Canvas.Color[Pixel] = Lerp(Base, Mottle, MottleAlpha) * (1.0f + Style.Grain * Fine);
 				Canvas.Height[Pixel] = 0.25f + 0.12f * Large + 0.04f * Fine;
+				// Gentle mounds and hollows (leaf piles), a few millimeters of grain.
+				Canvas.Relief[Pixel] = ReliefGround + (Style.ReliefCm * (2.0f * Large - 1.0f) + 0.15f * Fine) * Canvas.PerCm;
 			}
 		}
+		Canvas.GroundRelief = Canvas.Relief;
 
 		// Moss cushions: many small bumps, tips lighter.
 		const FRgb MossTip = ToRgb(Style.MossTip, Base * 1.3f);
@@ -333,7 +393,8 @@ namespace GroundTextures
 		{
 			const double R = PxPerM * Rng.FRandRange(0.006f, 0.016f);
 			const FRgb Color = Lerp(Base, MossTip, Rng.FRandRange(0.3f, 1.0f));
-			DrawDome(Canvas, Rng.FRand() * Size, Rng.FRand() * Size, R, R * Rng.FRandRange(0.8f, 1.2f), 0.0, Color, 0.3f, 0.25f, 0.25f, Rng.Next());
+			DrawDome(Canvas, Rng.FRand() * Size, Rng.FRand() * Size, R, R * Rng.FRandRange(0.8f, 1.2f), 0.0, Color, 0.3f, 0.25f, 0.25f, Rng.Next(),
+				static_cast<float>(R / PxPerM * 100.0 * 0.8));
 		}
 
 		// Grass blades seen from above: tapered strokes, dark at the root.
@@ -344,7 +405,7 @@ namespace GroundTextures
 			const FRgb Tip = Blade * Rng.FRandRange(0.8f, 1.25f);
 			const FRgb Root = Lerp(Base, Tip, 0.35f);
 			DrawStroke(Canvas, Rng.FRand() * Size, Rng.FRand() * Size, Rng.FRandRange(0.0f, UE_TWO_PI), Rng.FRandRange(-0.6f, 0.6f),
-				Length, FMath::Max(1.6, PxPerM * 0.004), Root, Tip, 0.35f, 0.4f);
+				Length, FMath::Max(1.6, PxPerM * 0.004), Root, Tip, 0.35f, 0.4f, 0.1f, 0.6f);
 		}
 
 		// Pebbles: rounded domes with a dark rim.
@@ -354,7 +415,7 @@ namespace GroundTextures
 			const double R = PxPerM * Style.PebbleSizeCm / 200.0 * Rng.FRandRange(0.5f, 1.4f);
 			const FRgb Color = Lerp(Pebble, Base, Rng.FRandRange(0.0f, 0.35f)) * Rng.FRandRange(0.8f, 1.2f);
 			DrawDome(Canvas, Rng.FRand() * Size, Rng.FRand() * Size, R, R * Rng.FRandRange(0.6f, 0.95f), Rng.FRandRange(0.0f, UE_TWO_PI),
-				Color, 0.3f, 0.6f, 0.18f, Rng.Next());
+				Color, 0.3f, 0.6f, 0.18f, Rng.Next(), static_cast<float>(R / PxPerM * 100.0 * 0.7));
 		}
 
 		// Twigs: thin, slightly bent brown strokes.
@@ -362,7 +423,7 @@ namespace GroundTextures
 		{
 			const FRgb Wood = FRgb{ 0.30f, 0.23f, 0.16f } * Rng.FRandRange(0.8f, 1.2f);
 			DrawStroke(Canvas, Rng.FRand() * Size, Rng.FRand() * Size, Rng.FRandRange(0.0f, UE_TWO_PI), Rng.FRandRange(-0.3f, 0.3f),
-				PxPerM * Rng.FRandRange(0.08f, 0.3f), FMath::Max(1.5, PxPerM * Rng.FRandRange(0.004f, 0.009f)), Wood, Wood * 1.1f, 0.6f, 0.0f);
+				PxPerM * Rng.FRandRange(0.08f, 0.3f), FMath::Max(1.5, PxPerM * Rng.FRandRange(0.004f, 0.009f)), Wood, Wood * 1.1f, 0.6f, 0.0f, 0.5f, 0.0f);
 		}
 
 		// Fallen leaves of the stand's genera, the latest on top.
@@ -403,7 +464,7 @@ namespace GroundTextures
 			// Older leaves lie lower in the pile: darker, flatter.
 			const float Depth = static_cast<float>(I) / FMath::Max(LeafCount, 1);
 			DrawLeaf(Canvas, Shape, Rng.FRand() * Size, Rng.FRand() * Size, Rng.FRandRange(0.0f, UE_TWO_PI),
-				Rng.FRandRange(0.8f, 1.15f) * FMath::Lerp(0.78f, 1.0f, Depth), Rng.FRandRange(0.03f, 0.12f), 0.4f + 0.25f * Depth);
+				Rng.FRandRange(0.8f, 1.15f) * FMath::Lerp(0.78f, 1.0f, Depth), Rng.FRandRange(0.03f, 0.12f), 0.4f + 0.25f * Depth, Rng.FRandRange(0.1f, 0.4f));
 		}
 
 		// Puddles: a flat, dark water film over the low spots.
@@ -423,12 +484,20 @@ namespace GroundTextures
 					const int32 Pixel = Y * Size + X;
 					Canvas.Color[Pixel] = Lerp(Canvas.Color[Pixel], Canvas.Color[Pixel] * 0.5f + FRgb{ 0.02f, 0.025f, 0.03f }, Water * 0.85f);
 					Canvas.Height[Pixel] = FMath::Lerp(Canvas.Height[Pixel], 0.2f, Water);
+					// Flat water about a centimeter below the ground.
+					Canvas.Relief[Pixel] = FMath::Lerp(Canvas.Relief[Pixel], ReliefGround - 1.0f * Canvas.PerCm, Water);
 				}
 			}
 		}
 
+		// The displacement turns sharp steps into walls with stretched texture: soften the physical relief
+		// over about a centimeter (the normal map keeps the crisp edges).
+		const int32 BlurRadius = FMath::Max(1, FMath::RoundToInt(0.004 * PxPerM));
+		BlurWrapped(Canvas.Relief, Size, BlurRadius, 2);
+
 		FGroundTextureImage Image;
 		Image.Size = Size;
+		Image.CoveredShare = static_cast<float>(Canvas.Covered.CountSetBits()) / Canvas.Covered.Num();
 		Image.Albedo.SetNum(Size * Size);
 		Image.Normal.SetNum(Size * Size);
 		const float Strength = 6.0f * Style.NormalStrength * Size / 1024.0f;
@@ -438,7 +507,7 @@ namespace GroundTextures
 			{
 				const int32 Pixel = Y * Size + X;
 				const FRgb& C = Canvas.Color[Pixel];
-				const float H = FMath::Clamp(Canvas.Height[Pixel], 0.0f, 1.0f);
+				const float H = FMath::Clamp(Canvas.Relief[Pixel], 0.0f, 1.0f);
 				Image.Albedo[Pixel] = FColor(
 					static_cast<uint8>(FMath::Clamp(FMath::RoundToInt(C.R * 255.0f), 0, 255)),
 					static_cast<uint8>(FMath::Clamp(FMath::RoundToInt(C.G * 255.0f), 0, 255)),

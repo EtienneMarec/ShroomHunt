@@ -70,17 +70,29 @@ bool FGroundTextureTest::RunTest(const FString& Parameters)
 		TestTrue(Key + TEXT(" normals face up"), bNormalsUp);
 	}
 
-	// The leaf litter is a closed carpet of leaves: few pixels of bare soil (height of the base layer).
+	// The leaf litter is a closed carpet of leaves, and its relief stays physical (D-042, D-043): a few
+	// centimeters around ground level, no plateaus that the displacement would turn into slabs.
 	if (const FGroundLayerStyle* Litter = Ground.Layers.FindByPredicate([](const FGroundLayerStyle& S) { return S.Layer == TEXT("Litter"); }))
 	{
 		const FGroundTextureImage Image = GroundTextures::Generate(Ground, *Litter, Vegetation);
-		int32 Soil = 0;
-		for (const FColor& C : Image.Albedo)
+		TestTrue(FString::Printf(TEXT("Litter covers the soil (%.0f %% covered)"), Image.CoveredShare * 100.0f), Image.CoveredShare > 0.85f);
+		int32 MinAlpha = 255;
+		int32 MaxAlpha = 0;
+		int32 MaxStep = 0;
+		const int32 Size = Image.Size;
+		for (int32 Y = 0; Y < Size; ++Y)
 		{
-			Soil += C.A < 100 ? 1 : 0; // leaves lie at >= 0.4 x 255
+			for (int32 X = 0; X < Size; ++X)
+			{
+				const int32 A = Image.Albedo[Y * Size + X].A;
+				MinAlpha = FMath::Min(MinAlpha, A);
+				MaxAlpha = FMath::Max(MaxAlpha, A);
+				MaxStep = FMath::Max(MaxStep, FMath::Abs(A - Image.Albedo[Y * Size + (X + 1) % Size].A));
+			}
 		}
-		const float Share = static_cast<float>(Soil) / Image.Albedo.Num();
-		TestTrue(FString::Printf(TEXT("Litter covers the soil (%.0f %% bare)"), Share * 100.0f), Share < 0.15f);
+		const float RangeCm = (MaxAlpha - MinAlpha) / 255.0f * Ground.ReliefRangeCm;
+		const float StepCm = MaxStep / 255.0f * Ground.ReliefRangeCm;
+		TestTrue(FString::Printf(TEXT("Litter relief within a few cm (%.1f cm), steps under 1 cm (%.2f cm)"), RangeCm, StepCm), RangeCm < 6.0f && StepCm < 1.0f);
 	}
 	return true;
 }
