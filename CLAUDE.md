@@ -68,6 +68,7 @@ ShroomHunt/
 │  ├─ Knowledge/           knowledge sources (posters, pages, books)
 │  ├─ Economy/             shop items and buyer rules (Shop.json)
 │  ├─ Environment/         generated ground textures (GroundTextures.json)
+│  ├─ Demo/                demo reel shots (DemoReel.json)
 │  └─ Vegetation/          tree archetypes, densities, understory rules
 ├─ Docs/                   design docs, decision log, milestone notes
 ├─ Source/ShroomHunt/      C++ runtime module (see §5)
@@ -83,7 +84,7 @@ ShroomHunt/
   `FMushroomSpeciesRow`). Check for engine name collisions before adding a class.
 - Source folders by domain inside `Source/ShroomHunt/`:
   `Core/ Time/ Weather/ Environment/ Forest/ Vegetation/ Mycology/ Mushroom/
-  Player/ Knowledge/ Economy/ Save/ UI/ Debug/`, tests in `<Domain>/Tests/`. Template code stays where it is until cleaned up.
+  Player/ Knowledge/ Economy/ Save/ UI/ Demo/ Debug/`, tests in `<Domain>/Tests/`. Template code stays where it is until cleaned up.
   New folders must be added to `PublicIncludePaths` in `ShroomHunt.Build.cs`
   only if needed; prefer includes relative to the module root
   (`#include "Weather/WeatherSubsystem.h"`).
@@ -216,6 +217,8 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
 - **Ground** (D-042): `Environment/GroundTextures` draws the landscape layer
   textures; `MF_GroundLayers` (from `Tools/Python/create_ground_material.py`)
   height-blends them inside `M_Landscape_Forest`.
+- **Demo** (D-045): `Data/Demo/DemoReel.json` → `DemoReel` (places found in the
+  field, camera motion, pure) → `UDemoSubsystem` (plays it in game). `sh.Demo.*`.
 - **Debug**: `sh.*` console commands (`Debug/ShroomConsoleCommands.cpp`) and
   the on-screen HUD (`UShroomDebugSubsystem`, `sh.Debug.HUD`).
 - **Weather** (`FWeatherModel` pure + `UWeatherSubsystem`): deterministic,

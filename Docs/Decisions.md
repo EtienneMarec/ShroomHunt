@@ -404,6 +404,17 @@ Tree leaves and bracken fronds became single-sided blades: 2.4 M triangles for
 Moss and bramble leaves moved to the evergreen *Frond* surface (they vanished in
 winter with the leaf fall).
 
+**D-045 — A demo reel placed from the forest data** · Accepted · 2026-11-26
+The demo video is shot in game by code, not in Sequencer: `Data/Demo/DemoReel.json`
+lists shots (walk, static dolly, rise; date, weather, snow, duration) and
+`DemoReel::FindPlace` finds each place in the deterministic forest field
+(longest rides, widest clearings, ponds, old stands of a genus, landmarks), so
+the reel follows the forest when it changes and needs no hand-placed cameras;
+`UDemoSubsystem` plays it with fades, hidden player and UI, and the
+`sh.Season.PreviewSnowCm` override. Recording is done with a screen recorder in a
+standalone game (no editor overhead). Wind in the crowns is postponed (WPO on
+Nanite foliage would undo D-044's shadow savings).
+
 ## Open questions (to the developer)
 
 - The 54 empty F01 partition files (2026-11-23): were they saved during a
