@@ -6,6 +6,8 @@
 #include "DemoSubsystem.generated.h"
 
 class ACameraActor;
+class AMushroomSpawner;
+struct FSpawnContext;
 class FForestField;
 class UUserWidget;
 
@@ -37,6 +39,8 @@ public:
 
 private:
 	bool LoadReel(FString& OutReport);
+	/** Spawn model inputs as the Mushroom Spawner sees them (weather of this world, trunks). */
+	FSpawnContext MakeSpawnContext(const AMushroomSpawner* Spawner);
 	void StartShot(int32 Index);
 	void EnterCinematic();
 	void LeaveCinematic();
@@ -45,6 +49,7 @@ private:
 	TArray<FDemoPlacement> Placements;
 	TSharedPtr<const FForestField> Field;
 	FTransform FieldToWorld;
+	TMap<uint64, float> TriggerCache;
 
 	bool bPlaying = false;
 	bool bScreenshots = false;

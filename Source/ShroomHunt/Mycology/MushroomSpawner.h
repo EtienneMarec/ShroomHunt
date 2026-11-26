@@ -41,6 +41,8 @@ public:
 	const FMushroomSpeciesRow* FindSpecies(FName SpeciesId) const { return Species.Find(SpeciesId); }
 	TArray<FName> GetSpeciesIds() const;
 	const FForestField* GetField() const { return Field.Get(); }
+	/** Solid vegetation (trunks, logs, stumps) of the whole forest. */
+	TSharedPtr<const FVegetationObstacleGrid> GetObstacles() const { return Obstacles; }
 
 	/** Today's mean trigger F_s over the species' lag range (debug). */
 	float GetTodayTrigger(FName SpeciesId);

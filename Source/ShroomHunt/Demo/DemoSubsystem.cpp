@@ -15,6 +15,8 @@
 #include "GameFramework/PlayerController.h"
 #include "HAL/IConsoleManager.h"
 #include "Kismet/GameplayStatics.h"
+#include "Mycology/MushroomSpawner.h"
+#include "Vegetation/VegetationObstacles.h"
 #include "Time/CalendarMath.h"
 #include "Time/CalendarSubsystem.h"
 #include "UnrealClient.h"
@@ -53,6 +55,26 @@ void UDemoSubsystem::Deinitialize()
 	Super::Deinitialize();
 }
 
+FSpawnContext UDemoSubsystem::MakeSpawnContext(const AMushroomSpawner* Spawner)
+{
+	FSpawnContext Context;
+	Context.Field = Spawner ? Spawner->GetField() : Field.Get();
+	Context.TriggerCache = &TriggerCache;
+	TriggerCache.Reset();
+	if (const UCalendarSubsystem* Calendar = GetWorld()->GetGameInstance() ? GetWorld()->GetGameInstance()->GetSubsystem<UCalendarSubsystem>() : nullptr)
+	{
+		Context.Calendar = Calendar->GetCalendarConfig();
+	}
+	if (const TSharedPtr<const FVegetationObstacleGrid> Obstacles = Spawner ? Spawner->GetObstacles() : nullptr)
+	{
+		Context.IsBlocked = [Obstacles](const FVector2f& P) { return Obstacles->Overlaps(P, 0.1f); };
+	}
+	TWeakObjectPtr<UWeatherSubsystem> Weather = GetWorld()->GetSubsystem<UWeatherSubsystem>();
+	Context.Weather.RainMm = [Weather](double From, double To) { return Weather.IsValid() ? Weather->GetRainfallMm(From, To) : 0.0f; };
+	Context.Weather.MeanTemperatureC = [Weather](double From, double To) { return Weather.IsValid() ? Weather->GetMeanTemperatureC(From, To) : 15.0f; };
+	return Context;
+}
+
 bool UDemoSubsystem::LoadReel(FString& OutReport)
 {
 	TArray<FString> Errors;
@@ -69,9 +91,22 @@ bool UDemoSubsystem::LoadReel(FString& OutReport)
 	}
 	FieldToWorld = ForestWorld::GetFieldToWorld(GetWorld(), FVector::ZeroVector);
 	Placements.Reset();
+	AMushroomSpawner* Spawner = AMushroomSpawner::Find(GetWorld());
 	for (const FDemoShot& Shot : Reel.Shots)
 	{
-		Placements.Add(DemoReel::FindPlace(*Field, Shot));
+		if (Shot.Place != EDemoPlace::Mushrooms)
+		{
+			Placements.Add(DemoReel::FindPlace(*Field, Shot));
+			continue;
+		}
+		// Mushroom shots: the same model, patches, trunks and weather the spawner draws from.
+		const FMushroomSpeciesRow* Species = Spawner ? Spawner->FindSpecies(Shot.Species) : nullptr;
+		const FDemoMushroomScene Scene = Species ? DemoReel::FindMushrooms(Shot, Reel.Year, *Species, Spawner->GetPatches(), MakeSpawnContext(Spawner)) : FDemoMushroomScene();
+		const TSharedPtr<const FVegetationObstacleGrid> Obstacles = Spawner ? Spawner->GetObstacles() : nullptr;
+		Placements.Add(DemoReel::PlaceMushroomShot(*Field, Shot, Scene, [&Obstacles](const FVector2f& P, float Radius)
+		{
+			return Obstacles.IsValid() && Obstacles->Overlaps(P, Radius);
+		}));
 	}
 	return true;
 }
@@ -222,6 +257,13 @@ void UDemoSubsystem::StartShot(int32 Index)
 	bFadingOut = false;
 	const FDemoShot& Shot = Reel.Shots[Index];
 
+	// End the previous shot's forced weather before moving in time, so it leaves only the few
+	// minutes actually played in the rain history (the mushrooms of later shots depend on it).
+	UWeatherSubsystem* Weather = GetWorld()->GetSubsystem<UWeatherSubsystem>();
+	if (Weather)
+	{
+		Weather->ClearForcedWeather();
+	}
 	// Date and time speed.
 	if (const UGameInstance* GameInstance = GetWorld()->GetGameInstance())
 	{
@@ -231,13 +273,14 @@ void UDemoSubsystem::StartShot(int32 Index)
 			const int64 SeasonValue = StaticEnum<ESeason>()->GetValueByNameString(Shot.Season);
 			const ESeason Season = SeasonValue == INDEX_NONE ? ESeason::Summer : static_cast<ESeason>(SeasonValue);
 			const int32 Day = FMath::Clamp(Shot.Day, 1, FMath::Max(Config.SeasonLengthDays[static_cast<int32>(Season)], 1));
-			Calendar->SetTotalGameSeconds(CalendarMath::EncodeDate(Config, Reel.Year, Season, Day, Shot.Hour));
+			const double Date = Placements[Index].GameSeconds >= 0.0 ? Placements[Index].GameSeconds : CalendarMath::EncodeDate(Config, Reel.Year, Season, Day, Shot.Hour);
+			Calendar->SetTotalGameSeconds(Date);
 			Calendar->SetTimePaused(Shot.TimeScale <= 0.0f);
 			Calendar->SetDebugTimeMultiplier(FMath::Max(Shot.TimeScale, 0.01f));
 		}
 	}
 	// Weather and snow.
-	if (UWeatherSubsystem* Weather = GetWorld()->GetSubsystem<UWeatherSubsystem>())
+	if (Weather)
 	{
 		const int64 State = Shot.Weather.IsEmpty() ? INDEX_NONE : StaticEnum<EWeatherState>()->GetValueByNameString(Shot.Weather);
 		if (State == INDEX_NONE)
@@ -250,6 +293,20 @@ void UDemoSubsystem::StartShot(int32 Index)
 		}
 	}
 	SetConsoleValue(TEXT("sh.Season.PreviewSnowCm"), Shot.SnowCm);
+	if (AMushroomSpawner* Spawner = AMushroomSpawner::Find(GetWorld()))
+	{
+		Spawner->Refresh(); // new date and weather: the mushrooms of this day, at once
+		if (Shot.Place == EDemoPlace::Mushrooms && Placements[Index].bFound)
+		{
+			const FVector2f Target(Placements[Index].Target.X, Placements[Index].Target.Y);
+			int32 InView = 0;
+			for (const FFruitBody& Fruit : Spawner->GetFruitBodies())
+			{
+				InView += Fruit.SpeciesId == Shot.Species && FVector2f::Distance(Fruit.PositionM, Target) < 1.5f ? 1 : 0;
+			}
+			UE_LOG(LogShroomDebug, Display, TEXT("Demo: %d %s standing in view"), InView, *Shot.Species.ToString());
+		}
+	}
 
 	if (Camera)
 	{

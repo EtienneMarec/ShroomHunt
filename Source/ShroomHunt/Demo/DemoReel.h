@@ -4,6 +4,9 @@
 #include "DemoReel.generated.h"
 
 class FForestField;
+struct FMushroomSpeciesRow;
+struct FMyceliumPatch;
+struct FSpawnContext;
 
 /** How the camera moves during a shot. */
 UENUM(BlueprintType)
@@ -14,7 +17,9 @@ enum class EDemoShotKind : uint8
 	/** Stands, slowly dollying forward, looking at the place. */
 	Static,
 	/** Rises from eye height over the canopy, tilting down. */
-	Rise
+	Rise,
+	/** Circles slowly around the place at EyeM, looking at it (mushroom close-ups). */
+	Orbit
 };
 
 /** Where a shot happens; the place is found in the forest field (nothing to place by hand). */
@@ -35,7 +40,9 @@ enum class EDemoPlace : uint8
 	/** In front of a landmark of kind Landmark (Signpost, Bridge, HuntingTower...). */
 	Landmark,
 	/** In front of the forester's house. */
-	Base
+	Base,
+	/** Standing mushrooms of Species: a day of the shot's season when a patch fruits well (spawn model). */
+	Mushrooms
 };
 
 /** One shot of the demo reel (Data/Demo/DemoReel.json, D-045). */
@@ -51,6 +58,14 @@ struct FDemoShot
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Demo") FName Genus;
 	/** Landmark: its kind name (ForestLandmarks::KindName). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Demo") FString Landmark;
+	/** Mushrooms: the species to show (DT_Species row name). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Demo") FName Species;
+	/** Mushrooms: fewest standing mushrooms in the group (rare species: 1). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Demo") int32 MinFruits = 3;
+	/** Mushrooms: distance from the camera to the group (m). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Demo") float DistanceM = 1.3f;
+	/** Orbit: angle swept around the place over the shot (degrees). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Demo") float OrbitDeg = 50.0f;
 	/** Which candidate (0 = best): try another one when a place does not look good. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Demo") int32 Pick = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Demo") float Seconds = 8.0f;
@@ -94,6 +109,19 @@ struct SHROOMHUNT_API FDemoPlacement
 	/** Static and Rise: the camera position at the start and the point it looks at. */
 	FVector3d Camera = FVector3d::ZeroVector;
 	FVector3d Target = FVector3d::ZeroVector;
+	/** Mushrooms: the date found for the shot (game seconds); negative = the shot's own date. */
+	double GameSeconds = -1.0;
+	FString Description;
+};
+
+/** Mushrooms: where and when a species stands in numbers (result of DemoReel::FindMushrooms). */
+struct SHROOMHUNT_API FDemoMushroomScene
+{
+	bool bFound = false;
+	double GameSeconds = 0.0;
+	/** Center of the densest group of good-looking (not rotten) mushrooms, field meters. */
+	FVector2d CenterM = FVector2d::ZeroVector;
+	int32 Count = 0;
 	FString Description;
 };
 
@@ -111,7 +139,20 @@ namespace DemoReel
 	SHROOMHUNT_API bool Load(FDemoReel& Out, TArray<FString>& OutErrors);
 	SHROOMHUNT_API bool Parse(const FString& JsonText, FDemoReel& Out, TArray<FString>& OutErrors);
 
+	/** Place of a shot from the field alone; Mushrooms shots need FindMushrooms + PlaceMushroomShot. */
 	SHROOMHUNT_API FDemoPlacement FindPlace(const FForestField& Field, const FDemoShot& Shot);
+
+	/**
+	 * Mushrooms: scans the days of the shot's season (year Year, then up to five following years if the species
+	 * does not fruit) and returns the Pick-th best group of at least MinFruits mushrooms of the
+	 * species, by the same deterministic model the Mushroom Spawner draws.
+	 */
+	SHROOMHUNT_API FDemoMushroomScene FindMushrooms(const FDemoShot& Shot, int32 Year, const FMushroomSpeciesRow& Species,
+		const TArray<FMyceliumPatch>& Patches, const FSpawnContext& Context);
+
+	/** Mushrooms: a low camera DistanceM from the group, with a free view and a free orbit (no trunk, no water). */
+	SHROOMHUNT_API FDemoPlacement PlaceMushroomShot(const FForestField& Field, const FDemoShot& Shot, const FDemoMushroomScene& Scene,
+		TFunctionRef<bool(const FVector2f& PositionM, float RadiusM)> IsBlocked);
 
 	/** Camera pose at T in [0, 1] of the shot. */
 	SHROOMHUNT_API FDemoPose Evaluate(const FForestField& Field, const FDemoShot& Shot, const FDemoPlacement& Placement, float T);

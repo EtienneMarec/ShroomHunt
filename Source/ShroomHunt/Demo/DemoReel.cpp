@@ -6,6 +6,9 @@
 #include "JsonObjectConverter.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "Core/ShroomHash.h"
+#include "Mycology/SpawnModel.h"
+#include "Time/CalendarMath.h"
 #include "Time/TimeTypes.h"
 
 namespace DemoReelDetail
@@ -129,6 +132,12 @@ namespace DemoReelDetail
 		T = FMath::Clamp(T, 0.0, 1.0);
 		return T * T * (3.0 - 2.0 * T);
 	}
+
+	/** Height of a low camera at P looking at mushrooms at Center: EyeM above them, never in a bank. */
+	double MushroomCameraZ(const FForestField& Field, const FVector2d& P, const FVector2d& Center, double EyeM)
+	{
+		return FMath::Max(Ground(Field, Center.X, Center.Y) + EyeM, Ground(Field, P.X, P.Y) + 0.25);
+	}
 }
 
 namespace DemoReel
@@ -170,6 +179,10 @@ namespace DemoReel
 			if (Shot.Place == EDemoPlace::Landmark && Shot.Landmark.IsEmpty())
 			{
 				OutErrors.Add(Field + TEXT(": Landmark needs a Landmark kind"));
+			}
+			if (Shot.Place == EDemoPlace::Mushrooms && (Shot.Species.IsNone() || Shot.DistanceM <= 0.2f || Shot.MinFruits < 1))
+			{
+				OutErrors.Add(Field + TEXT(": Mushrooms needs a Species, DistanceM > 0.2 and MinFruits >= 1"));
 			}
 		}
 		return OutErrors.Num() == Before;
@@ -361,6 +374,9 @@ namespace DemoReel
 				}
 			}
 			break;
+		case EDemoPlace::Mushrooms:
+			// Needs the spawn model: FindMushrooms, then PlaceMushroomShot.
+			break;
 		}
 		if (Out.bFound)
 		{
@@ -414,7 +430,180 @@ namespace DemoReel
 			Pose.LookAt = OnGround(Field, LookP, FMath::Lerp(static_cast<double>(Shot.EyeM) + 2.0, -5.0, Up));
 			break;
 		}
+		case EDemoShotKind::Orbit:
+		{
+			const FVector2d Center(Placement.Target.X, Placement.Target.Y);
+			const FVector2d Offset = FVector2d(Placement.Camera.X, Placement.Camera.Y) - Center;
+			// Constant speed with soft ends.
+			const double Angle = FMath::Atan2(Offset.Y, Offset.X) + FMath::DegreesToRadians(static_cast<double>(Shot.OrbitDeg)) * (0.5 * Time + 0.5 * Ease(Time));
+			const FVector2d P = Center + Dir(Angle) * Offset.Size();
+			Pose.Position = FVector3d(P.X, P.Y, MushroomCameraZ(Field, P, Center, Shot.EyeM));
+			Pose.LookAt = Placement.Target;
+			break;
+		}
 		}
 		return Pose;
+	}
+
+	FDemoMushroomScene FindMushrooms(const FDemoShot& Shot, int32 Year, const FMushroomSpeciesRow& Species,
+		const TArray<FMyceliumPatch>& Patches, const FSpawnContext& Context)
+	{
+		using namespace DemoReelDetail;
+		FDemoMushroomScene Out;
+		const int64 SeasonValue = StaticEnum<ESeason>()->GetValueByNameString(Shot.Season);
+		const ESeason Season = SeasonValue == INDEX_NONE ? ESeason::Summer : static_cast<ESeason>(SeasonValue);
+		const int32 SeasonDays = FMath::Max(1, Context.Calendar.SeasonLengthDays[static_cast<int32>(Season)]);
+
+		struct FGroup
+		{
+			double Seconds = 0.0;
+			int32 Year = 0;
+			int32 Day = 0;
+			uint32 PatchId = 0;
+			FVector2d Center = FVector2d::ZeroVector;
+			int32 Count = 0;
+			double Score = 0.0;
+		};
+		TArray<FGroup> Groups;
+		TArray<FFruitBody> Fruits;
+		TArray<double> Weights;
+		TSet<uint32> PatchesFound;
+		for (int32 Y = Year; Y < Year + 6 && PatchesFound.Num() <= Shot.Pick; ++Y)
+		{
+			for (int32 Day = 1; Day <= SeasonDays; ++Day)
+			{
+				const double Seconds = CalendarMath::EncodeDate(Context.Calendar, Y, Season, Day, Shot.Hour);
+				for (const FMyceliumPatch& Patch : Patches)
+				{
+					if (Patch.SpeciesId != Shot.Species)
+					{
+						continue;
+					}
+					Fruits.Reset();
+					SpawnModel::FruitBodiesAt(Species, Patch, Context, Seconds, Fruits);
+					// Young to mature mushrooms look best; buttons a little, rotting ones not at all.
+					Weights.Reset();
+					for (const FFruitBody& Fruit : Fruits)
+					{
+						const float Age = Fruit.AgeFraction(Seconds);
+						Weights.Add(Age < 0.08f ? 0.3 : (Age < 0.75f ? 1.0 : (Age < 0.88f ? 0.3 : 0.0)));
+					}
+					// Densest group: the mushroom with the most good neighbours within a close-up frame.
+					FGroup Best;
+					for (int32 I = 0; I < Fruits.Num(); ++I)
+					{
+						if (Weights[I] <= 0.0)
+						{
+							continue;
+						}
+						double Local = 0.0;
+						FVector2d Sum = FVector2d::ZeroVector;
+						int32 Count = 0;
+						for (int32 J = 0; J < Fruits.Num(); ++J)
+						{
+							if (Weights[J] > 0.0 && FVector2f::Distance(Fruits[I].PositionM, Fruits[J].PositionM) < 1.2f)
+							{
+								Local += Weights[J];
+								Sum += FVector2d(Fruits[J].PositionM) * Weights[J];
+								++Count;
+							}
+						}
+						const double Score = Local - 0.05 * FMath::Abs(Day - Shot.Day) - 0.3 * (Y - Year);
+						if (Count >= Shot.MinFruits && (Best.Count == 0 || Score > Best.Score))
+						{
+							Best = { Seconds, Y, Day, Patch.Id, Sum / Local, Count, Score };
+						}
+					}
+					if (Best.Count > 0)
+					{
+						Groups.Add(Best);
+						PatchesFound.Add(Patch.Id);
+					}
+				}
+			}
+		}
+		// The best day of each patch, then the Pick-th best patch (the last one when there are fewer).
+		Groups.Sort([](const FGroup& A, const FGroup& B) { return A.Score > B.Score; });
+		TArray<uint32> Seen;
+		const FGroup* Chosen = nullptr;
+		for (const FGroup& Group : Groups)
+		{
+			if (Seen.Contains(Group.PatchId))
+			{
+				continue;
+			}
+			Seen.Add(Group.PatchId);
+			Chosen = &Group;
+			if (Seen.Num() > Shot.Pick)
+			{
+				break;
+			}
+		}
+		if (Chosen)
+		{
+			Out.bFound = true;
+			Out.GameSeconds = Chosen->Seconds;
+			Out.CenterM = Chosen->Center;
+			Out.Count = Chosen->Count;
+			Out.Description = FString::Printf(TEXT("%d %s, year %d %s day %d, at (%.0f, %.0f) m"), Chosen->Count, *Shot.Species.ToString(),
+				Chosen->Year, *Shot.Season, Chosen->Day, Chosen->Center.X, Chosen->Center.Y);
+		}
+		return Out;
+	}
+
+	FDemoPlacement PlaceMushroomShot(const FForestField& Field, const FDemoShot& Shot, const FDemoMushroomScene& Scene,
+		TFunctionRef<bool(const FVector2f& PositionM, float RadiusM)> IsBlocked)
+	{
+		using namespace DemoReelDetail;
+		FDemoPlacement Out;
+		if (!Scene.bFound)
+		{
+			return Out;
+		}
+		const FVector2d Center = Scene.CenterM;
+		const double Arc = Shot.Kind == EDemoShotKind::Orbit ? FMath::DegreesToRadians(static_cast<double>(Shot.OrbitDeg)) : 0.0;
+		const double Dolly = Shot.Kind == EDemoShotKind::Static ? FMath::Min(static_cast<double>(Shot.DollyM), 0.6 * Shot.DistanceM) : 0.0;
+		// Camera positions along the shot must be free, and so must the view to the mushrooms.
+		auto Clear = [&](const FVector2d& P)
+		{
+			if (!Inside(Field, P, 2.0) || Field.Sample(static_cast<float>(P.X), static_cast<float>(P.Y)).bWater || IsBlocked(FVector2f(P), 0.35f))
+			{
+				return false;
+			}
+			for (const double U : { 0.25, 0.5, 0.7 })
+			{
+				if (IsBlocked(FVector2f(FMath::Lerp(P, Center, U)), 0.1f))
+				{
+					return false;
+				}
+			}
+			return true;
+		};
+		const double Phase = ShroomHash::ToUnitFloat(ShroomHash::Hash(0xDE30u, static_cast<uint32>(Center.X * 10.0), static_cast<uint32>(Center.Y * 10.0))) * UE_DOUBLE_TWO_PI;
+		for (const double Distance : { static_cast<double>(Shot.DistanceM), 0.8 * Shot.DistanceM, 0.6 * Shot.DistanceM })
+		{
+			for (int32 K = 0; K < 24; ++K)
+			{
+				const double Start = Phase + UE_DOUBLE_TWO_PI * K / 24;
+				bool bFree = true;
+				for (int32 Step = 0; Step <= 6 && bFree; ++Step)
+				{
+					const double S = Step / 6.0;
+					bFree = Clear(Center + Dir(Start + Arc * S) * (Distance - Dolly * S));
+				}
+				if (!bFree)
+				{
+					continue;
+				}
+				const FVector2d P = Center + Dir(Start) * Distance;
+				Out.bFound = true;
+				Out.Camera = FVector3d(P.X, P.Y, MushroomCameraZ(Field, P, Center, Shot.EyeM));
+				Out.Target = OnGround(Field, Center, 0.06);
+				Out.GameSeconds = Scene.GameSeconds;
+				Out.Description = TEXT("Mushrooms: ") + Scene.Description;
+				return Out;
+			}
+		}
+		return Out;
 	}
 }
