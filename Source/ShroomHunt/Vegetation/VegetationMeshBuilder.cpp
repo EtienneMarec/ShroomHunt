@@ -233,7 +233,7 @@ namespace VegetationMeshDetail
 	 * The outline follows the genus (widest point and tip from LeafTip, a sinus for lobed oak
 	 * leaves, wavy spines for holly), the tip bends down.
 	 */
-	void AddLeafBlade(FMeshAccumulator& Acc, const FTreeArchetype& Arch, const FTreeLeaf& Leaf, const FLinearColor& Front, const FLinearColor& Back)
+	void AddLeafBlade(FMeshAccumulator& Acc, const FTreeArchetype& Arch, const FTreeLeaf& Leaf, const FLinearColor& Front)
 	{
 		// Evergreen leaves (holly) use the Frond surface: the seasonal material neither colors nor drops them.
 		const EVegetationSurface Surface = Arch.bEvergreen ? EVegetationSurface::Frond : EVegetationSurface::Foliage;
@@ -289,10 +289,11 @@ namespace VegetationMeshDetail
 		};
 		auto Uv = [&](double T, double Y) { return FVector2f(static_cast<float>(T), static_cast<float>(0.5 + Y / FMath::Max(Leaf.Width, 1e-3))); };
 
-		for (int32 Face = 0; Face < 2; ++Face)
+		// One face: the foliage slot uses a two-sided material (D-044), half the triangles of a double blade.
+		for (int32 Face = 0; Face < 1; ++Face)
 		{
-			const bool bBack = Face == 1;
-			const FLinearColor& Color = bBack ? Back : Front;
+			const bool bBack = false;
+			const FLinearColor& Color = Front;
 			const int32 Base = AddVertexM(Acc, At(0.0, 0.0, 0.0), Color);
 			const int32 TipId = AddVertexM(Acc, At(1.0, 0.0, 0.0), Color);
 			int32 L[MaxRows], M[MaxRows], R[MaxRows];
@@ -434,11 +435,8 @@ namespace VegetationMeshDetail
 		{
 			const FTreeLeaf& Leaf = Skeleton.Leaves[Index];
 			FLinearColor Front = Tint(static_cast<uint32>(Index), Leaf.Light);
-			// The underside is paler and duller.
-			FLinearColor Back = LerpSRGB(ScaleSRGB(Front, 0.85f), Srgb(0.42, 0.46, 0.30), 0.25f);
 			Front.A = Leaf.Random;
-			Back.A = Leaf.Random;
-			AddLeafBlade(Acc, Arch, Leaf, Front, Back);
+			AddLeafBlade(Acc, Arch, Leaf, Front);
 		}
 
 		const bool bCollides = Form.Kind == EVegetationKind::Pole || Form.Kind == EVegetationKind::Mature || Form.Kind == EVegetationKind::Old || Form.Kind == EVegetationKind::Young;
@@ -505,9 +503,10 @@ namespace VegetationMeshDetail
 				Rows[2].Add(Spine - Side * W - Up * 0.12 * W);
 				RowColors.Add(S < 0.25 ? Stem : ScaleSRGB(Green, static_cast<float>(0.82 + 0.25 * S)));
 			}
-			for (int32 Face = 0; Face < 2; ++Face)
+			// One face: fronds use the two-sided foliage material (D-044).
+			for (int32 Face = 0; Face < 1; ++Face)
 			{
-				const bool bBack = Face == 1;
+				const bool bBack = false;
 				int32 Ids[3][Steps + 1];
 				for (int32 Row = 0; Row < 3; ++Row)
 				{
@@ -567,7 +566,7 @@ namespace VegetationMeshDetail
 					const FLinearColor C = LerpSRGB(Leaf, Red, Mottle > 0.8f ? 0.5f : 0.0f);
 					return ScaleSRGB(C, FMath::Lerp(0.6f, 1.0f, static_cast<float>(0.5 + 0.5 * D.Z)));
 				},
-				EVegetationSurface::Foliage);
+				EVegetationSurface::Frond);
 		}
 
 		// Arching canes rooting at their tips.
@@ -855,7 +854,7 @@ namespace VegetationMeshDetail
 					const float Mottle = DirectionNoise(BlobSeed ^ 0x7u, D, 6.0) * 0.5f + 0.5f;
 					return ScaleSRGB(LerpSRGB(Dark, Light, Mottle), FMath::Lerp(0.55f, 1.0f, static_cast<float>(0.5 + 0.5 * D.Z)));
 				},
-				EVegetationSurface::Foliage);
+				EVegetationSurface::Frond);
 		}
 	}
 }
@@ -895,6 +894,13 @@ namespace VegetationMeshBuilder
 		FRandomStream Rng(static_cast<int32>(Seed));
 		Rng.FRandRange(0.25f, 0.6f); // height
 		return Rng.FRandRange(0.2f, 0.38f) * 1.4f;
+	}
+
+	TConstArrayView<uint8> GetSlotPerSurface()
+	{
+		// Bark, Wood, Foliage, Frond, Cane, Litter, Fruit, (unused).
+		static const uint8 Slots[8] = { 0, 0, 1, 1, 0, 0, 0, 0 };
+		return MakeArrayView(Slots);
 	}
 
 	bool Build(const FVegetationDefinition& Definition, const FVegetationMeshSpec& Spec, FDynamicMesh3& OutMesh, FVegetationCollision* OutCollision)
@@ -953,7 +959,7 @@ namespace VegetationMeshBuilder
 			default: return false;
 			}
 		}
-		Acc.Emit(OutMesh);
+		Acc.Emit(OutMesh, GetSlotPerSurface());
 		return OutMesh.TriangleCount() > 0;
 	}
 }

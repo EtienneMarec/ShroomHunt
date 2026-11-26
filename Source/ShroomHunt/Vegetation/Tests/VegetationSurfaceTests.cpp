@@ -56,7 +56,25 @@ bool FVegetationSurfaceTest::RunTest(const FString& Parameters)
 	UE::Geometry::FDynamicMesh3 Mesh;
 	VegetationMeshBuilder::Build(Definition, Spec, Mesh);
 	FMeshDescription Description;
-	ShroomMesh::ToMeshDescription(Mesh, TEXT("Vegetation"), Description);
+	const FName Slots[2] = { VegetationMeshBuilder::WoodSlot, VegetationMeshBuilder::FoliageSlot };
+	ShroomMesh::ToMeshDescription(Mesh, MakeArrayView(Slots), Description);
+
+	// Two sections (D-044): opaque wood in group 0, two-sided foliage in group 1.
+	{
+		const FStaticMeshConstAttributes Attributes(Description);
+		const TPolygonGroupAttributesConstRef<FName> Names = Attributes.GetPolygonGroupMaterialSlotNames();
+		TestEqual(TEXT("Two material slots"), Description.PolygonGroups().Num(), 2);
+		int32 FoliageTriangles = 0;
+		int32 WoodTriangles = 0;
+		for (const FTriangleID Triangle : Description.Triangles().GetElementIDs())
+		{
+			const FName Slot = Names[Description.GetTrianglePolygonGroup(Triangle)];
+			FoliageTriangles += Slot == VegetationMeshBuilder::FoliageSlot ? 1 : 0;
+			WoodTriangles += Slot == VegetationMeshBuilder::WoodSlot ? 1 : 0;
+		}
+		TestTrue(FString::Printf(TEXT("Leaves in the foliage slot (%d), wood in the wood slot (%d)"), FoliageTriangles, WoodTriangles),
+			FoliageTriangles > 10000 && WoodTriangles > 1000);
+	}
 	const int32 Leaves = CountSurface(Description, EVegetationSurface::Foliage);
 	const int32 Bark = CountSurface(Description, EVegetationSurface::Bark);
 	TestTrue(FString::Printf(TEXT("Built mesh: foliage vertices in UV1 (%d)"), Leaves), Leaves > 1000);

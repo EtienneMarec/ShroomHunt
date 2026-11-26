@@ -47,6 +47,12 @@ public:
 
 	void Emit(UE::Geometry::FDynamicMesh3& Out) const;
 
+	/**
+	 * Same, with a material slot per triangle taken from its surface id (SlotPerSurface[Id]): the
+	 * mesh then has one section per slot (e.g. opaque wood and masked foliage, D-044).
+	 */
+	void Emit(UE::Geometry::FDynamicMesh3& Out, TConstArrayView<uint8> SlotPerSurface) const;
+
 private:
 	struct FTriangle
 	{
@@ -64,6 +70,9 @@ namespace ShroomMesh
 {
 	/** Converts a generated mesh to a static mesh description; every polygon group gets SlotName. */
 	SHROOMHUNT_API void ToMeshDescription(const UE::Geometry::FDynamicMesh3& Mesh, FName SlotName, FMeshDescription& OutDescription);
+
+	/** Same, for a mesh with material ids: polygon group (= material id) i gets SlotNames[i] (the last name beyond). */
+	SHROOMHUNT_API void ToMeshDescription(const UE::Geometry::FDynamicMesh3& Mesh, TConstArrayView<FName> SlotNames, FMeshDescription& OutDescription);
 
 	/** Writes a generated mesh as OBJ with per-vertex sRGB colors ("v x y z r g b"), for offline previews. */
 	SHROOMHUNT_API bool WriteObj(const UE::Geometry::FDynamicMesh3& Mesh, const FString& Path, const FString& Header);

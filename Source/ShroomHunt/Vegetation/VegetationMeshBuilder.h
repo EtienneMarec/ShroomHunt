@@ -68,7 +68,16 @@ namespace VegetationMeshBuilder
 	 * Bump whenever the meshes this builder (or TreeGrowth) produces change for the same data:
 	 * the editor then rebuilds the baked vegetation meshes at its next start (D-040).
 	 */
-	constexpr int32 BuilderVersion = 5;
+	constexpr int32 BuilderVersion = 6;
+
+	/**
+	 * Material slots (D-044): slot 0 "Vegetation" = opaque, one-sided (bark, wood, canes, berries, ground
+	 * litter); slot 1 "Foliage" = masked, two-sided (living leaves and fronds: single-sided geometry).
+	 * Opaque wood keeps Nanite and the virtual shadow maps on their fast path.
+	 */
+	inline const FName WoodSlot = TEXT("Vegetation");
+	inline const FName FoliageSlot = TEXT("Foliage");
+	SHROOMHUNT_API TConstArrayView<uint8> GetSlotPerSurface();
 
 	/** Returns false when the spec refers to a genus or form missing from the definition. */
 	SHROOMHUNT_API bool Build(const FVegetationDefinition& Definition, const FVegetationMeshSpec& Spec, UE::Geometry::FDynamicMesh3& OutMesh, FVegetationCollision* OutCollision = nullptr);

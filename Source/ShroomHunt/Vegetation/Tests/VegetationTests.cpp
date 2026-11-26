@@ -141,9 +141,11 @@ bool FVegetationMeshTest::RunTest(const FString& Parameters)
 		const bool bTree = Spec.Kind == EVegetationKind::Pole || Spec.Kind == EVegetationKind::Mature || Spec.Kind == EVegetationKind::Old || Spec.Kind == EVegetationKind::Young;
 		TestEqual(Key + TEXT(" collision: capsule for trees and dead wood only"), Collision.bHasCapsule,
 			bTree || Spec.Kind == EVegetationKind::Log || Spec.Kind == EVegetationKind::Stump);
-		if (Spec.Kind != EVegetationKind::Bracken && Spec.Kind != EVegetationKind::Leaf && !VegetationData::IsShrubKind(Spec.Kind))
+		const bool bHasOpenSurfaces = VegetationData::IsTreeKind(Spec.Kind) || VegetationData::IsShrubKind(Spec.Kind)
+			|| Spec.Kind == EVegetationKind::Bracken || Spec.Kind == EVegetationKind::Leaf;
+		if (!bHasOpenSurfaces)
 		{
-			// Every part is a closed or nearly closed surface facing outward (bracken and leaves are double-sided).
+			// Every part is a closed surface facing outward (leaves and fronds are open blades: skipped).
 			TestTrue(Key + TEXT(" faces outward (positive volume)"), SignedVolume(Mesh) > 0.0);
 		}
 		if (Spec.Kind == EVegetationKind::Mature)

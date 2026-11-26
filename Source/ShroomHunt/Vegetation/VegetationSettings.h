@@ -36,9 +36,17 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Ground Textures")
 	FString GroundTextureFolder = TEXT("/Game/ShroomHunt/Environment/Landscape/Generated");
 
-	/** Material of the placeholder meshes (vertex color albedo). */
+	/** Material of the opaque slot (bark, wood, berries, ground litter; D-044): an opaque instance of M_Vegetation. */
 	UPROPERTY(Config, EditAnywhere, Category = "Meshes")
-	TSoftObjectPtr<UMaterialInterface> VegetationMaterial = TSoftObjectPtr<UMaterialInterface>(FSoftObjectPath(TEXT("/Game/ShroomHunt/Environment/Vegetation/M_Vegetation.M_Vegetation")));
+	TSoftObjectPtr<UMaterialInterface> VegetationMaterial = TSoftObjectPtr<UMaterialInterface>(FSoftObjectPath(TEXT("/Game/ShroomHunt/Environment/Vegetation/MI_VegetationWood.MI_VegetationWood")));
+
+	/** Material of the foliage slot (living leaves and fronds): a masked, two-sided instance of M_Vegetation. */
+	UPROPERTY(Config, EditAnywhere, Category = "Meshes")
+	TSoftObjectPtr<UMaterialInterface> FoliageMaterial = TSoftObjectPtr<UMaterialInterface>(FSoftObjectPath(TEXT("/Game/ShroomHunt/Environment/Vegetation/MI_VegetationFoliage.MI_VegetationFoliage")));
+
+	/** The master vegetation material (vertex color albedo, seasons, wetness, snow), used while an instance is missing. */
+	UPROPERTY(Config, EditAnywhere, Category = "Meshes")
+	TSoftObjectPtr<UMaterialInterface> MasterMaterial = TSoftObjectPtr<UMaterialInterface>(FSoftObjectPath(TEXT("/Game/ShroomHunt/Environment/Vegetation/M_Vegetation.M_Vegetation")));
 
 	/** Used when VegetationMaterial does not exist yet. */
 	UPROPERTY(Config, EditAnywhere, Category = "Meshes")

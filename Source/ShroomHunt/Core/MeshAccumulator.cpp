@@ -41,6 +41,11 @@ void FMeshAccumulator::AddQuad(int32 A, int32 B, int32 C, int32 D, const FVector
 
 void FMeshAccumulator::Emit(FDynamicMesh3& Out) const
 {
+	Emit(Out, TConstArrayView<uint8>());
+}
+
+void FMeshAccumulator::Emit(FDynamicMesh3& Out, TConstArrayView<uint8> SlotPerSurface) const
+{
 	Out.Clear();
 	Out.EnableAttributes();
 	FDynamicMeshAttributeSet* Attributes = Out.Attributes();
@@ -49,6 +54,12 @@ void FMeshAccumulator::Emit(FDynamicMesh3& Out) const
 	FDynamicMeshUVOverlay* UV0 = Attributes->GetUVLayer(0);
 	FDynamicMeshUVOverlay* UV1 = Attributes->GetUVLayer(1);
 	FDynamicMeshColorOverlay* ColorOverlay = Attributes->PrimaryColors();
+	FDynamicMeshMaterialAttribute* MaterialIds = nullptr;
+	if (SlotPerSurface.Num() > 0)
+	{
+		Attributes->EnableMaterialID();
+		MaterialIds = Attributes->GetMaterialID();
+	}
 
 	for (int32 Index = 0; Index < Positions.Num(); ++Index)
 	{
@@ -98,6 +109,10 @@ void FMeshAccumulator::Emit(FDynamicMesh3& Out) const
 		UV1->SetTriangle(TriangleId, FIndex3i(GetSurfaceElement(Tri.Vertices.X, Tri.Surface), GetSurfaceElement(Tri.Vertices.Y, Tri.Surface),
 			GetSurfaceElement(Tri.Vertices.Z, Tri.Surface)));
 		ColorOverlay->SetTriangle(TriangleId, FIndex3i(Tri.Vertices.X, Tri.Vertices.Y, Tri.Vertices.Z));
+		if (MaterialIds)
+		{
+			MaterialIds->SetValue(TriangleId, SlotPerSurface.IsValidIndex(Tri.Surface) ? SlotPerSurface[Tri.Surface] : 0);
+		}
 	}
 
 	FMeshNormals::InitializeOverlayToPerVertexNormals(Attributes->PrimaryNormals(), false);
@@ -106,6 +121,21 @@ void FMeshAccumulator::Emit(FDynamicMesh3& Out) const
 
 namespace ShroomMesh
 {
+	void ToMeshDescription(const FDynamicMesh3& Mesh, TConstArrayView<FName> SlotNames, FMeshDescription& OutDescription)
+	{
+		FStaticMeshAttributes Attributes(OutDescription);
+		Attributes.Register();
+		FDynamicMeshToMeshDescription Converter;
+		Converter.Convert(&Mesh, OutDescription, true);
+
+		// The converter makes polygon group i for material id i; runtime builds match sections by slot name.
+		TPolygonGroupAttributesRef<FName> Names = Attributes.GetPolygonGroupMaterialSlotNames();
+		for (const FPolygonGroupID GroupId : OutDescription.PolygonGroups().GetElementIDs())
+		{
+			Names[GroupId] = SlotNames.Num() > 0 ? SlotNames[FMath::Min(GroupId.GetValue(), SlotNames.Num() - 1)] : NAME_None;
+		}
+	}
+
 	void ToMeshDescription(const FDynamicMesh3& Mesh, FName SlotName, FMeshDescription& OutDescription)
 	{
 		FStaticMeshAttributes Attributes(OutDescription);

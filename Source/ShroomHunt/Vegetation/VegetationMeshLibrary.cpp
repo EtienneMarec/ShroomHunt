@@ -26,7 +26,6 @@
 
 namespace VegetationMeshLibraryDetail
 {
-	const FName MaterialSlot(TEXT("Vegetation"));
 
 #if WITH_EDITOR
 	FString GetBakeStampPath()
@@ -42,11 +41,11 @@ namespace VegetationMeshLibraryDetail
 		Json.ReplaceInline(TEXT("\r"), TEXT("")); // same stamp whatever the line endings of the checkout
 		const UVegetationSettings* Settings = GetDefault<UVegetationSettings>();
 		return FString::Printf(TEXT("builder %d, data %08x, material %s, folder %s"), VegetationMeshBuilder::BuilderVersion,
-			FCrc::StrCrc32(*Json), *Settings->VegetationMaterial.ToString(), *Settings->GeneratedMeshFolder);
+			FCrc::StrCrc32(*Json), *(Settings->VegetationMaterial.ToString() + TEXT(" + ") + Settings->FoliageMaterial.ToString()), *Settings->GeneratedMeshFolder);
 	}
 
 	/** Builds one palette mesh and saves it as a Nanite static mesh asset (created or updated in place). */
-	bool BakeOne(const FVegetationDefinition& Definition, const FVegetationMeshSpec& Spec, const FString& PackageName, UMaterialInterface* Material, int32& OutTriangles, FString& OutError)
+	bool BakeOne(const FVegetationDefinition& Definition, const FVegetationMeshSpec& Spec, const FString& PackageName, UMaterialInterface* WoodMaterial, UMaterialInterface* FoliageMaterial, int32& OutTriangles, FString& OutError)
 	{
 		UE::Geometry::FDynamicMesh3 Mesh;
 		FVegetationCollision Collision;
@@ -57,7 +56,8 @@ namespace VegetationMeshLibraryDetail
 		}
 		OutTriangles = Mesh.TriangleCount();
 		FMeshDescription Description;
-		ShroomMesh::ToMeshDescription(Mesh, MaterialSlot, Description);
+		const FName Slots[2] = { VegetationMeshBuilder::WoodSlot, VegetationMeshBuilder::FoliageSlot };
+		ShroomMesh::ToMeshDescription(Mesh, MakeArrayView(Slots), Description);
 
 		const FString AssetName = FPackageName::GetShortName(PackageName);
 		const FString ObjectPath = PackageName + TEXT(".") + AssetName;
@@ -80,7 +80,9 @@ namespace VegetationMeshLibraryDetail
 		StaticMesh->CommitMeshDescription(0);
 
 		StaticMesh->GetStaticMaterials().Reset();
-		StaticMesh->GetStaticMaterials().Add(FStaticMaterial(Material, MaterialSlot, MaterialSlot));
+		// Slot 0 opaque wood, slot 1 masked two-sided foliage (D-044); a mesh without leaves leaves slot 1 unused.
+		StaticMesh->GetStaticMaterials().Add(FStaticMaterial(WoodMaterial, Slots[0], Slots[0]));
+		StaticMesh->GetStaticMaterials().Add(FStaticMaterial(FoliageMaterial, Slots[1], Slots[1]));
 
 		FMeshNaniteSettings Nanite = StaticMesh->GetNaniteSettings();
 		Nanite.bEnabled = true;
@@ -139,13 +141,24 @@ FString UVegetationMeshLibrary::BakeVegetationMeshes(const FString& Folder)
 	}
 
 	const UVegetationSettings* Settings = GetDefault<UVegetationSettings>();
-	UMaterialInterface* Material = Settings->VegetationMaterial.LoadSynchronous();
-	if (!Material)
+	auto LoadMaterial = [Settings](const TSoftObjectPtr<UMaterialInterface>& Wanted)
 	{
-		Material = Settings->FallbackMaterial.LoadSynchronous();
-		UE_LOG(LogShroomVegetation, Warning, TEXT("Vegetation material %s not found, using %s (re-bake once it exists)"),
-			*Settings->VegetationMaterial.ToString(), *GetNameSafe(Material));
-	}
+		UMaterialInterface* Found = Wanted.LoadSynchronous();
+		if (!Found)
+		{
+			// The material instances are made by Tools/Python/create_vegetation_materials.py; until then the master.
+			Found = Settings->MasterMaterial.LoadSynchronous();
+			if (!Found)
+			{
+				Found = Settings->FallbackMaterial.LoadSynchronous();
+			}
+			UE_LOG(LogShroomVegetation, Warning, TEXT("Vegetation material %s not found, using %s (re-bake once it exists)"),
+				*Wanted.ToString(), *GetNameSafe(Found));
+		}
+		return Found;
+	};
+	UMaterialInterface* Material = LoadMaterial(Settings->VegetationMaterial);
+	UMaterialInterface* FoliageMaterial = LoadMaterial(Settings->FoliageMaterial);
 
 	const double Start = FPlatformTime::Seconds();
 	int32 Baked = 0;
@@ -165,7 +178,7 @@ FString UVegetationMeshLibrary::BakeVegetationMeshes(const FString& Folder)
 		}
 		int32 MeshTriangles = 0;
 		FString Error;
-		if (BakeOne(*Definition, Spec, PackageName, Material, MeshTriangles, Error))
+		if (BakeOne(*Definition, Spec, PackageName, Material, FoliageMaterial, MeshTriangles, Error))
 		{
 			++Baked;
 			Triangles += MeshTriangles;
