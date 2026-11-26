@@ -210,6 +210,14 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Fog", meta = (ClampMin = "1"))
 	float FogDensityMultiplierInHeavyRain = 3.0f;
 
+	/** Exposure change under a full canopy (EV): the wood feels darker than a clearing (V1-5). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Fog", meta = (ClampMax = "0"))
+	float CanopyExposureEV = -0.35f;
+
+	/** Color tint under a full canopy: light filtered by the leaves turns a little green. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Fog")
+	FLinearColor CanopyTint = FLinearColor(0.93f, 1.0f, 0.88f);
+
 	/** Fog multiplier in a dense stand (canopy 1 above the camera): the view closes between the trunks (V1-5). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Fog", meta = (ClampMin = "1"))
 	float FogDensityMultiplierUnderCanopy = 2.5f;

@@ -38,6 +38,11 @@ namespace
 {
 	using ShroomMath::SmoothStep01;
 
+	TAutoConsoleVariable<float> CVarSeasonPreviewSnowCm(
+		TEXT("sh.Season.PreviewSnowCm"),
+		-1.0f,
+		TEXT("Shows this much snow on the ground (cm) instead of the real snow pack, at once. Negative = off (demo shots, D-045)."));
+
 	TAutoConsoleVariable<float> CVarSeasonPreviewMonth(
 		TEXT("sh.Season.PreviewMonth"),
 		0.0f,
@@ -461,9 +466,14 @@ void AEnvironmentDirector::ApplyEnvironment(const FGameDate& Date, double TotalG
 			FPostProcessSettings& Grading = WeatherPostProcess->Settings;
 			Grading.bOverride_AutoExposureBias = true;
 			const APlayerCameraManager* Camera = UGameplayStatics::GetPlayerCameraManager(this, 0);
-			Grading.AutoExposureBias = GetLevelExposureBias(Camera ? Camera->GetCameraLocation() : GetActorLocation()) + MoodNow.ExposureBiasEV;
+			// Under the leaves: a bit darker and greener (the canopy fades as the leaves fall).
+			const float Shade = CanopyAtCamera;
+			Grading.AutoExposureBias = GetLevelExposureBias(Camera ? Camera->GetCameraLocation() : GetActorLocation()) + MoodNow.ExposureBiasEV
+				+ CanopyExposureEV * Shade;
 			Grading.bOverride_ColorSaturation = true;
 			Grading.ColorSaturation = FVector4(MoodNow.Saturation, MoodNow.Saturation, MoodNow.Saturation, 1.0);
+			Grading.bOverride_SceneColorTint = true;
+			Grading.SceneColorTint = FMath::Lerp(FLinearColor::White, CanopyTint, Shade);
 		}
 	}
 
@@ -680,11 +690,18 @@ void AEnvironmentDirector::UpdateSeason(const FGameDate& Date)
 			Shown = Shown < 0.0f ? Target : FMath::Lerp(Shown, Target, Alpha);
 			return Shown;
 		};
-		SetSeasonParameter(TEXT("SnowCover"), Follow(ShownSnowCover, Weather->GetSnowCover()));
+		const float PreviewSnowCm = CVarSeasonPreviewSnowCm.GetValueOnGameThread();
+		if (PreviewSnowCm >= 0.0f)
+		{
+			// Demo preview: no easing, the snow is there at once.
+			ShownSnowCover = ShroomMath::SmoothStep01(0.0f, 2.0f, PreviewSnowCm);
+			ShownSnowDepthCm = PreviewSnowCm;
+		}
+		SetSeasonParameter(TEXT("SnowCover"), PreviewSnowCm >= 0.0f ? ShownSnowCover : Follow(ShownSnowCover, Weather->GetSnowCover()));
 		SetSeasonParameter(TEXT("Frost"), Follow(ShownFrost, Weather->GetFrost()));
 		// Fresh snow is about ten times thicker than its water (1 mm of water ~ 1 cm of snow): drives the
 		// ground displacement (Nanite tessellation of the landscape, V1-2b).
-		SetSeasonParameter(TEXT("SnowDepthCm"), Follow(ShownSnowDepthCm, FMath::Clamp(Weather->GetSnowWaterMm(), 0.0f, 40.0f)));
+		SetSeasonParameter(TEXT("SnowDepthCm"), PreviewSnowCm >= 0.0f ? ShownSnowDepthCm : Follow(ShownSnowDepthCm, FMath::Clamp(Weather->GetSnowWaterMm(), 0.0f, 40.0f)));
 		SetSeasonParameter(TEXT("Dryness"), Weather->GetDryness());
 	}
 	SetSeasonParameter(TEXT("SnowFalling"), SnowAtCamera);
