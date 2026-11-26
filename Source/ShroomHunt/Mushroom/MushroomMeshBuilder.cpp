@@ -384,6 +384,148 @@ namespace MushroomMeshDetail
 		});
 	}
 
+	/**
+	 * Closed cap of morels and false morels: an egg (Morchelloid) or a lobed dome (Cerebriform)
+	 * from its base on the stem top up to its apex, carved by a 3D pattern along the normal:
+	 * a honeycomb of vertically elongated pits (cellular noise, ridges on the cell borders) or
+	 * brain-like folds (grooves along the zero lines of gradient noise). The pattern lives in
+	 * coordinates normalized by the cap size, so an individual keeps its pits while it grows.
+	 * Ridges take the cap colors, hollows the underside color (the fertile surface).
+	 */
+	void BuildPittedCap(FBuildContext& Ctx)
+	{
+		const FMushroomMorphology& M = Ctx.M;
+		const bool bMorel = (M.CapShapeBlend < 0.5f ? M.CapShape : M.CapShapeB) == ECapShape::Morchelloid;
+		const double R = Ctx.CapRadius;
+		const double H = Ctx.CapHeight;
+		const double NominalHeight = MushroomMorphology::GetShapeHeightRatio(bMorel ? ECapShape::Morchelloid : ECapShape::Cerebriform);
+		const bool bRelief = Ctx.Detail.bGeometricGills;
+		const int32 Around = FMath::Max(12, Ctx.Detail.RadialSegments * 3);
+		const int32 Rings = FMath::Max(8, Ctx.Detail.CapProfileSegments * 5);
+		const uint32 Seed = ShroomHash::Hash(M.ShapeSeed, 0x9177u);
+		const double Shrivel = 1.0 - 0.15 * M.CapSag;
+
+		// Undisplaced surface: normalized radius (shape only) at height fraction T.
+		auto ShapeRadius = [bMorel](double T)
+		{
+			return bMorel
+				? 1.08 * FMath::Pow(FMath::Sin(UE_DOUBLE_PI * (0.2 + 0.8 * T)), 0.65) * (1.0 - 0.18 * T)
+				: 1.05 * FMath::Pow(FMath::Sin(UE_DOUBLE_PI * (0.12 + 0.88 * T)), 0.4);
+		};
+		// Pattern coordinates: unit horizontal radius, height scaled like the nominal shape.
+		auto PatternPoint = [&](double T, double Theta)
+		{
+			const double Rn = ShapeRadius(T);
+			return FVector3d(Rn * FMath::Cos(Theta), Rn * FMath::Sin(Theta), T * NominalHeight);
+		};
+		auto Surface = [&](double T, double Theta)
+		{
+			const FVector3d Q = PatternPoint(T, Theta);
+			const double Lumps = 1.0 + (bMorel ? 0.07 : 0.2) * ShroomHash::GradientNoise3D(Seed ^ 0x1u, Q * (bMorel ? 0.9 : 0.8));
+			const double Radius = R * ShapeRadius(T) * Lumps * Shrivel;
+			return FVector3d(Radius * FMath::Cos(Theta), Radius * FMath::Sin(Theta), T * H * (bMorel ? 1.0 : Lumps));
+		};
+		// 0 on a ridge, 1 at the bottom of a pit or fold.
+		auto Hollow = [&](double T, double Theta)
+		{
+			const FVector3d Q = PatternPoint(T, Theta);
+			if (bMorel)
+			{
+				double F1 = 0.0;
+				double F2 = 0.0;
+				ShroomHash::Cellular3D(Seed ^ 0x2u, FVector3d(Q.X / 0.4, Q.Y / 0.4, Q.Z / 0.78), F1, F2);
+				// Ridges fade out right at the apex and at the base rim, like on real caps.
+				const double Hollowness = ShroomMath::SmoothStep01(0.03f, 0.2f, static_cast<float>(F2 - F1));
+				return Hollowness * ShroomMath::SmoothStep01(0.0f, 0.05f, static_cast<float>(T)) * (1.0 - 0.5 * ShroomMath::SmoothStep01(0.96f, 1.0f, static_cast<float>(T)));
+			}
+			const double Fold = FMath::Abs(ShroomHash::GradientNoise3D(Seed ^ 0x3u, Q * 2.3) + 0.3 * ShroomHash::GradientNoise3D(Seed ^ 0x4u, Q * 4.6));
+			return FMath::Pow(1.0 - ShroomMath::SmoothStep01(0.0f, 0.28f, static_cast<float>(Fold)), 1.3);
+		};
+		const double Depth = (bMorel ? 0.2 : 0.16) * R;
+
+		auto Place = [&Ctx](const FVector3d& Local)
+		{
+			return Ctx.CapOrigin + Ctx.CapTilt.RotateVector(Local);
+		};
+		auto RidgeColor = [&M](double T)
+		{
+			FLinearColor Color = LerpSRGB(M.CapColorMargin, M.CapColorCenter, static_cast<float>(T));
+			Color.A = 0.0f;
+			return Color;
+		};
+		auto HollowColor = [&M](double Amount)
+		{
+			// The bottom of the hollows is shaded (no ambient occlusion on these small meshes).
+			const float Shade = static_cast<float>(1.0 - 0.45 * Amount);
+			return FLinearColor(M.UndersideColor.R * Shade, M.UndersideColor.G * Shade, M.UndersideColor.B * Shade, 0.0f);
+		};
+
+		// Rows from the apex (pole) down to the base, denser near the apex where the dome turns.
+		TArray<TArray<int32>> Rows;
+		TArray<float> RowV;
+		TArray<EMushroomSurface> RowSurface;
+		for (int32 K = 0; K <= Rings; ++K)
+		{
+			const double A = static_cast<double>(K) / Rings;
+			const double T = FMath::Lerp(1.0 - A, FMath::Cos(0.5 * UE_DOUBLE_PI * A), 0.5);
+			TArray<int32>& Row = Rows.AddDefaulted_GetRef();
+			RowV.Add(static_cast<float>(T));
+			RowSurface.Add(EMushroomSurface::CapTop);
+			const int32 Count = K == 0 ? 1 : Around;
+			for (int32 J = 0; J < Count; ++J)
+			{
+				const double Theta = UE_DOUBLE_TWO_PI * J / Around;
+				const FVector3d P = Surface(T, Theta);
+				FVector3d Normal = FVector3d::UnitZ();
+				if (K > 0)
+				{
+					const double Dt = 0.004;
+					const double Da = 0.004;
+					const FVector3d AlongTheta = Surface(T, Theta + Da) - Surface(T, Theta - Da);
+					const FVector3d AlongT = Surface(FMath::Min(T + Dt, 1.0), Theta) - Surface(FMath::Max(T - Dt, 0.0), Theta);
+					const FVector3d Cross = FVector3d::CrossProduct(AlongTheta, AlongT);
+					Normal = Cross.IsNearlyZero() ? Normal : Cross.GetSafeNormal();
+				}
+				const double Amount = Hollow(T, Theta);
+				const FVector3d Displaced = P - Normal * (bRelief ? Depth * Amount : 0.0);
+				Row.Add(Ctx.Acc.AddVertex(Place(Displaced), LerpSRGB(RidgeColor(T), HollowColor(Amount), static_cast<float>(Amount))));
+			}
+		}
+		// Base rim tucked in towards the stem (it closes inside the stem, like the other caps).
+		{
+			TArray<int32>& Row = Rows.AddDefaulted_GetRef();
+			RowV.Add(0.0f);
+			RowSurface.Add(EMushroomSurface::CapUnderside);
+			const double Inner = FMath::Min(Ctx.StemTopRadius * 0.6, 0.5 * R);
+			for (int32 J = 0; J < Around; ++J)
+			{
+				const double Theta = UE_DOUBLE_TWO_PI * J / Around;
+				Row.Add(Ctx.Acc.AddVertex(Place(FVector3d(Inner * FMath::Cos(Theta), Inner * FMath::Sin(Theta), 0.06 * H)), HollowColor(1.0)));
+			}
+		}
+
+		// Same triangulation as Revolve (rows read top -> outward -> down -> inward).
+		for (int32 K = 0; K + 1 < Rows.Num(); ++K)
+		{
+			const TArray<int32>& RowA = Rows[K];
+			const TArray<int32>& RowB = Rows[K + 1];
+			for (int32 J = 0; J < Around; ++J)
+			{
+				const int32 J1 = (J + 1) % Around;
+				const float U0 = static_cast<float>(J) / Around;
+				const float U1 = static_cast<float>(J + 1) / Around;
+				const int32 A0 = RowA.Num() == 1 ? RowA[0] : RowA[J];
+				const int32 A1 = RowA.Num() == 1 ? RowA[0] : RowA[J1];
+				const int32 B0 = RowB[J];
+				const int32 B1 = RowB[J1];
+				const float VA = RowV[K];
+				const float VB = RowV[K + 1];
+				Ctx.Acc.AddTriangle(A0, B0, A1, FVector2f(U0, VA), FVector2f(U0, VB), FVector2f(U1, VA), RowSurface[K + 1]);
+				Ctx.Acc.AddTriangle(B0, B1, A1, FVector2f(U0, VB), FVector2f(U1, VB), FVector2f(U1, VA), RowSurface[K + 1]);
+			}
+		}
+	}
+
 	void BuildGills(FBuildContext& Ctx)
 	{
 		const FMushroomMorphology& M = Ctx.M;
@@ -501,12 +643,22 @@ namespace MushroomMeshBuilder
 		const double BendAzimuth = FMath::DegreesToRadians(static_cast<double>(M.StemBendAzimuthDeg));
 		Ctx.BendDirection = FVector3d(FMath::Cos(BendAzimuth), FMath::Sin(BendAzimuth), 0.0);
 
-		// Cap sits so that its underside meets the stem top (decurrent: a bit higher).
-		const double StemU = FMath::Clamp(Ctx.StemTopRadius / Ctx.CapRadius, 0.05, 0.6);
-		double CapLift = -Ctx.UndersideZ(StemU);
-		if (M.Attachment == EGillAttachment::Decurrent)
+		const bool bPitted = MushroomMorphology::IsPittedShape(M.CapShape) || MushroomMorphology::IsPittedShape(M.CapShapeB);
+		double CapLift = 0.0;
+		if (bPitted)
 		{
-			CapLift += 0.12 * Ctx.CapRadius;
+			// Closed cap whose base sits on the stem top (the stem enters it a little).
+			CapLift = -0.04 * Ctx.CapHeight;
+		}
+		else
+		{
+			// Cap sits so that its underside meets the stem top (decurrent: a bit higher).
+			const double StemU = FMath::Clamp(Ctx.StemTopRadius / Ctx.CapRadius, 0.05, 0.6);
+			CapLift = -Ctx.UndersideZ(StemU);
+			if (M.Attachment == EGillAttachment::Decurrent)
+			{
+				CapLift += 0.12 * Ctx.CapRadius;
+			}
 		}
 		Ctx.CapOrigin = Ctx.StemCenter(1.0) + FVector3d(0.0, 0.0, M.StemLength + CapLift);
 		const double TiltAzimuth = FMath::DegreesToRadians(static_cast<double>(M.CapTiltAzimuthDeg));
@@ -516,9 +668,16 @@ namespace MushroomMeshBuilder
 		BuildStem(Ctx);
 		BuildRing(Ctx);
 		BuildVolva(Ctx);
-		BuildCap(Ctx);
-		BuildGills(Ctx);
-		BuildWarts(Ctx);
+		if (bPitted)
+		{
+			BuildPittedCap(Ctx);
+		}
+		else
+		{
+			BuildCap(Ctx);
+			BuildGills(Ctx);
+			BuildWarts(Ctx);
+		}
 
 		Acc.Emit(OutMesh);
 	}

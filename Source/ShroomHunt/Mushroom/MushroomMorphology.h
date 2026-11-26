@@ -104,4 +104,7 @@ namespace MushroomMorphology
 
 	/** Typical cap height ratio (height / radius) of a shape. */
 	SHROOMHUNT_API float GetShapeHeightRatio(ECapShape Shape);
+
+	/** Morel-like caps: closed, fused to the stem, no underside (built by the pitted-cap builder). */
+	SHROOMHUNT_API bool IsPittedShape(ECapShape Shape);
 }

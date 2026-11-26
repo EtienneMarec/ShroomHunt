@@ -55,6 +55,8 @@ namespace ObservableCriteria
 		case ECapShape::Flat:            return LOCTEXT("ShapeFlat", "flat");
 		case ECapShape::Depressed:       return LOCTEXT("ShapeDepressed", "depressed in the center");
 		case ECapShape::Infundibuliform: return LOCTEXT("ShapeFunnel", "funnel-shaped");
+		case ECapShape::Morchelloid:     return LOCTEXT("ShapeMorchelloid", "egg-shaped, a honeycomb of pits");
+		case ECapShape::Cerebriform:     return LOCTEXT("ShapeCerebriform", "lobed, folded like a brain");
 		}
 		return FText::GetEmpty();
 	}
@@ -85,6 +87,7 @@ namespace ObservableCriteria
 		case EUndersideType::Pores:  Kind = LOCTEXT("KindPores", "mushroom with pores"); break;
 		case EUndersideType::Ridges: Kind = LOCTEXT("KindRidges", "mushroom with ridges"); break;
 		case EUndersideType::Teeth:  Kind = LOCTEXT("KindTeeth", "mushroom with spines"); break;
+		case EUndersideType::Pitted: Kind = LOCTEXT("KindPitted", "mushroom with a pitted cap"); break;
 		default:                     Kind = LOCTEXT("KindGills", "gilled mushroom"); break;
 		}
 		return FText::Format(LOCTEXT("VagueLabel", "Unknown {0} {1}"), ColorName(M.CapColorCenter), Kind);
@@ -119,7 +122,14 @@ namespace ObservableCriteria
 				: (M.Attachment == EGillAttachment::Decurrent ? LOCTEXT("UnderGillsDecurrent", "gills running down the stem") : LOCTEXT("UnderGills", "gills"));
 			break;
 		}
-		Lines.Add(FText::Format(LOCTEXT("Underside", "Underside: {0}, {1}"), Underside, ColorName(M.UndersideColor)));
+		if (M.UndersideType == EUndersideType::Pitted)
+		{
+			Lines.Add(FText::Format(LOCTEXT("UnderPitted", "Underside: none, no gills, the cap is joined to the stem; {0} inside the hollows"), ColorName(M.UndersideColor)));
+		}
+		else
+		{
+			Lines.Add(FText::Format(LOCTEXT("Underside", "Underside: {0}, {1}"), Underside, ColorName(M.UndersideColor)));
+		}
 
 		FText StemShape;
 		switch (M.StemShape)

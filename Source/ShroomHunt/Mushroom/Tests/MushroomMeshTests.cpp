@@ -146,6 +146,16 @@ bool FMushroomMorphologyTest::RunTest(const FString& Parameters)
 		&& FlyAgaric.Ring == ERingType::Skirt && FlyAgaric.Volva == EVolvaType::Friable);
 	const FMushroomMorphology Cep = MushroomMorphology::Sample(Species[TEXT("BoletusEdulis")], TEXT("BoletusEdulis"), 7u, EMushroomStage::Mature);
 	TestTrue(TEXT("Cep has pores (no gill fins)"), Cep.UndersideType == EUndersideType::Pores && Cep.GillCount == 0);
+	if (Species.Contains(TEXT("MorchellaEsculenta")))
+	{
+		// A morel is pitted from the very first day (no closed button) and taller than wide.
+		const FMushroomSpeciesRow& MorelRow = Species[TEXT("MorchellaEsculenta")];
+		const FMushroomMorphology Button = MushroomMorphology::SampleAtAge(MorelRow, TEXT("MorchellaEsculenta"), 7u, 0.0f);
+		const FMushroomMorphology Morel = MushroomMorphology::Sample(MorelRow, TEXT("MorchellaEsculenta"), 7u, EMushroomStage::Mature);
+		TestTrue(TEXT("Morel button is already a morel"), Button.CapShape == ECapShape::Morchelloid && Button.CapShapeB == ECapShape::Morchelloid);
+		TestTrue(TEXT("Morel has a pitted cap and no gills"), Morel.UndersideType == EUndersideType::Pitted && Morel.GillCount == 0);
+		TestTrue(TEXT("Morel cap is taller than wide"), Morel.CapHeightRatio > 2.0f);
+	}
 	return true;
 }
 
@@ -196,8 +206,10 @@ bool FMushroomMeshBuilderTest::RunTest(const FString& Parameters)
 				const UE::Geometry::FAxisAlignedBox3d Bounds = Near.GetBounds();
 				const double Height = Bounds.Max.Z;
 				TestTrue(Label + TEXT(": starts at the ground"), FMath::Abs(Bounds.Min.Z) < 0.1 * M.StemLength + 0.5);
+				// Caps are at most about as tall as wide, except the egg-shaped morels (height from the shape ratio).
+				const double CapTallest = FMath::Max(0.9 * M.CapDiameter, 0.6 * M.CapDiameter * M.CapHeightRatio);
 				TestTrue(Label + FString::Printf(TEXT(": height %.1f close to stem + cap"), Height),
-					Height > M.StemLength * 0.9 && Height < M.StemLength + M.CapDiameter * 0.9 + 1.0);
+					Height > M.StemLength * 0.9 && Height < M.StemLength + CapTallest + 1.0);
 				TestTrue(Label + TEXT(": width close to the cap diameter"), Bounds.Width() < M.CapDiameter * 1.35 + 1.0 && Bounds.Width() > M.CapDiameter * 0.7);
 
 				// Winding: outward normals give a clearly positive signed volume (stem alone ~ pi r^2 L).

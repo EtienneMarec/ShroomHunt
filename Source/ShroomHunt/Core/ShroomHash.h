@@ -78,6 +78,15 @@ namespace ShroomHash
 	/** 2D gradient (Perlin-style) noise in about [-1, 1]: smoother, less grid-aligned than value noise (terrain). */
 	SHROOMHUNT_API float GradientNoise2D(uint32 Seed, double X, double Y);
 
+	/** 3D gradient (Perlin-style) noise in about [-1, 1] (shapes of closed surfaces: no seam, no pole). */
+	SHROOMHUNT_API float GradientNoise3D(uint32 Seed, const FVector3d& P);
+
+	/**
+	 * 3D cellular (Worley) noise: distances from P to the nearest and second nearest
+	 * of one jittered feature point per unit cell. F2 - F1 is ~0 on the cell borders.
+	 */
+	SHROOMHUNT_API void Cellular3D(uint32 Seed, const FVector3d& P, double& OutF1, double& OutF2);
+
 	/** Fractal sum of 2D gradient noise, normalized to about [-1, 1]. */
 	SHROOMHUNT_API float GradientFbm2D(uint32 Seed, double X, double Y, int32 Octaves, float Lacunarity = 2.0f, float Gain = 0.5f);
 

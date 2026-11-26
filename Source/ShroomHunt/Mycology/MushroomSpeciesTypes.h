@@ -56,7 +56,11 @@ enum class EClustering : uint8
 UENUM(BlueprintType)
 enum class ECapShape : uint8
 {
-	Hemispherical, Campanulate, Conical, Convex, Umbonate, Flat, Depressed, Infundibuliform
+	Hemispherical, Campanulate, Conical, Convex, Umbonate, Flat, Depressed, Infundibuliform,
+	/** Egg-shaped honeycomb of pits fused to the stem (true morels). */
+	Morchelloid,
+	/** Irregular lobed cap with brain-like folds (false morels, Gyromitra). */
+	Cerebriform
 };
 
 UENUM(BlueprintType)
@@ -74,7 +78,9 @@ enum class ECapSurface : uint8
 UENUM(BlueprintType)
 enum class EUndersideType : uint8
 {
-	Gills, Pores, Ridges, Teeth
+	Gills, Pores, Ridges, Teeth,
+	/** No underside: spores form in the pits or folds of the cap (morels, false morels). */
+	Pitted
 };
 
 UENUM(BlueprintType)

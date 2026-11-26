@@ -54,6 +54,11 @@ float FMushroomMorphology::GetApproximateHeight() const
 
 namespace MushroomMorphology
 {
+	bool IsPittedShape(ECapShape Shape)
+	{
+		return Shape == ECapShape::Morchelloid || Shape == ECapShape::Cerebriform;
+	}
+
 	float GetShapeHeightRatio(ECapShape Shape)
 	{
 		switch (Shape)
@@ -66,6 +71,8 @@ namespace MushroomMorphology
 		case ECapShape::Flat:            return 0.2f;
 		case ECapShape::Depressed:       return 0.25f;
 		case ECapShape::Infundibuliform: return 0.45f;
+		case ECapShape::Morchelloid:     return 3.2f; // cap 1.6 times taller than wide
+		case ECapShape::Cerebriform:     return 1.5f;
 		default:                         return 0.5f;
 		}
 	}
@@ -149,10 +156,13 @@ namespace MushroomMorphology
 			float HeightRatio;
 		};
 		const ECapShape OldShape = Pick(EMushroomStage::Old);
+		// Morels and false morels keep their shape from the start (no closed button).
+		const ECapShape MatureShape = Pick(EMushroomStage::Mature);
+		const bool bPitted = IsPittedShape(MatureShape);
 		const FKey Keys[5] = {
-			{ 0.0f, ECapShape::Hemispherical, 1.15f }, // closed button, cap pressed on the stem
+			bPitted ? FKey{ 0.0f, MatureShape, 0.0f } : FKey{ 0.0f, ECapShape::Hemispherical, 1.15f }, // closed button, cap pressed on the stem
 			{ Young * 0.6f, Pick(EMushroomStage::Young), 0.0f },
-			{ 0.5f * (Young + Mature), Pick(EMushroomStage::Mature), 0.0f },
+			{ 0.5f * (Young + Mature), MatureShape, 0.0f },
 			{ 0.5f * (Mature + 1.0f), OldShape, 0.0f },
 			{ 1.0f, OldShape, 0.0f } };
 		int32 Segment = 0;
@@ -185,6 +195,7 @@ namespace MushroomMorphology
 		case EUndersideType::Pores:  M.CapFleshRatio = 0.45f; break;
 		case EUndersideType::Ridges: M.CapFleshRatio = 0.32f; break;
 		case EUndersideType::Teeth:  M.CapFleshRatio = 0.3f; break;
+		case EUndersideType::Pitted: M.CapFleshRatio = 0.08f; break; // thin hollow cap
 		default:                     M.CapFleshRatio = 0.22f; break;
 		}
 		M.CapFleshRatio *= FleshJitter * (1.0f - 0.35f * Rot); // rotting flesh shrinks
