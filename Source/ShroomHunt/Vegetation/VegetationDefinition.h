@@ -30,7 +30,11 @@ enum class EVegetationKind : uint8
 	Hazel,
 	Holly,
 	/** Ground (V1-4): a tuft of grass blades, where the grass layer is painted (clearings, rides). */
-	GrassTuft
+	GrassTuft,
+	/** Ground (V1-4): a patch of creeping ivy, evergreen, in the shade on rich moist soils. */
+	Ivy,
+	/** Ground (V1-4): a clump of woodland herbs (anemone-like leaves on thin stems), gone in winter. */
+	Herb
 };
 
 /** Which group of kinds a PCG node outputs (separate spawners: collision and cull distances differ). */

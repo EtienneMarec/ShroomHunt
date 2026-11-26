@@ -621,6 +621,23 @@ namespace VegetationMeshDetail
 			},
 			EVegetationSurface::Bark, true, true, Srgb(0.58, 0.47, 0.32), Srgb(0.40, 0.31, 0.20), EVegetationSurface::Wood);
 
+		// Broken-off branch stubs pointing out and up from the trunk.
+		const int32 Stubs = Rng.RandRange(1, 4);
+		for (int32 StubIndex = 0; StubIndex < Stubs; ++StubIndex)
+		{
+			const double S = Rng.FRandRange(0.15f, 0.85f);
+			const double Around = Rng.FRandRange(-1.3f, 1.3f); // radians from straight up
+			const FVector3d Out(0.0, FMath::Sin(Around), FMath::Cos(Around));
+			const FVector3d Root((S - 0.5) * Length, Bend * FMath::Sin(UE_DOUBLE_PI * S), Radius * 0.8);
+			const double StubRadius = Radius * Rng.FRandRange(0.18f, 0.35f);
+			const double StubLength = Radius * Rng.FRandRange(1.2f, 3.0f);
+			const FVector3d Dir = (Out + FVector3d(Rng.FRandRange(-0.5f, 0.5f), 0.0, 0.0)).GetSafeNormal();
+			TArray<FVector3d> StubPath = { Root, Root + Dir * (Radius * 0.9 + StubLength * 0.5), Root + Dir * (Radius * 0.9 + StubLength) };
+			AddTube(Acc, StubPath, 6, [&](int32 Ring, double) { return StubRadius * (1.0 - 0.3 * Ring / 2.0); },
+				[&](int32, double, const FVector3d&) { return ScaleSRGB(Bark, 0.95f); },
+				EVegetationSurface::Bark, false, true, Srgb(0.58, 0.47, 0.32), Srgb(0.40, 0.31, 0.20), EVegetationSurface::Wood);
+		}
+
 		if (OutCollision)
 		{
 			OutCollision->bHasCapsule = true;
@@ -659,6 +676,23 @@ namespace VegetationMeshDetail
 				return LerpSRGB(ScaleSRGB(Bark, 1.0f + 0.15f * Grain), Moss, MossAlpha);
 			},
 			EVegetationSurface::Bark, false, true, Srgb(0.62, 0.52, 0.36), Srgb(0.42, 0.33, 0.21), EVegetationSurface::Wood);
+
+		// Half the stumps are snapped, not sawn: splinters stand on the rim.
+		if (Rng.FRand() < 0.5f)
+		{
+			const int32 Splinters = Rng.RandRange(4, 8);
+			for (int32 K = 0; K < Splinters; ++K)
+			{
+				const double A = UE_DOUBLE_TWO_PI * (K + Rng.FRandRange(-0.3f, 0.3f)) / Splinters;
+				const FVector3d Rim(FMath::Cos(A) * Radius * 0.7, FMath::Sin(A) * Radius * 0.7, Height - 0.02);
+				const double SplinterHeight = Rng.FRandRange(0.06f, 0.3f);
+				const double Base = Radius * Rng.FRandRange(0.15f, 0.28f);
+				TArray<FVector3d> SplinterPath = { Rim, Rim + FVector3d(FMath::Cos(A) * 0.02, FMath::Sin(A) * 0.02, SplinterHeight) };
+				AddTube(Acc, SplinterPath, 4, [&](int32 Ring, double) { return Ring == 0 ? Base : Base * 0.08; },
+					[&](int32, double, const FVector3d&) { return Srgb(0.55, 0.45, 0.31); },
+					EVegetationSurface::Wood, false, false, Bark, Bark, EVegetationSurface::Wood);
+			}
+		}
 
 		if (OutCollision)
 		{
@@ -909,6 +943,97 @@ namespace VegetationMeshDetail
 		}
 	}
 
+	/** A leaf lying near the ground for the herb layer, built with the tree leaf blade (one face). */
+	void AddGroundLeaf(FMeshAccumulator& Acc, const FTreeArchetype& Shape, const FVector3d& Base, const FVector3d& Axis, const FVector3d& Up,
+		double Length, const FLinearColor& Color)
+	{
+		FTreeLeaf Leaf;
+		Leaf.Base = Base;
+		Leaf.Axis = Axis.GetSafeNormal();
+		Leaf.Normal = (Up - Leaf.Axis * FVector3d::DotProduct(Up, Leaf.Axis)).GetSafeNormal();
+		Leaf.Length = Length;
+		Leaf.Width = Length * Shape.LeafWidth;
+		AddLeafBlade(Acc, Shape, Leaf, Color);
+	}
+
+	/**
+	 * A patch of ivy: a few creeping stems on the ground with dark, glossy, lobed leaves turned to the
+	 * sky. Evergreen (Frond surface: never colored nor dropped by the seasons).
+	 */
+	void BuildIvy(uint32 Seed, FMeshAccumulator& Acc)
+	{
+		FRandomStream Rng(static_cast<int32>(Seed));
+		FTreeArchetype Ivy;
+		Ivy.LeafWidth = 0.95f;
+		Ivy.LeafTip = 0.6f;
+		Ivy.LeafLobes = 2;
+		Ivy.bEvergreen = true;
+		const FLinearColor Dark = Srgb(0.07, 0.15, 0.05);
+		const FLinearColor Light = Srgb(0.13, 0.24, 0.08);
+		const FLinearColor StemColor = Srgb(0.22, 0.20, 0.12);
+		const int32 Stems = Rng.RandRange(3, 6);
+		for (int32 S = 0; S < Stems; ++S)
+		{
+			double Heading = Rng.FRandRange(0.0f, UE_TWO_PI);
+			FVector3d P(Rng.FRandRange(-0.1f, 0.1f), Rng.FRandRange(-0.1f, 0.1f), 0.01);
+			TArray<FVector3d> StemPath = { P };
+			const int32 Steps = Rng.RandRange(6, 11);
+			for (int32 K = 0; K < Steps; ++K)
+			{
+				Heading += Rng.FRandRange(-0.5f, 0.5f);
+				P += FVector3d(FMath::Cos(Heading), FMath::Sin(Heading), 0.0) * 0.07;
+				P.Z = 0.012;
+				StemPath.Add(P);
+				// A leaf on each side of the node, raised a little on its stalk, facing the sky.
+				for (const double Side : { -1.0, 1.0 })
+				{
+					const double LeafHeading = Heading + Side * Rng.FRandRange(0.8f, 1.6f);
+					const FVector3d Axis(FMath::Cos(LeafHeading), FMath::Sin(LeafHeading), Rng.FRandRange(0.05f, 0.3f));
+					const FVector3d Tilt(Rng.FRandRange(-0.25f, 0.25f), Rng.FRandRange(-0.25f, 0.25f), 1.0);
+					const FLinearColor C = ScaleSRGB(LerpSRGB(Dark, Light, Rng.FRand()), Rng.FRandRange(0.9f, 1.15f));
+					AddGroundLeaf(Acc, Ivy, P + FVector3d(0, 0, Rng.FRandRange(0.01f, 0.05f)), Axis, Tilt, Rng.FRandRange(0.09f, 0.14f), C);
+				}
+			}
+			AddTube(Acc, StemPath, 3, [](int32, double) { return 0.004; }, [&](int32, double, const FVector3d&) { return StemColor; },
+				EVegetationSurface::Cane, false, false, StemColor, StemColor, EVegetationSurface::Cane);
+		}
+	}
+
+	/**
+	 * A clump of woodland herbs: thin stems, each topped by a whorl of three toothed leaflets (like wood
+	 * anemone). Foliage surface: they turn and vanish with the seasons, as the herb layer does in winter.
+	 */
+	void BuildHerb(uint32 Seed, FMeshAccumulator& Acc)
+	{
+		FRandomStream Rng(static_cast<int32>(Seed));
+		FTreeArchetype Herb;
+		Herb.LeafWidth = 0.55f;
+		Herb.LeafTip = 0.8f;
+		Herb.LeafSpines = Rng.FRand() < 0.5f ? 2 : 0;
+		const FLinearColor Green = LerpSRGB(Srgb(0.20, 0.36, 0.09), Srgb(0.28, 0.44, 0.12), Rng.FRand());
+		const FLinearColor StemColor = Srgb(0.24, 0.30, 0.10);
+		const int32 Stems = Rng.RandRange(5, 11);
+		for (int32 S = 0; S < Stems; ++S)
+		{
+			const double A = Rng.FRandRange(0.0f, UE_TWO_PI);
+			const FVector3d Root = FVector3d(FMath::Cos(A), FMath::Sin(A), 0.0) * Rng.FRandRange(0.0f, 0.12f);
+			const double Height = Rng.FRandRange(0.08f, 0.22f);
+			const FVector3d Top = Root + FVector3d(FMath::Cos(A) * Height * 0.25, FMath::Sin(A) * Height * 0.25, Height);
+			TArray<FVector3d> StemPath = { Root - FVector3d(0, 0, 0.01), (Root + Top) * 0.5, Top };
+			AddTube(Acc, StemPath, 3, [](int32, double) { return 0.0025; }, [&](int32, double, const FVector3d&) { return StemColor; },
+				EVegetationSurface::Cane, false, false, StemColor, StemColor, EVegetationSurface::Cane);
+			const double Turn = Rng.FRandRange(0.0f, UE_TWO_PI);
+			for (int32 L = 0; L < 3; ++L)
+			{
+				const double LeafHeading = Turn + UE_DOUBLE_TWO_PI * L / 3.0;
+				const FVector3d Axis(FMath::Cos(LeafHeading), FMath::Sin(LeafHeading), -0.15);
+				FLinearColor C = ScaleSRGB(Green, Rng.FRandRange(0.85f, 1.15f));
+				C.A = Rng.FRand(); // leaf fall order
+				AddGroundLeaf(Acc, Herb, Top, Axis, FVector3d(0, 0, 1), Rng.FRandRange(0.05f, 0.09f), C);
+			}
+		}
+	}
+
 	void BuildMoss(uint32 Seed, FMeshAccumulator& Acc)
 	{
 		FRandomStream Rng(static_cast<int32>(Seed));
@@ -1037,6 +1162,8 @@ namespace VegetationMeshBuilder
 			case EVegetationKind::Stones: BuildStones(Seed, Acc); break;
 			case EVegetationKind::Moss: BuildMoss(Seed, Acc); break;
 			case EVegetationKind::GrassTuft: BuildGrassTuft(Seed, Acc); break;
+			case EVegetationKind::Ivy: BuildIvy(Seed, Acc); break;
+			case EVegetationKind::Herb: BuildHerb(Seed, Acc); break;
 			default: return false;
 			}
 		}

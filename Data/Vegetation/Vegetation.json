@@ -101,10 +101,10 @@
       "SpacingFactor": 0.5, "WaterMarginM": 2.5, "ScaleJitter": 0.3, "Variants": 3 },
     { "Kind": "Log", "PerHa": { "ClearCut": 3, "Regeneration": 2, "Pole": 3, "Mature": 6, "Old": 14 },
       "Moisture": [0.0, 0.0, 1.0, 1.0], "PH": [0.0, 0.0, 14.0, 14.0], "Light": [0.0, 0.0, 1.0, 1.0],
-      "SpacingFactor": 0.5, "WaterMarginM": 6.0, "ScaleJitter": 0.2, "Variants": 2 },
+      "SpacingFactor": 0.5, "WaterMarginM": 6.0, "ScaleJitter": 0.2, "Variants": 3 },
     { "Kind": "Stump", "PerHa": { "ClearCut": 60, "Regeneration": 30, "Pole": 25, "Mature": 8, "Old": 4 },
       "Moisture": [0.0, 0.0, 1.0, 1.0], "PH": [0.0, 0.0, 14.0, 14.0], "Light": [0.0, 0.0, 1.0, 1.0],
-      "SpacingFactor": 0.5, "WaterMarginM": 3.0, "ScaleJitter": 0.2, "Variants": 2 }
+      "SpacingFactor": 0.5, "WaterMarginM": 3.0, "ScaleJitter": 0.2, "Variants": 3 }
   ],
 
   "Ground": [
@@ -123,6 +123,12 @@
     { "Kind": "GrassTuft", "PerHa": { "ClearCut": 30000, "Regeneration": 18000, "Pole": 6000, "Mature": 9000, "Old": 9000 },
       "Moisture": [0.05, 0.2, 0.85, 0.95], "PH": [0.0, 0.0, 14.0, 14.0], "Light": [0.4, 0.75, 1.0, 1.0],
       "SpacingFactor": 0.0, "WaterMarginM": 0.8, "ScaleJitter": 0.3, "PathFactor": [0.0, 1.0, 0.25],
-      "bOpenOnPaths": true, "bAvoidRuts": true, "Variants": 4 }
+      "bOpenOnPaths": true, "bAvoidRuts": true, "Variants": 4 },
+    { "Kind": "Ivy", "PerHa": { "ClearCut": 50, "Regeneration": 200, "Pole": 900, "Mature": 1600, "Old": 2600 },
+      "Moisture": [0.3, 0.5, 0.9, 1.0], "PH": [5.0, 6.0, 8.0, 8.6], "Light": [0.0, 0.0, 0.5, 0.8],
+      "SpacingFactor": 0.5, "WaterMarginM": 1.0, "ScaleJitter": 0.3, "Variants": 3 },
+    { "Kind": "Herb", "PerHa": { "ClearCut": 3000, "Regeneration": 6000, "Pole": 1500, "Mature": 4000, "Old": 4000 },
+      "Moisture": [0.2, 0.4, 0.85, 0.95], "PH": [4.5, 5.5, 8.0, 8.5], "Light": [0.1, 0.3, 0.9, 1.0],
+      "SpacingFactor": 0.0, "WaterMarginM": 1.0, "ScaleJitter": 0.3, "PathFactor": [0.0, 0.3, 0.2], "Variants": 4 }
   ]
 }
