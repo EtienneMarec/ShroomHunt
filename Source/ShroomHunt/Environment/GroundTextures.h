@@ -50,6 +50,10 @@ struct FGroundLayerStyle
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Ground") float ReliefCm = 1.0f;
 	/** Stylized exaggeration of the objects' relief (leaves, pebbles, blades, moss bumps): 1 = real size. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Ground") float ReliefScale = 1.0f;
+	/** Softening of the relief (mm): smooth domes for pebbles; ~1 mm keeps fallen leaves crisp, leaf by leaf. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Ground") float ReliefBlurMm = 4.0f;
+	/** Highest pile of objects above the bare ground (cm, before ReliefScale); 0 = no limit. Avoids deep pits between tall piles. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Ground") float MaxPileCm = 0.0f;
 };
 
 /** The ground texture set. Source of truth: Data/Environment/GroundTextures.json (D-042). */
@@ -89,7 +93,7 @@ struct SHROOMHUNT_API FGroundTextureImage
 namespace GroundTextures
 {
 	/** Bump when the generated pixels change for the same data (the editor then rebakes the textures). */
-	constexpr int32 GeneratorVersion = 5;
+	constexpr int32 GeneratorVersion = 6;
 
 	SHROOMHUNT_API FString GetDefaultPath();
 	SHROOMHUNT_API bool Parse(const FString& JsonText, FGroundTexturesDefinition& Out, TArray<FString>& OutErrors);

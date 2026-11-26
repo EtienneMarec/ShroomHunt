@@ -128,14 +128,19 @@ void AEnvironmentDirector::OnConstruction(const FTransform& Transform)
 	Super::OnConstruction(Transform);
 
 	UWorld* World = GetWorld();
-	if (!bPreviewInEditor || !World || World->IsGameWorld())
+	if (!World || World->IsGameWorld())
+	{
+		return;
+	}
+	// Also without the preview: the editor viewport shows the sun and the moon together too.
+	AutoFindActors();
+	EnvironmentDirectorLights::SetForwardShadingPriority(SunLight, 1);
+	EnvironmentDirectorLights::SetForwardShadingPriority(MoonLight, 0);
+	if (!bPreviewInEditor)
 	{
 		return;
 	}
 
-	AutoFindActors();
-	EnvironmentDirectorLights::SetForwardShadingPriority(SunLight, 1);
-	EnvironmentDirectorLights::SetForwardShadingPriority(MoonLight, 0);
 	const UTimeSettings* Settings = GetDefault<UTimeSettings>();
 	const FCalendarConfig Config = Settings->MakeCalendarConfig();
 	const int32 MidSeasonDay = Config.SeasonLengthDays[static_cast<int32>(PreviewSeason)] / 2;

@@ -118,6 +118,8 @@ namespace GroundTexturesDetail
 		TBitArray<> Covered;
 		/** Relief units per centimeter (1 / ReliefRangeCm). */
 		float PerCm = 0.1f;
+		/** Highest pile above the bare ground, in relief units (0 = no limit). */
+		float MaxPile = 0.0f;
 	};
 
 	/** Ground level of the relief (the landscape material's displacement Center). */
@@ -180,6 +182,10 @@ namespace GroundTexturesDetail
 			Canvas.Height[Pixel] = Lift + Curl * Edge * Edge;
 			// A leaf is a sheet: it adds ~1.5 mm on what lies below, its edges curl up a few mm.
 			Canvas.Relief[Pixel] += (0.15f + CurlCm * Edge * Edge) * Canvas.PerCm;
+			if (Canvas.MaxPile > 0.0f)
+			{
+				Canvas.Relief[Pixel] = FMath::Min(Canvas.Relief[Pixel], Canvas.GroundRelief[Pixel] + Canvas.MaxPile);
+			}
 			Canvas.Covered[Pixel] = true;
 		});
 	}
@@ -366,6 +372,7 @@ namespace GroundTextures
 		const float GroundPerCm = 1.0f / FMath::Max(Definition.ReliefRangeCm, 0.5f);
 		// Objects (leaves, pebbles, blades, bumps) get the layer's stylized exaggeration.
 		Canvas.PerCm = GroundPerCm * FMath::Max(Style.ReliefScale, 0.0f);
+		Canvas.MaxPile = Style.MaxPileCm * Canvas.PerCm;
 
 		// Ground: base color mottled by large noise, fine grain, gentle relief.
 		const FRgb Base = ToRgb(Style.Base, { 0.3f, 0.2f, 0.1f });
@@ -494,8 +501,11 @@ namespace GroundTextures
 
 		// The displacement turns sharp steps into walls with stretched texture: soften the physical relief
 		// over about a centimeter (the normal map keeps the crisp edges).
-		const int32 BlurRadius = FMath::Max(1, FMath::RoundToInt(0.004 * PxPerM));
-		BlurWrapped(Canvas.Relief, Size, BlurRadius, 2);
+		if (Style.ReliefBlurMm > 0.0f)
+		{
+			const int32 BlurRadius = FMath::Max(1, FMath::RoundToInt(Style.ReliefBlurMm / 1000.0 * PxPerM));
+			BlurWrapped(Canvas.Relief, Size, BlurRadius, Style.ReliefBlurMm >= 2.0f ? 2 : 1);
+		}
 
 		// Every layer's mean surface at ground level: no step where two layers meet, and a fair height
 		// blend (litter, the highest pile, otherwise won every border and hid the grass).
