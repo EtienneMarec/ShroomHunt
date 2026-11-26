@@ -2,7 +2,7 @@
 
 The function blends the generated ground textures (T_Ground_<Layer>_D / _N, D-042) of every landscape
 paint layer with a height blend (the albedo alpha is the height, so leaves and pebbles stay on top at
-layer borders) and outputs BaseColor, Normal and Roughness. M_Landscape_Forest calls it instead of
+layer borders) and outputs BaseColor, Normal, Roughness and Height (0-1, for the Nanite displacement). M_Landscape_Forest calls it instead of
 its flat colors (Docs/Milestones/V1.md, step V1-2).
 
 Idempotent: an existing function is emptied and rebuilt in place, so the materials that call it keep
@@ -85,8 +85,9 @@ def main():
     with open(DATA, encoding="utf-8") as file:
         layers = json.load(file)["Layers"]
     function = load_function()
-    function.set_editor_property("description", "Generated ground layers (D-042): height-blended albedo, normal and roughness per landscape paint layer.")
+    function.set_editor_property("description", "Generated ground layers (D-042): height-blended albedo, normal and roughness per landscape paint layer, and the height for the displacement.")
 
+    albedos = {}
     color = layer_blend(function, layers, 900, 0)
     normal = layer_blend(function, layers, 900, 700)
     rough = layer_blend(function, layers, 900, 1400)
@@ -97,6 +98,7 @@ def main():
         # Landscape coordinates are in quads (1 m at scale 100): one tile every TileM meters.
         coords.set_editor_property("mapping_scale", float(style.get("TileM", 3.0)))
         albedo = texture_sample(function, f"{TEXTURE_FOLDER}/T_Ground_{layer}_D", unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, coords, -500, y)
+        albedos[layer] = albedo
         normal_map = texture_sample(function, f"{TEXTURE_FOLDER}/T_Ground_{layer}_N", unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL, coords, -500, y + 180)
         roughness = node(function, unreal.MaterialExpressionConstant, 400, 1400 + index * 80)
         roughness.set_editor_property("r", float(style.get("Roughness", 0.85)))
@@ -108,7 +110,26 @@ def main():
             connect(albedo, "A", blend, f"Height {layer}")
         log(f"layer {layer}: tile {style.get('TileM', 3.0)} m, roughness {style.get('Roughness', 0.85)}")
 
-    for priority, (name, source, y) in enumerate((("BaseColor", color, 0), ("Normal", normal, 700), ("Roughness", rough, 1400))):
+    # Height for the Nanite displacement (V1-2b): a sum of layer weight x layer height. Built from
+    # Landscape Layer Sample nodes rather than a Layer Blend, which flattened displacement in early 5.8.
+    height = None
+    for index, style in enumerate(layers):
+        layer = style["Layer"]
+        weight = node(function, unreal.MaterialExpressionLandscapeLayerSample, 400, 2000 + index * 160)
+        weight.set_editor_property("parameter_name", layer)
+        weight.set_editor_property("preview_weight", 1.0 if index == 0 else 0.0)
+        product = node(function, unreal.MaterialExpressionMultiply, 650, 2000 + index * 160)
+        connect(weight, "", product, "A")
+        connect(albedos[layer], "A", product, "B")
+        if height is None:
+            height = product
+        else:
+            total = node(function, unreal.MaterialExpressionAdd, 900, 2000 + index * 160)
+            connect(height, "", total, "A")
+            connect(product, "", total, "B")
+            height = total
+
+    for priority, (name, source, y) in enumerate((("BaseColor", color, 0), ("Normal", normal, 700), ("Roughness", rough, 1400), ("Height", height, 2000))):
         output = node(function, unreal.MaterialExpressionFunctionOutput, 1400, y)
         output.set_editor_property("output_name", name)
         output.set_editor_property("sort_priority", priority)

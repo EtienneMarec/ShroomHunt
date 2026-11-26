@@ -27,6 +27,7 @@ GLOBAL_SCALARS = {
     "FreshLitter": 0.0,
     "Month": 7.0,
     "SnowCover": 0.0,
+    "SnowDepthCm": 0.0,
     "SnowFalling": 0.0,
     "Frost": 0.0,
     "Dryness": 0.0,

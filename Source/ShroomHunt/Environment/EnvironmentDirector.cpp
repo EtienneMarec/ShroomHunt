@@ -666,6 +666,9 @@ void AEnvironmentDirector::UpdateSeason(const FGameDate& Date)
 		};
 		SetSeasonParameter(TEXT("SnowCover"), Follow(ShownSnowCover, Weather->GetSnowCover()));
 		SetSeasonParameter(TEXT("Frost"), Follow(ShownFrost, Weather->GetFrost()));
+		// Fresh snow is about ten times thicker than its water (1 mm of water ~ 1 cm of snow): drives the
+		// ground displacement (Nanite tessellation of the landscape, V1-2b).
+		SetSeasonParameter(TEXT("SnowDepthCm"), Follow(ShownSnowDepthCm, FMath::Clamp(Weather->GetSnowWaterMm(), 0.0f, 40.0f)));
 		SetSeasonParameter(TEXT("Dryness"), Weather->GetDryness());
 	}
 	SetSeasonParameter(TEXT("SnowFalling"), SnowAtCamera);

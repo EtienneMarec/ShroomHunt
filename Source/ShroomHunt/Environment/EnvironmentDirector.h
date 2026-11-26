@@ -383,4 +383,5 @@ private:
 	/** Snow cover and frost as shown (smoothed); negative until the first update. */
 	float ShownSnowCover = -1.0f;
 	float ShownFrost = -1.0f;
+	float ShownSnowDepthCm = -1.0f;
 };
