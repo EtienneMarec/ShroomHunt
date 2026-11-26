@@ -48,6 +48,8 @@ struct FGroundLayerStyle
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Ground") float NormalStrength = 1.0f;
 	/** Amplitude (cm) of the gentle undulation of the layer (leaf piles, moss mounds) in the displacement height. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Ground") float ReliefCm = 1.0f;
+	/** Stylized exaggeration of the objects' relief (leaves, pebbles, blades, moss bumps): 1 = real size. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Ground") float ReliefScale = 1.0f;
 };
 
 /** The ground texture set. Source of truth: Data/Environment/GroundTextures.json (D-042). */
@@ -87,7 +89,7 @@ struct SHROOMHUNT_API FGroundTextureImage
 namespace GroundTextures
 {
 	/** Bump when the generated pixels change for the same data (the editor then rebakes the textures). */
-	constexpr int32 GeneratorVersion = 4;
+	constexpr int32 GeneratorVersion = 5;
 
 	SHROOMHUNT_API FString GetDefaultPath();
 	SHROOMHUNT_API bool Parse(const FString& JsonText, FGroundTexturesDefinition& Out, TArray<FString>& OutErrors);

@@ -41,6 +41,14 @@ bool FGroundTextureTest::RunTest(const FString& Parameters)
 	for (const FGroundLayerStyle& Style : Ground.Layers)
 	{
 		const FString Key = Style.Layer.ToString();
+		const FGroundTextureImage Full = GroundTextures::Generate(Ground, Style, Vegetation);
+		double AlphaSum = 0.0;
+		for (const FColor& C : Full.Albedo)
+		{
+			AlphaSum += C.A;
+		}
+		TestTrue(FString::Printf(TEXT("%s mean surface at ground level (alpha %.1f, expected ~102)"), *Key, AlphaSum / Full.Albedo.Num()),
+			FMath::Abs(AlphaSum / Full.Albedo.Num() - 0.4 * 255.0) < 4.0);
 		const FGroundTextureImage Image = GroundTextures::Generate(Ground, Style, Vegetation);
 		const FGroundTextureImage Again = GroundTextures::Generate(Ground, Style, Vegetation);
 		const int32 Size = Image.Size;
@@ -92,7 +100,10 @@ bool FGroundTextureTest::RunTest(const FString& Parameters)
 		}
 		const float RangeCm = (MaxAlpha - MinAlpha) / 255.0f * Ground.ReliefRangeCm;
 		const float StepCm = MaxStep / 255.0f * Ground.ReliefRangeCm;
-		TestTrue(FString::Printf(TEXT("Litter relief within a few cm (%.1f cm), steps under 1 cm (%.2f cm)"), RangeCm, StepCm), RangeCm < 6.0f && StepCm < 1.0f);
+		// Physical sizes times the layer's stylized exaggeration.
+		const float Scale = FMath::Max(Litter->ReliefScale, 1.0f);
+		TestTrue(FString::Printf(TEXT("Litter relief within a few cm (%.1f cm), steps under 1 cm (%.2f cm), scale %.1f"), RangeCm, StepCm, Scale),
+			RangeCm < 6.0f * Scale && StepCm < 1.0f * Scale);
 	}
 	return true;
 }

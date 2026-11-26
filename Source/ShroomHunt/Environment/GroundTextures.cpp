@@ -363,7 +363,9 @@ namespace GroundTextures
 		const uint32 Seed = ShroomHash::Hash(ShroomHash::HashString(Style.Layer.ToString()), 0x6A0Du);
 		FGroundRng Rng(Seed);
 		FGroundCanvas Canvas(Size);
-		Canvas.PerCm = 1.0f / FMath::Max(Definition.ReliefRangeCm, 0.5f);
+		const float GroundPerCm = 1.0f / FMath::Max(Definition.ReliefRangeCm, 0.5f);
+		// Objects (leaves, pebbles, blades, bumps) get the layer's stylized exaggeration.
+		Canvas.PerCm = GroundPerCm * FMath::Max(Style.ReliefScale, 0.0f);
 
 		// Ground: base color mottled by large noise, fine grain, gentle relief.
 		const FRgb Base = ToRgb(Style.Base, { 0.3f, 0.2f, 0.1f });
@@ -382,7 +384,7 @@ namespace GroundTextures
 				Canvas.Color[Pixel] = Lerp(Base, Mottle, MottleAlpha) * (1.0f + Style.Grain * Fine);
 				Canvas.Height[Pixel] = 0.25f + 0.12f * Large + 0.04f * Fine;
 				// Gentle mounds and hollows (leaf piles), a few millimeters of grain.
-				Canvas.Relief[Pixel] = ReliefGround + (Style.ReliefCm * (2.0f * Large - 1.0f) + 0.15f * Fine) * Canvas.PerCm;
+				Canvas.Relief[Pixel] = ReliefGround + (Style.ReliefCm * (2.0f * Large - 1.0f) + 0.15f * Fine) * GroundPerCm;
 			}
 		}
 		Canvas.GroundRelief = Canvas.Relief;
@@ -494,6 +496,19 @@ namespace GroundTextures
 		// over about a centimeter (the normal map keeps the crisp edges).
 		const int32 BlurRadius = FMath::Max(1, FMath::RoundToInt(0.004 * PxPerM));
 		BlurWrapped(Canvas.Relief, Size, BlurRadius, 2);
+
+		// Every layer's mean surface at ground level: no step where two layers meet, and a fair height
+		// blend (litter, the highest pile, otherwise won every border and hid the grass).
+		double Mean = 0.0;
+		for (const float R : Canvas.Relief)
+		{
+			Mean += R;
+		}
+		const float Shift = ReliefGround - static_cast<float>(Mean / Canvas.Relief.Num());
+		for (float& R : Canvas.Relief)
+		{
+			R += Shift;
+		}
 
 		FGroundTextureImage Image;
 		Image.Size = Size;
