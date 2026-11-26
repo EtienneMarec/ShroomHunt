@@ -415,6 +415,20 @@ the reel follows the forest when it changes and needs no hand-placed cameras;
 standalone game (no editor overhead). Wind in the crowns is postponed (WPO on
 Nanite foliage would undo D-044's shadow savings).
 
+**D-046 — Morels: closed caps carved by 3D noise** · Accepted · 2026-11-26
+Morels cannot be a revolved profile with an underside: their cap is a closed
+egg joined to the stem, made of pits. `ECapShape::Morchelloid` and
+`Cerebriform` are built by a separate builder: a dense grid of revolution
+(about 12 k triangles near, no relief far) displaced along the normal by
+cellular noise (`ShroomHash::Cellular3D`: ridges where the two nearest feature
+points are equidistant, cells stretched vertically) or by the zero lines of
+gradient noise (`GradientNoise3D`: brain folds). The pattern is sampled in
+coordinates normalized by the cap size, so an individual keeps its pits while
+it grows; ridges take the cap colors and hollows the underside colors, shaded
+darker (no ambient occlusion on these meshes). `EUndersideType::Pitted` tells
+the identification texts there are no gills. The yellow morel and its deadly
+double, the false morel (*Gyromitra esculenta*), are taught by a new book.
+
 ## Open questions (to the developer)
 
 - The 54 empty F01 partition files (2026-11-23): were they saved during a

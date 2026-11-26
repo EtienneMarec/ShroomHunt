@@ -75,7 +75,7 @@ Edit JSON → re-run the script → no recompilation.
 | `WormyChance` | float | probability an old specimen is wormy |
 | **Morphology** | | |
 | `Cap` | struct | `ShapesByStage {young[], mature[], old[]}` of `{shape, weight}`; `DiameterCm`; `MarginType` (`Even`, `Inrolled`, `Wavy`, `Striate`, `Appendiculate`); `Surface` (`Smooth`, `Velvety`, `Scaly`, `Warty`, `Viscid`, `Fibrillose`); `Colors` (range); `Warts` {color, density, washOffByRain} |
-| `Underside` | struct | `Type` (`Gills`, `Pores`, `Ridges`, `Teeth`); `Attachment` (`Free`, `Adnate`, `Decurrent`, `Sinuate`); `ColorsByStage` |
+| `Underside` | struct | `Type` (`Gills`, `Pores`, `Ridges`, `Teeth`, `Pitted`: no underside, morels); `Attachment` (`Free`, `Adnate`, `Decurrent`, `Sinuate`); `ColorsByStage` |
 | `Stem` | struct | `LengthCm`, `ThicknessCm`, `Shape` (`Cylindrical`, `Clavate`, `Bulbous`, `Tapering`, `Rooting`), `Colors`, `Reticulation` {present, color, extent}, `Ring` {type: `None`, `Skirt`, `Fragile`, `Cortina`}, `Volva` {type: `None`, `Sac`, `Friable`, `Bulb`} |
 | `Flesh` | struct | `Color`, `ColorChange` (`None`, `Blue`, `Red`, `Yellow`…), `Odor`, `Taste` (`Mild`, `Bitter`, `Acrid`, `Untested`) |
 | `SporePrint` | color | hidden criterion (needs spore-print test) |
@@ -87,6 +87,10 @@ Edit JSON → re-run the script → no recompilation.
 Cap shapes: `Hemispherical`, `Campanulate` (bell), `Conical`, `Convex`,
 `Umbonate` (with nipple/mamelon), `Flat`, `Depressed`, `Infundibuliform`
 (funnel). Each shape is a parametric 2D profile in the mesh builder.
+`Morchelloid` (egg-shaped honeycomb, true morels) and `Cerebriform` (brain-like
+folds, false morels) are closed caps joined to the stem, carved by a 3D pattern
+(D-046); use them for every stage (no closed button) with `Underside.Type`
+`Pitted`, whose colors are the colors inside the pits.
 
 Observability of criteria (drives identification, `Docs/Progression.md`):
 - **visible** at a glance: cap shape/color/surface, stem color, size, habitat;

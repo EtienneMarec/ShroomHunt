@@ -37,8 +37,8 @@ litter/moss/snow layers, phenology fully active, winter species
 (e.g. wood blewit, oyster mushroom), spring morels & St George's mushroom.
 *Written ahead:* leaf calendar per genus, `MPC_Season`, snow and frost, snow
 particles, wood blewit, yellowfoot, St George's mushroom. *Left:* editor steps
-of M2.md, per-genus season values in `M_Vegetation` (genus id in the mesh), morels (honeycomb
-cap), seasonal density of the ground leaves.
+of M2.md, per-genus season values in `M_Vegetation` (genus id in the mesh),
+seasonal density of the ground leaves. Morels done (D-046).
 
 ## M3 — Base & economy (first part ready, `Docs/Milestones/M3.md`)
 Forester's house (spawn, storage, encyclopedia desk), selling with
@@ -52,10 +52,10 @@ identification keys and kits, pharmacist, storage, encyclopedia desk.
 Complete save/load (all systems, versioned), 12–15 species including the
 key dangerous confusions (death cap / green russulas, jack-o'-lantern /
 chanterelle, bitter bolete / cep), more landmarks.
-*Written ahead:* save game and autosave, 11 species with death cap / green
+*Written ahead:* save game and autosave, 13 species with death cap / green
 brittlegill, false chanterelle / chanterelle (more common in the north than the
-jack-o'-lantern), bitter bolete / cep, panther cap. *Left:* morels and
-wood-growing species, more landmarks, load menu.
+jack-o'-lantern), bitter bolete / cep, panther cap, morel / false morel.
+*Left:* wood-growing species, more landmarks, load menu.
 
 ## M5 — Second forest
 Mountain beech–fir forest (Vosges/Jura): second `ForestDefinition`, climate,
