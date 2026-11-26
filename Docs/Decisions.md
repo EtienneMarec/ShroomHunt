@@ -414,6 +414,11 @@ the reel follows the forest when it changes and needs no hand-placed cameras;
 `sh.Season.PreviewSnowCm` override. Recording is done with a screen recorder in a
 standalone game (no editor overhead). Wind in the crowns is postponed (WPO on
 Nanite foliage would undo D-044's shadow savings).
+*Update 2026-11-26:* mushroom shots. The game is about mushrooms, so the reel
+shows ten close-ups; their date is searched, not set: `DemoReel::FindMushrooms`
+runs the spawn model (`SpawnModel::FruitBodiesAt`) over the days of the season
+with the world's weather and picks the densest group of good-looking
+mushrooms, so a shot never films an empty patch and needs no placed props.
 
 **D-046 — Morels: closed caps carved by 3D noise** · Accepted · 2026-11-26
 Morels cannot be a revolved profile with an underside: their cap is a closed

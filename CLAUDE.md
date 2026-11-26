@@ -218,7 +218,8 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   textures; `MF_GroundLayers` (from `Tools/Python/create_ground_material.py`)
   height-blends them inside `M_Landscape_Forest`.
 - **Demo** (D-045): `Data/Demo/DemoReel.json` → `DemoReel` (places found in the
-  field, camera motion, pure) → `UDemoSubsystem` (plays it in game). `sh.Demo.*`.
+  field, mushroom close-ups found by the spawn model, camera motion, pure) →
+  `UDemoSubsystem` (plays it in game). `sh.Demo.*`.
 - **Debug**: `sh.*` console commands (`Debug/ShroomConsoleCommands.cpp`) and
   the on-screen HUD (`UShroomDebugSubsystem`, `sh.Debug.HUD`).
 - **Weather** (`FWeatherModel` pure + `UWeatherSubsystem`): deterministic,
