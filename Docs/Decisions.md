@@ -388,6 +388,19 @@ heights (Landscape Layer Sample), not a Layer Blend, which flattened
 displacement in early 5.8. 3D grass and moss tufts (runtime, like the 3D
 leaves) come next for what a heightfield cannot show.
 
+**D-044 — Opaque wood, two-sided masked foliage** · Accepted · 2026-11-26
+F01 ran at ~48 ms of GPU per frame, 27 ms of it in shadow depths: every
+vegetation mesh used the masked material, which takes Nanite and the virtual
+shadow maps off their fast path. Each mesh now has two material slots, from the
+surface id: slot 0 *Vegetation* (bark, wood, canes, berries, ground litter) with
+`MI_VegetationWood` (M_Vegetation forced opaque), slot 1 *Foliage* (living
+leaves and evergreen fronds) with `MI_VegetationFoliage` (masked, two-sided).
+Tree leaves and bracken fronds became single-sided blades: 2.4 M triangles for
+100 meshes instead of 3.2 M for 84. Both instances are created by
+`Tools/Python/create_vegetation_materials.py`; the master keeps all the logic.
+Moss and bramble leaves moved to the evergreen *Frond* surface (they vanished in
+winter with the leaf fall).
+
 ## Open questions (to the developer)
 
 - The 54 empty F01 partition files (2026-11-23): were they saved during a
