@@ -5,8 +5,8 @@ paint layer with a height blend (the albedo alpha is the height, so leaves and p
 layer borders) and outputs BaseColor, Normal, Roughness and Height (0-1, for the Nanite displacement). M_Landscape_Forest calls it instead of
 its flat colors (Docs/Milestones/V1.md, step V1-2).
 
-Idempotent: an existing function is emptied and rebuilt in place, so the materials that call it keep
-their reference. Logs what it creates.
+Idempotent: an existing function is emptied and rebuilt in place, keeping its output nodes, so the
+materials that call it keep their reference and their wires. Logs what it creates.
 
 Run in the editor (Tools > Execute Python Script...) or headless (editor closed):
     UnrealEditor-Cmd.exe ShroomHunt.uproject -run=pythonscript
@@ -21,7 +21,10 @@ import unreal
 
 FOLDER = "/Game/ShroomHunt/Environment/Landscape"
 TEXTURE_FOLDER = FOLDER + "/Generated"
-NAME = "MF_GroundLayers"
+import sys
+
+# Optional first argument: another function name (to try the script on a copy).
+NAME = sys.argv[1] if len(sys.argv) > 1 else "MF_GroundLayers"
 DATA = os.path.join(unreal.Paths.project_dir(), "Data", "Environment", "GroundTextures.json")
 
 mel = unreal.MaterialEditingLibrary
@@ -32,17 +35,47 @@ def log(message):
     unreal.log(f"[ground] {message}")
 
 
+OUTPUTS = ("BaseColor", "Normal", "Roughness", "Height")
+
+
+def clear_function(function):
+    """Deletes every node but one output per wanted name, and returns those outputs by name.
+
+    delete_all_material_expressions_in_function leaves some nodes behind (each rerun piled up a
+    copy), and recreating the outputs would change their ids, which disconnects the materials that
+    call the function: keep them.
+    """
+    kept = {}
+    for _ in range(20):
+        doomed = []
+        for expression in mel.get_material_function_expressions(function):
+            if isinstance(expression, unreal.MaterialExpressionFunctionOutput):
+                name = str(expression.get_editor_property("output_name"))
+                if name in OUTPUTS and (name not in kept or kept[name] == expression):
+                    kept[name] = expression
+                    continue
+            doomed.append(expression)
+        if not doomed:
+            break
+        for expression in doomed:
+            mel.delete_material_expression_in_function(function, expression)
+    left = mel.get_num_material_expressions_in_function(function)
+    if left != len(kept):
+        raise RuntimeError(f"could not empty {NAME}: {left} nodes left")
+    return kept
+
+
 def load_function():
     path = f"{FOLDER}/{NAME}"
     if assets.does_asset_exist(path):
         function = assets.load_asset(path)
-        mel.delete_all_material_expressions_in_function(function)
-        log(f"rebuilding {path}")
-        return function
+        kept = clear_function(function)
+        log(f"rebuilding {path} (kept outputs: {', '.join(sorted(kept))})")
+        return function, kept
     tools = unreal.AssetToolsHelpers.get_asset_tools()
     function = tools.create_asset(NAME, FOLDER, unreal.MaterialFunction, unreal.MaterialFunctionFactoryNew())
     log(f"created {path}")
-    return function
+    return function, {}
 
 
 def connect(source, output, target, input_name):
@@ -84,7 +117,7 @@ def texture_sample(function, path, sampler_type, coords, x, y):
 def main():
     with open(DATA, encoding="utf-8") as file:
         layers = json.load(file)["Layers"]
-    function = load_function()
+    function, outputs = load_function()
     function.set_editor_property("description", "Generated ground layers (D-042): height-blended albedo, normal and roughness per landscape paint layer, and the height for the displacement.")
 
     albedos = {}
@@ -130,14 +163,15 @@ def main():
             height = total
 
     for priority, (name, source, y) in enumerate((("BaseColor", color, 0), ("Normal", normal, 700), ("Roughness", rough, 1400), ("Height", height, 2000))):
-        output = node(function, unreal.MaterialExpressionFunctionOutput, 1400, y)
+        output = outputs.get(name) or node(function, unreal.MaterialExpressionFunctionOutput, 1400, y)
         output.set_editor_property("output_name", name)
         output.set_editor_property("sort_priority", priority)
         connect(source, "", output, "")
 
     mel.update_material_function(function)
     assets.save_loaded_asset(function)
-    log(f"OK: {NAME} with {len(layers)} layers")
+    count = mel.get_num_material_expressions_in_function(function)
+    log(f"OK: {NAME} with {len(layers)} layers, {count} nodes")
 
 
 main()
