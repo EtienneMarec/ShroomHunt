@@ -443,7 +443,23 @@ namespace VegetationScatter
 						}
 						C.Genus = Genera[GenusIndex];
 					}
-					OutDensity = UnderstoryDensityPerHa(Rule, Sample) * PathMultiplier;
+					const bool bOnPath = IsOnPath(Field, Sample, 0.0f);
+					if (Rule.bAvoidRuts && bOnPath && Sample.PathRank == static_cast<int32>(EForestPathRank::Ride)
+						&& FMath::Abs(Sample.PathDistanceM - 0.75f) < 0.4f)
+					{
+						return false; // the wheel ruts of the ride: bare dirt
+					}
+					if (Rule.bOpenOnPaths && bOnPath)
+					{
+						// A path is an open strip whatever the canopy above it.
+						FForestSample Open = Sample;
+						Open.Canopy = 0.0f;
+						OutDensity = UnderstoryDensityPerHa(Rule, Open) * PathMultiplier;
+					}
+					else
+					{
+						OutDensity = UnderstoryDensityPerHa(Rule, Sample) * PathMultiplier;
+					}
 					if (bBoosted)
 					{
 						OutDensity *= HabitatBoost(Rule, Sample, FineSlope(Field, P));
@@ -453,7 +469,7 @@ namespace VegetationScatter
 			if (bGround)
 			{
 				// Flat on the terrain, just above it (leaves, moss) or sunk in it (stones).
-				const float Sink = Rule.Kind == EVegetationKind::Stones ? 0.03f : 0.005f;
+				const float Sink = Rule.Kind == EVegetationKind::Stones ? 0.03f : (Rule.Kind == EVegetationKind::GrassTuft ? 0.02f : 0.005f);
 				for (const FCandidate& C : Kept)
 				{
 					FVegetationInstance Instance = MakeInstance(Field, Definition, C, Rule.ScaleJitter, Sink, 0.0f);

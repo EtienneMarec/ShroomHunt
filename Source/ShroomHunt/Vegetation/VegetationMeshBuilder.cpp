@@ -831,6 +831,84 @@ namespace VegetationMeshDetail
 	}
 
 	/** Low, bumpy moss cushions. */
+	/**
+	 * A tuft of 28-44 grass blades leaning out from a small base and bending under their weight.
+	 * Each blade is a tapered strip, both faces (opaque Cane surface: no masked foliage cost, no
+	 * seasonal leaf fall), dark at the root, light at the tip; a few dry yellow blades.
+	 */
+	void BuildGrassTuft(uint32 Seed, FMeshAccumulator& Acc)
+	{
+		FRandomStream Rng(static_cast<int32>(Seed));
+		const FLinearColor Root = Srgb(0.10, 0.15, 0.05);
+		const FLinearColor Green = LerpSRGB(Srgb(0.30, 0.44, 0.12), Srgb(0.38, 0.50, 0.15), Rng.FRand());
+		const FLinearColor Dry = Srgb(0.58, 0.52, 0.28);
+		const int32 Blades = Rng.RandRange(28, 44);
+		const double Height = Rng.FRandRange(0.16f, 0.30f);
+		constexpr int32 Segments = 3;
+		for (int32 B = 0; B < Blades; ++B)
+		{
+			const double Azimuth = Rng.FRandRange(0.0f, UE_TWO_PI);
+			const FVector3d Out(FMath::Cos(Azimuth), FMath::Sin(Azimuth), 0.0);
+			const FVector3d Side(-Out.Y, Out.X, 0.0);
+			const FVector3d Base = Out * (0.09 * FMath::Sqrt(Rng.FRand()));
+			const double Length = Height * Rng.FRandRange(0.6f, 1.15f);
+			const double Lean = FMath::DegreesToRadians(Rng.FRandRange(8.0f, 40.0f));
+			const double Droop = Rng.FRandRange(0.1f, 0.45f);
+			const double Width = Rng.FRandRange(0.008f, 0.013f);
+			const bool bDry = Rng.FRand() < 0.12f;
+			const FLinearColor Tip = bDry ? Dry : ScaleSRGB(Green, Rng.FRandRange(0.85f, 1.15f));
+			// Points along the blade: leaning out, then bending down (droop grows with the square of s).
+			FVector3d Points[Segments + 1];
+			for (int32 K = 0; K <= Segments; ++K)
+			{
+				const double S = static_cast<double>(K) / Segments;
+				const double Angle = Lean + Droop * S * S * 1.6;
+				Points[K] = Base + (Out * FMath::Sin(Angle) * S + FVector3d(0, 0, FMath::Cos(Angle) * S)) * Length;
+			}
+			for (int32 Face = 0; Face < 2; ++Face)
+			{
+				const bool bBack = Face == 1;
+				int32 Left[Segments], Right[Segments];
+				for (int32 K = 0; K < Segments; ++K)
+				{
+					const double S = static_cast<double>(K) / Segments;
+					const double HalfWidth = 0.5 * Width * (1.0 - S * 0.75);
+					const FLinearColor C = ScaleSRGB(LerpSRGB(bDry ? Dry : Root, Tip, static_cast<float>(FMath::Pow(S, 0.7))), bBack ? 0.85f : 1.0f);
+					Left[K] = AddVertexM(Acc, Points[K] + Side * HalfWidth, C);
+					Right[K] = AddVertexM(Acc, Points[K] - Side * HalfWidth, C);
+				}
+				const int32 TipId = AddVertexM(Acc, Points[Segments], ScaleSRGB(Tip, bBack ? 0.85f : 1.0f));
+				// Front faces outward (toward Out); the back face reverses the winding.
+				auto Quad = [&](int32 A, int32 Bv, int32 C, int32 D, float V0, float V1)
+				{
+					if (bBack)
+					{
+						Acc.AddQuad(A, D, C, Bv, FVector2f(0, V0), FVector2f(0, V1), FVector2f(1, V1), FVector2f(1, V0), static_cast<uint8>(EVegetationSurface::Cane));
+					}
+					else
+					{
+						Acc.AddQuad(A, Bv, C, D, FVector2f(0, V0), FVector2f(1, V0), FVector2f(1, V1), FVector2f(0, V1), static_cast<uint8>(EVegetationSurface::Cane));
+					}
+				};
+				for (int32 K = 0; K + 1 < Segments; ++K)
+				{
+					const float V0 = static_cast<float>(K) / Segments;
+					const float V1 = static_cast<float>(K + 1) / Segments;
+					Quad(Right[K], Left[K], Left[K + 1], Right[K + 1], V0, V1);
+				}
+				const int32 L = Segments - 1;
+				if (bBack)
+				{
+					Acc.AddTriangle(Right[L], TipId, Left[L], FVector2f(1, 0.66f), FVector2f(0.5f, 1), FVector2f(0, 0.66f), EVegetationSurface::Cane);
+				}
+				else
+				{
+					Acc.AddTriangle(Right[L], Left[L], TipId, FVector2f(1, 0.66f), FVector2f(0, 0.66f), FVector2f(0.5f, 1), EVegetationSurface::Cane);
+				}
+			}
+		}
+	}
+
 	void BuildMoss(uint32 Seed, FMeshAccumulator& Acc)
 	{
 		FRandomStream Rng(static_cast<int32>(Seed));
@@ -846,15 +924,17 @@ namespace VegetationMeshDetail
 			AddBlob(Acc, 2,
 				[&](const FVector3d& D)
 				{
-					const double Bump = 1.0 + 0.3 * DirectionNoise(BlobSeed, D, 3.5);
-					return Center + FVector3d(D.X, D.Y, D.Z * 0.28) * (Radius * Bump);
+					// Cushion with small tufty bumps on top (two noise scales).
+					const double Bump = 1.0 + 0.3 * DirectionNoise(BlobSeed, D, 3.5) + 0.14 * FMath::Max(D.Z, 0.0) * DirectionNoise(BlobSeed ^ 0x11u, D, 12.0);
+					return Center + FVector3d(D.X, D.Y, D.Z * 0.32) * (Radius * Bump);
 				},
 				[&](const FVector3d& D, const FVector3d&)
 				{
 					const float Mottle = DirectionNoise(BlobSeed ^ 0x7u, D, 6.0) * 0.5f + 0.5f;
-					return ScaleSRGB(LerpSRGB(Dark, Light, Mottle), FMath::Lerp(0.55f, 1.0f, static_cast<float>(0.5 + 0.5 * D.Z)));
+					const float Tufts = DirectionNoise(BlobSeed ^ 0x11u, D, 12.0) * 0.5f + 0.5f;
+					return ScaleSRGB(LerpSRGB(Dark, Light, Mottle * 0.6f + Tufts * 0.4f), FMath::Lerp(0.55f, 1.0f, static_cast<float>(0.5 + 0.5 * D.Z)));
 				},
-				EVegetationSurface::Frond);
+				EVegetationSurface::Cane);
 		}
 	}
 }
@@ -956,6 +1036,7 @@ namespace VegetationMeshBuilder
 			case EVegetationKind::Twigs: BuildTwigs(Seed, Acc); break;
 			case EVegetationKind::Stones: BuildStones(Seed, Acc); break;
 			case EVegetationKind::Moss: BuildMoss(Seed, Acc); break;
+			case EVegetationKind::GrassTuft: BuildGrassTuft(Seed, Acc); break;
 			default: return false;
 			}
 		}

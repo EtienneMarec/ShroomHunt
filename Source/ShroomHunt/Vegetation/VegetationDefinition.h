@@ -28,7 +28,9 @@ enum class EVegetationKind : uint8
 	Young,
 	/** Shrubs (D-041), grown like the trees from an archetype of FVegetationDefinition::Shrubs. */
 	Hazel,
-	Holly
+	Holly,
+	/** Ground (V1-4): a tuft of grass blades, where the grass layer is painted (clearings, rides). */
+	GrassTuft
 };
 
 /** Which group of kinds a PCG node outputs (separate spawners: collision and cull distances differ). */
@@ -238,6 +240,10 @@ struct FUnderstoryRule
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") int32 Variants = 2;
 	/** Shrub kinds (Hazel, Holly): the archetype of FVegetationDefinition::Shrubs they grow from. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") FName Archetype;
+	/** Paths count as fully lit for this rule (grass covers the rides even under a closed canopy). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") bool bOpenOnPaths = false;
+	/** Nothing on the two wheel ruts of the rides (they are bare dirt in the ground layers). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vegetation") bool bAvoidRuts = false;
 };
 
 /** Vegetation palette shared by the forests. Source of truth: Data/Vegetation/Vegetation.json. */

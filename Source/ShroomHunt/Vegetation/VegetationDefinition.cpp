@@ -113,6 +113,7 @@ namespace VegetationData
 		case EVegetationKind::Twigs:
 		case EVegetationKind::Stones:
 		case EVegetationKind::Moss:
+		case EVegetationKind::GrassTuft:
 			return EVegetationLayer::Ground;
 		default:
 			return EVegetationLayer::Understory;
@@ -138,6 +139,7 @@ namespace VegetationData
 		case EVegetationKind::Young: return TEXT("Young");
 		case EVegetationKind::Hazel: return TEXT("Hazel");
 		case EVegetationKind::Holly: return TEXT("Holly");
+		case EVegetationKind::GrassTuft: return TEXT("GrassTuft");
 		}
 		return TEXT("Unknown");
 	}
@@ -320,7 +322,7 @@ namespace VegetationData
 			}
 		};
 		CheckRules(Out.Understory, TEXT("Understory"), EVegetationLayer::Understory, TEXT("Sapling, Hazel, Holly, Bracken, Bramble, Log or Stump"));
-		CheckRules(Out.Ground, TEXT("Ground"), EVegetationLayer::Ground, TEXT("Leaf, Twigs, Stones or Moss"));
+		CheckRules(Out.Ground, TEXT("Ground"), EVegetationLayer::Ground, TEXT("Leaf, Twigs, Stones, Moss or GrassTuft"));
 		return OutErrors.Num() == ErrorsBefore;
 	}
 

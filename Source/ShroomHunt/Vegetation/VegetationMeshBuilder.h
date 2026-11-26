@@ -68,7 +68,7 @@ namespace VegetationMeshBuilder
 	 * Bump whenever the meshes this builder (or TreeGrowth) produces change for the same data:
 	 * the editor then rebuilds the baked vegetation meshes at its next start (D-040).
 	 */
-	constexpr int32 BuilderVersion = 6;
+	constexpr int32 BuilderVersion = 7;
 
 	/**
 	 * Material slots (D-044): slot 0 "Vegetation" = opaque, one-sided (bark, wood, canes, berries, ground

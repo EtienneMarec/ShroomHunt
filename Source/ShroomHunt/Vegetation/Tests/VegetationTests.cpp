@@ -78,7 +78,7 @@ bool FVegetationDefinitionTest::RunTest(const FString& Parameters)
 		Expected += Rule.Variants * (Rule.Kind == EVegetationKind::Leaf ? Definition.Trees.Num() : 1);
 	}
 	TestEqual(TEXT("One mesh per genus x form x variant plus understory and ground variants (leaf litter per genus)"), Specs.Num(), Expected);
-	TestEqual(TEXT("Four ground debris kinds"), Definition.GetRules(EVegetationLayer::Ground).Num(), 4);
+	TestEqual(TEXT("Five ground kinds (leaves, twigs, stones, moss, grass tufts)"), Definition.GetRules(EVegetationLayer::Ground).Num(), 5);
 	TSet<FString> Keys;
 	for (const FVegetationMeshSpec& Spec : Specs)
 	{
@@ -142,7 +142,7 @@ bool FVegetationMeshTest::RunTest(const FString& Parameters)
 		TestEqual(Key + TEXT(" collision: capsule for trees and dead wood only"), Collision.bHasCapsule,
 			bTree || Spec.Kind == EVegetationKind::Log || Spec.Kind == EVegetationKind::Stump);
 		const bool bHasOpenSurfaces = VegetationData::IsTreeKind(Spec.Kind) || VegetationData::IsShrubKind(Spec.Kind)
-			|| Spec.Kind == EVegetationKind::Bracken || Spec.Kind == EVegetationKind::Leaf;
+			|| Spec.Kind == EVegetationKind::Bracken || Spec.Kind == EVegetationKind::Leaf || Spec.Kind == EVegetationKind::GrassTuft;
 		if (!bHasOpenSurfaces)
 		{
 			// Every part is a closed surface facing outward (leaves and fronds are open blades: skipped).
