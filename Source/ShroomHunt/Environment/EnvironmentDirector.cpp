@@ -168,6 +168,12 @@ void AEnvironmentDirector::BeginPlay()
 	SetupCloudMaterial();
 	WarnIfNotMovable(SunLight, TEXT("Sun"));
 	WarnIfNotMovable(MoonLight, TEXT("Moon"));
+	if (bVolumetricFog && HeightFog && HeightFog->GetComponent())
+	{
+		UExponentialHeightFogComponent* Fog = HeightFog->GetComponent();
+		Fog->SetVolumetricFog(true);
+		Fog->SetVolumetricFogScatteringDistribution(VolumetricFogScattering);
+	}
 	EnvironmentDirectorLights::SetForwardShadingPriority(SunLight, 1);
 	EnvironmentDirectorLights::SetForwardShadingPriority(MoonLight, 0);
 
@@ -464,7 +470,12 @@ void AEnvironmentDirector::ApplyEnvironment(const FGameDate& Date, double TotalG
 	if (HeightFog && HeightFog->GetComponent())
 	{
 		const float RainHaze = FMath::Clamp(Weather.PrecipitationMmPerHour / RainRateForFullIntensity, 0.0f, 1.0f);
-		const float Multiplier = FMath::Lerp(1.0f, FogDensityMultiplierAtFullFog, Fog) * FMath::Lerp(1.0f, FogDensityMultiplierInHeavyRain, RainHaze);
+		// Forest atmosphere (V1-5): denser among the trees, morning mist in humid still air at dawn.
+		const float DawnHour = static_cast<float>(Date.Hour);
+		const float Dawn = ShroomMath::SmoothStep01(4.5f, 6.5f, DawnHour) * (1.0f - ShroomMath::SmoothStep01(8.0f, 10.5f, DawnHour));
+		MorningMist = Dawn * ShroomMath::SmoothStep01(0.75f, 0.95f, Weather.Humidity) * (1.0f - ShroomMath::SmoothStep01(2.0f, 6.0f, Weather.WindSpeed));
+		const float Multiplier = FMath::Lerp(1.0f, FogDensityMultiplierAtFullFog, Fog) * FMath::Lerp(1.0f, FogDensityMultiplierInHeavyRain, RainHaze)
+			* FMath::Lerp(1.0f, FogDensityMultiplierUnderCanopy, bInGame ? CanopyAtCamera : 0.0f) * (1.0f + MorningMistMultiplier * MorningMist);
 		HeightFog->GetComponent()->SetFogDensity(Initial.FogDensity * Multiplier);
 		if (bInGame)
 		{

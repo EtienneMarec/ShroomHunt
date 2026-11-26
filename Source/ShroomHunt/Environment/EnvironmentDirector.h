@@ -59,6 +59,8 @@ public:
 	/** Rain felt at the camera this frame (debug HUD). */
 	const FLocalRain& GetLocalRain() const { return LocalRainNow; }
 	float GetCanopyAtCamera() const { return CanopyAtCamera; }
+	/** Weight of the morning mist now (0-1): dawn, humid air, little wind. */
+	float GetMorningMist() const { return MorningMist; }
 	const FSkyMood& GetSkyMood() const { return MoodNow; }
 
 	/** Forest-wide average foliage (placeholder trees) and per genus (debug HUD, sh.Season.Status). */
@@ -207,6 +209,22 @@ protected:
 	/** Extra fog multiplier during heavy rain (rain haze). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Fog", meta = (ClampMin = "1"))
 	float FogDensityMultiplierInHeavyRain = 3.0f;
+
+	/** Fog multiplier in a dense stand (canopy 1 above the camera): the view closes between the trunks (V1-5). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Fog", meta = (ClampMin = "1"))
+	float FogDensityMultiplierUnderCanopy = 2.5f;
+
+	/** Extra fog at dawn in humid, still air: the density is multiplied by up to 1 + this (morning mist). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Fog", meta = (ClampMin = "0"))
+	float MorningMistMultiplier = 5.0f;
+
+	/** Volumetric fog: shafts of sunlight between the trunks (about 1-2 ms of GPU). Applied at Begin Play. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Fog")
+	bool bVolumetricFog = true;
+
+	/** Forward scattering of the volumetric fog (0 even, 0.9 strong shafts toward the sun). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Environment|Fog", meta = (ClampMin = "0", ClampMax = "0.9", EditCondition = "bVolumetricFog"))
+	float VolumetricFogScattering = 0.7f;
 
 	/**
 	 * Drive the cloud coverage from the weather through a dynamic instance of the volumetric
@@ -384,4 +402,5 @@ private:
 	float ShownSnowCover = -1.0f;
 	float ShownFrost = -1.0f;
 	float ShownSnowDepthCm = -1.0f;
+	float MorningMist = 0.0f;
 };
