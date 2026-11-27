@@ -253,15 +253,19 @@ namespace DemoReel
 					{
 						return false;
 					}
-					// Prefer wide openings: the canopy stays low in a ring of 12 m.
+					// A gap in the forest, not an empty clear-cut: open around the camera (8 m), trees
+					// on most of a ring 28 m away (wide clear-cuts showed bare ground and no tree).
 					double Open = 0.0;
+					double Trees = 0.0;
 					for (int32 K = 0; K < 8; ++K)
 					{
-						const FVector2d R = Q + Dir(UE_DOUBLE_TWO_PI * K / 8) * 12.0;
-						Open += 1.0 - Field.Sample(static_cast<float>(R.X), static_cast<float>(R.Y)).Canopy;
+						const FVector2d Near = Q + Dir(UE_DOUBLE_TWO_PI * K / 8) * 8.0;
+						const FVector2d Far = Q + Dir(UE_DOUBLE_TWO_PI * K / 8) * 28.0;
+						Open += 1.0 - Field.Sample(static_cast<float>(Near.X), static_cast<float>(Near.Y)).Canopy;
+						Trees += Field.Sample(static_cast<float>(Far.X), static_cast<float>(Far.Y)).Canopy;
 					}
-					Score = Open;
-					return true;
+					Score = Open + 1.5 * Trees;
+					return Trees >= 4.0;
 				}, P))
 			{
 				// Look toward the forest edge (where the canopy is densest 30 m away).
@@ -356,8 +360,39 @@ namespace DemoReel
 			{
 				const FForestLandmark& Mark = *Matching[Shot.Pick % Matching.Num()];
 				const FVector2d Where(Mark.PositionM.X, Mark.PositionM.Y);
-				const FVector2d Front = Dir(FMath::DegreesToRadians(Mark.YawDeg));
-				Stand(Where + Front * (6.0 + Mark.LengthM * 0.5), Where, -Shot.EyeM + 1.4);
+				const double Yaw = FMath::DegreesToRadians(Mark.YawDeg);
+				const double Near = 6.0 + Mark.LengthM * 0.5;
+				const double Far = FMath::Max(Near, static_cast<double>(Shot.DistanceM));
+				// Seen whole, from a distance: the most open line of sight (low canopy between the camera
+				// and the landmark), the front side and the farthest distance preferred.
+				double BestScore = -1e30;
+				FVector2d Best = Where + Dir(Yaw) * Near;
+				for (int32 K = 0; K < 16; ++K)
+				{
+					const double Angle = Yaw + UE_DOUBLE_TWO_PI * K / 16;
+					for (const double Fraction : { 1.0, 0.75, 0.5 })
+					{
+						const double Distance = FMath::Max(Near, Far * Fraction);
+						const FVector2d Camera = Where + Dir(Angle) * Distance;
+						if (!Inside(Field, Camera, 5.0) || Field.Sample(static_cast<float>(Camera.X), static_cast<float>(Camera.Y)).bWater)
+						{
+							continue;
+						}
+						double Open = 0.0;
+						for (int32 Step = 0; Step < 8; ++Step)
+						{
+							const FVector2d Q = FMath::Lerp(Where + Dir(Angle) * Near * 0.5, Camera, (Step + 0.5) / 8.0);
+							Open += (1.0 - Field.Sample(static_cast<float>(Q.X), static_cast<float>(Q.Y)).Canopy) / 8.0;
+						}
+						const double Score = Open + 0.15 * FMath::Cos(Angle - Yaw) + 0.1 * Distance / Far;
+						if (Score > BestScore)
+						{
+							BestScore = Score;
+							Best = Camera;
+						}
+					}
+				}
+				Stand(Best, Where, -Shot.EyeM + (Shot.LookAtM >= 0.0f ? Shot.LookAtM : 1.4));
 			}
 			break;
 		}

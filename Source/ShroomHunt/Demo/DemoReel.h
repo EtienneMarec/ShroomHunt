@@ -29,7 +29,7 @@ enum class EDemoPlace : uint8
 	Ride,
 	Road,
 	Footpath,
-	/** An open area: clear-cut or a gap in the canopy. */
+	/** A gap in the canopy with trees all around (not an empty clear-cut). */
 	Clearing,
 	/** The bank of a pond. */
 	Pond,
@@ -62,8 +62,10 @@ struct FDemoShot
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Demo") FName Species;
 	/** Mushrooms: fewest standing mushrooms in the group (rare species: 1). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Demo") int32 MinFruits = 3;
-	/** Mushrooms: distance from the camera to the group (m). */
+	/** Mushrooms: distance from the camera to the group; Landmark: farthest camera distance, the view kept open (m). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Demo") float DistanceM = 1.3f;
+	/** Landmark: height of the point looked at above the ground (m); negative = the place's default. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Demo") float LookAtM = -1.0f;
 	/** Orbit: angle swept around the place over the shot (degrees). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Demo") float OrbitDeg = 50.0f;
 	/** Which candidate (0 = best): try another one when a place does not look good. */
