@@ -216,9 +216,14 @@ namespace LandmarkMeshDetail
 		AddFace(Acc, { FVector3d(-0.07, 0.07, 2.55), FVector3d(-0.07, -0.07, 2.55), FVector3d(0, 0, 2.7) }, FVector3d(-1, 0, 1), Wood, ESurface::Wood);
 		AddFace(Acc, { FVector3d(0.07, 0.07, 2.55), FVector3d(-0.07, 0.07, 2.55), FVector3d(0, 0, 2.7) }, FVector3d(0, 1, 1), Wood, ESurface::Wood);
 		AddFace(Acc, { FVector3d(-0.07, -0.07, 2.55), FVector3d(0.07, -0.07, 2.55), FVector3d(0, 0, 2.7) }, FVector3d(0, -1, 1), Wood, ESurface::Wood);
-		// Name board across the post, facing +X and -X.
-		AddBox(Acc, FVector3d(0, 0, LandmarkMeshBuilder::SignNameBoardZ / Cm), FVector3d(0.03, 0.75, 0.15), Srgb(0.9, 0.88, 0.82), ESurface::Paint);
-		AddBox(Acc, FVector3d(0, 0, LandmarkMeshBuilder::SignNameBoardZ / Cm), FVector3d(0.025, 0.77, 0.17), Srgb(0.55, 0.12, 0.1), ESurface::Paint);
+		// Name boards on both faces of the post (facing +X and -X): one board through the post left the
+		// post standing in front of the name on both sides.
+		for (const double Side : { 1.0, -1.0 })
+		{
+			const double BoardX = Side * LandmarkMeshBuilder::SignNameBoardFaceX / Cm;
+			AddBox(Acc, FVector3d(BoardX - Side * 0.015, 0, LandmarkMeshBuilder::SignNameBoardZ / Cm), FVector3d(0.015, 0.75, 0.15), Srgb(0.9, 0.88, 0.82), ESurface::Paint);
+			AddBox(Acc, FVector3d(BoardX - Side * 0.018, 0, LandmarkMeshBuilder::SignNameBoardZ / Cm), FVector3d(0.012, 0.77, 0.17), Srgb(0.55, 0.12, 0.1), ESurface::Paint);
+		}
 	}
 
 	void BuildParcelStone(FMeshAccumulator& Acc, FLandmarkCollision* Collision)

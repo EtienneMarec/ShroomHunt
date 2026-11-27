@@ -47,6 +47,8 @@ namespace LandmarkMeshBuilder
 
 	/** Height of a signpost's name board center and of its first arrow board (cm). */
 	inline constexpr float SignNameBoardZ = 235.0f;
+	/** Distance from the post axis to the face of each name board (the post is 6 cm from its axis). */
+	inline constexpr float SignNameBoardFaceX = 9.0f;
 	inline constexpr float SignFirstArrowZ = 195.0f;
 	inline constexpr float SignArrowSpacing = 32.0f;
 }

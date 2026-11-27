@@ -246,8 +246,9 @@ void AForestLandmarkSet::Build()
 			if (!Name.IsEmpty())
 			{
 				const float Size = FitSize(Name, 140.0f, 13.0f);
-				AddText(Component, Name, FVector(4.0, 0.0, LandmarkMeshBuilder::SignNameBoardZ), 0.0f, Size);
-				AddText(Component, Name, FVector(-4.0, 0.0, LandmarkMeshBuilder::SignNameBoardZ), 180.0f, Size);
+				const double TextX = LandmarkMeshBuilder::SignNameBoardFaceX + 1.0;
+				AddText(Component, Name, FVector(TextX, 0.0, LandmarkMeshBuilder::SignNameBoardZ), 0.0f, Size);
+				AddText(Component, Name, FVector(-TextX, 0.0, LandmarkMeshBuilder::SignNameBoardZ), 180.0f, Size);
 			}
 			// Arrows to the neighboring named places, along each path leaving the node.
 			int32 Board = 0;
