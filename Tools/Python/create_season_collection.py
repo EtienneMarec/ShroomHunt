@@ -1,7 +1,8 @@
 """Create or update /Game/ShroomHunt/Environment/MPC_Season (M2 seasons).
 
 The Environment Director writes the seasonal values into this Material Parameter Collection
-every frame; materials read them (foliage colors and leaf fall, snow, frost, fresh litter).
+every frame; materials read them (foliage colors and leaf fall, snow, frost, fresh litter). The
+Mushroom Spawner writes the snow hollows (SnowHollow0..7) read by the landscape (add_snow_hollows.py).
 
 Run inside the Unreal Editor (Tools > Execute Python Script...) or headless:
   UnrealEditor-Cmd.exe ShroomHunt.uproject -run=pythonscript -script="<project>/Tools/Python/create_season_collection.py"
@@ -34,6 +35,10 @@ GLOBAL_SCALARS = {
 }
 GENUS_SCALARS = {"LeafAmount": 1.0, "Coloring": 0.0, "Freshness": 0.0}
 SUMMER_GREEN = unreal.LinearColor(0.22, 0.36, 0.10, 1.0)
+# Snow hollows around the mushrooms nearest to the camera, written by the Mushroom Spawner
+# (xyz = world position in cm, w = radius in cm, 0 = unused; AMushroomSpawner::SnowHollowCount).
+SNOW_HOLLOWS = 8
+NO_HOLLOW = unreal.LinearColor(0.0, 0.0, 0.0, 0.0)
 
 
 def read_genera():
@@ -65,7 +70,8 @@ def main():
     for genus in genera:
         for suffix, value in GENUS_SCALARS.items():
             wanted_scalars[genus + suffix] = value
-    wanted_vectors = ["FoliageColor"] + [genus + "FoliageColor" for genus in genera]
+    wanted_vectors = {name: SUMMER_GREEN for name in ["FoliageColor"] + [genus + "FoliageColor" for genus in genera]}
+    wanted_vectors.update({f"SnowHollow{index}": NO_HOLLOW for index in range(SNOW_HOLLOWS)})
 
     scalars = list(collection.get_editor_property("scalar_parameters"))
     vectors = list(collection.get_editor_property("vector_parameters"))
@@ -80,11 +86,11 @@ def main():
             parameter.set_editor_property("default_value", value)
             scalars.append(parameter)
             added.append(name)
-    for name in wanted_vectors:
+    for name, value in wanted_vectors.items():
         if name not in have_vectors:
             parameter = unreal.CollectionVectorParameter()
             parameter.set_editor_property("parameter_name", name)
-            parameter.set_editor_property("default_value", SUMMER_GREEN)
+            parameter.set_editor_property("default_value", value)
             vectors.append(parameter)
             added.append(name)
 

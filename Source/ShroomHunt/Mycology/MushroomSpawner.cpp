@@ -1,5 +1,6 @@
 #include "Mycology/MushroomSpawner.h"
 
+#include "Camera/PlayerCameraManager.h"
 #include "Components/StaticMeshComponent.h"
 #include "Core/ShroomHash.h"
 #include "Core/ShroomLog.h"
@@ -15,6 +16,8 @@
 #include "Mycology/ObservableCriteria.h"
 #include "Mycology/SpeciesDatabaseSubsystem.h"
 #include "Kismet/GameplayStatics.h"
+#include "Materials/MaterialParameterCollection.h"
+#include "Materials/MaterialParameterCollectionInstance.h"
 #include "Player/ForagerComponent.h"
 #include "Player/ForagingSubsystem.h"
 #include "Time/CalendarSubsystem.h"
@@ -74,6 +77,7 @@ bool AMushroomSpawner::Initialize()
 	}
 	// The solid vegetation (same deterministic placement as the PCG vegetation).
 	Obstacles = MakeShared<FVegetationObstacleGrid>();
+	Cover = MakeShared<FVegetationObstacleGrid>();
 	if (const TSharedPtr<const FVegetationDefinition> Vegetation = ForestFieldCache::GetVegetation(Errors))
 	{
 		const FBox2d Whole(FVector2d::ZeroVector, FVector2d(Field->GetSizeM(), Field->GetSizeM()));
@@ -81,7 +85,9 @@ bool AMushroomSpawner::Initialize()
 		VegetationScatter::Scatter(*Field, *Vegetation, EVegetationLayer::Trees, Whole, Instances);
 		VegetationScatter::Scatter(*Field, *Vegetation, EVegetationLayer::Understory, Whole, Instances);
 		Obstacles->AddInstances(*Vegetation, Instances);
+		Cover->AddCover(*Vegetation, Instances);
 	}
+	SeasonCollection = SeasonParameters.LoadSynchronous();
 	FieldToWorld = ForestWorld::GetFieldToWorld(GetWorld(), FVector::ZeroVector);
 	UE_LOG(LogShroomSpawn, Log, TEXT("Mushroom Spawner: %d species, %d mycelium patches, %d solid obstacles in %s"), Species.Num(), Patches.Num(), Obstacles->Num(), *ForestName);
 	return true;
@@ -154,6 +160,61 @@ void AMushroomSpawner::Tick(float DeltaSeconds)
 		LastHourIndex = Hour;
 		Recompute(Now);
 	}
+	UpdateSnowHollows();
+}
+
+void AMushroomSpawner::UpdateSnowHollows()
+{
+	const APlayerCameraManager* CameraManager = UGameplayStatics::GetPlayerCameraManager(this, 0);
+	UMaterialParameterCollectionInstance* Collection = SeasonCollection ? GetWorld()->GetParameterCollectionInstance(SeasonCollection) : nullptr;
+	if (!CameraManager || !Collection)
+	{
+		return;
+	}
+	// The SnowHollowCount mushrooms nearest to the camera (insertion into a short sorted list).
+	const FVector Camera = CameraManager->GetCameraLocation();
+	const double MaxDistanceSq = FMath::Square(SnowHollowDistanceM * 100.0);
+	TArray<TPair<double, FVector4>, TInlineAllocator<SnowHollowCount + 1>> Nearest;
+	for (const FVector4& Source : HollowSources)
+	{
+		const double DistanceSq = FVector::DistSquared(FVector(Source), Camera);
+		if (DistanceSq > MaxDistanceSq || (Nearest.Num() == SnowHollowCount && DistanceSq >= Nearest.Last().Key))
+		{
+			continue;
+		}
+		int32 Slot = Nearest.Num();
+		while (Slot > 0 && Nearest[Slot - 1].Key > DistanceSq)
+		{
+			--Slot;
+		}
+		Nearest.Insert(TPair<double, FVector4>(DistanceSq, Source), Slot);
+		if (Nearest.Num() > SnowHollowCount)
+		{
+			Nearest.Pop();
+		}
+	}
+	TArray<FVector4> Hollows;
+	for (const TPair<double, FVector4>& Entry : Nearest)
+	{
+		Hollows.Add(Entry.Value);
+	}
+	Hollows.SetNum(SnowHollowCount); // unused slots: radius 0 = no hollow
+	if (Hollows == WrittenHollows)
+	{
+		return;
+	}
+	WrittenHollows = Hollows;
+	static const FName Names[SnowHollowCount] = { TEXT("SnowHollow0"), TEXT("SnowHollow1"), TEXT("SnowHollow2"), TEXT("SnowHollow3"),
+		TEXT("SnowHollow4"), TEXT("SnowHollow5"), TEXT("SnowHollow6"), TEXT("SnowHollow7") };
+	for (int32 Index = 0; Index < SnowHollowCount; ++Index)
+	{
+		const FVector4& H = Hollows[Index];
+		if (!Collection->SetVectorParameterValue(Names[Index], FLinearColor(H.X, H.Y, H.Z, H.W)) && !bWarnedHollows)
+		{
+			bWarnedHollows = true;
+			UE_LOG(LogShroomSpawn, Warning, TEXT("Mushroom Spawner: %s has no %s; run Tools/Python/create_season_collection.py"), *SeasonCollection->GetPathName(), *Names[Index].ToString());
+		}
+	}
 }
 
 void AMushroomSpawner::Refresh()
@@ -204,6 +265,7 @@ void AMushroomSpawner::RebuildInstances(double NowGameSeconds)
 
 	TMap<FString, TArray<FTransform>> Groups;
 	TMap<FString, UStaticMesh*> GroupMeshes;
+	HollowSources.Reset();
 	for (const FFruitBody& Fruit : FruitBodies)
 	{
 		const FMushroomSpeciesRow* Row = Species.Find(Fruit.SpeciesId);
@@ -225,7 +287,11 @@ void AMushroomSpawner::RebuildInstances(double NowGameSeconds)
 		const float Pitch = 6.0f * ShroomHash::ToSignedFloat(ShroomHash::Hash(Fruit.Seed, 11u));
 		const float Roll = 6.0f * ShroomHash::ToSignedFloat(ShroomHash::Hash(Fruit.Seed, 12u));
 		const FQuat Rotation = FieldToWorld.GetRotation() * FRotator(Pitch, Fruit.YawDeg, Roll).Quaternion();
-		Groups.FindOrAdd(Key).Add(FTransform(Rotation, GetWorldLocation(Fruit), FVector(Fruit.Scale * GrowthScale)));
+		const FVector Location = GetWorldLocation(Fruit);
+		Groups.FindOrAdd(Key).Add(FTransform(Rotation, Location, FVector(Fruit.Scale * GrowthScale)));
+		// Snow hollow footprint: the cap's radius at its size now (as in FindTarget), at least a stem's.
+		const float Growth = MushroomMorphology::GrowthFraction(*Row, Age) * Fruit.Scale;
+		HollowSources.Add(FVector4(Location, FMath::Max(0.5f * Row->Cap.DiameterCm.Lerp(0.6f) * Growth, 2.0f)));
 	}
 
 	// One component per mushroom, reused from update to update (a few hundred at most).
@@ -253,7 +319,8 @@ void AMushroomSpawner::RebuildInstances(double NowGameSeconds)
 				Component->SetCastShadow(true);
 				Component->LDMaxDrawDistance = CullCm;
 				Component->SetCachedMaxDrawDistance(CullCm);
-				// M_Mushroom lifts mushrooms with this flag onto the displaced litter and snow (add_mushroom_ground_lift.py).
+				// M_Mushroom lifts mushrooms with this flag onto the displaced leaf litter (add_mushroom_ground_lift.py);
+				// the snow makes a hollow around them instead (UpdateSnowHollows).
 				Component->SetCustomPrimitiveDataFloat(0, 1.0f);
 				Component->RegisterComponent();
 				MushroomComponents.Add(Component);
