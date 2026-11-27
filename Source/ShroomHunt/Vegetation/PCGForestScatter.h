@@ -53,7 +53,11 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Settings, meta = (PCG_Overridable))
 	bool bAlignToLandscape = true;
 
-	/** Used when bAlignToLandscape is off or no Landscape exists: world location (cm) of the field's corner (0, 0, height 0). */
+	/**
+	 * Used only when bAlignToLandscape is off: world location (cm) of the field's corner (0, 0, height 0).
+	 * With bAlignToLandscape and no Landscape found, the node outputs nothing (a silent fallback once
+	 * placed a whole generation 504 m away from the landscape: floating trees).
+	 */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Settings, meta = (PCG_Overridable))
 	FVector ForestOrigin = FVector::ZeroVector;
 

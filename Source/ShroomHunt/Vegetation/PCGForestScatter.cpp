@@ -67,7 +67,10 @@ bool FPCGForestScatterElement::ExecuteInternal(FPCGContext* Context) const
 		FieldToWorld = ForestWorld::GetFieldToWorld(Context->ExecutionSource->GetExecutionState().GetWorld(), Settings->ForestOrigin, &bFoundLandscape);
 		if (!bFoundLandscape)
 		{
-			PCGE_LOG(Warning, GraphAndLog, LOCTEXT("NoLandscape", "No Landscape in the level: using Forest Origin."));
+			// Never guess: instances placed from Forest Origin end up beside the landscape and stay
+			// there in their partition actors (Tools/Python/fix_forest_pcg_alignment.py removes them).
+			PCGE_LOG(Error, GraphAndLog, LOCTEXT("NoLandscape", "No Landscape in the level: nothing generated. Import the landscape first, or untick Align To Landscape and set Forest Origin."));
+			return true;
 		}
 	}
 	const FBox Bounds = Context->ExecutionSource->GetExecutionState().GetBounds();
