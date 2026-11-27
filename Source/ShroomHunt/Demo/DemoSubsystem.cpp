@@ -6,7 +6,16 @@
 #include "Camera/CameraComponent.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Core/ShroomLog.h"
+#include "Async/Async.h"
 #include "Engine/Engine.h"
+#include "Engine/GameViewportClient.h"
+#include "HAL/FileManager.h"
+#include "IImageWrapper.h"
+#include "IImageWrapperModule.h"
+#include "Misc/App.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
+#include "Modules/ModuleManager.h"
 #include "Engine/World.h"
 #include "Forest/ForestField.h"
 #include "Forest/ForestFieldCache.h"
@@ -168,6 +177,56 @@ bool UDemoSubsystem::Play(int32 FirstShot, bool bInScreenshots, FString& OutRepo
 	return true;
 }
 
+bool UDemoSubsystem::Render(int32 FirstShot, int32 Fps, float WarmupSeconds, FString& OutReport)
+{
+	if (!Play(FirstShot, false, OutReport))
+	{
+		return false;
+	}
+	RenderFps = FMath::Clamp(Fps, 10, 120);
+	WarmupFrames = FMath::Max(0, FMath::RoundToInt(WarmupSeconds * RenderFps));
+	FramesFolder = FPaths::ConvertRelativePathToFull(FPaths::ProjectSavedDir() / TEXT("DemoFrames"));
+	IFileManager::Get().DeleteDirectory(*FramesFolder, false, true);
+	IFileManager::Get().MakeDirectory(*FramesFolder, true);
+	FrameNumber = 0;
+	PendingWrites = MakeShared<FThreadSafeCounter>();
+	// Logical time advances by exactly 1 / Fps per frame, however long a frame takes to render.
+	bSavedFixedTimeStep = FApp::UseFixedTimeStep();
+	SavedFixedDeltaTime = FApp::GetFixedDeltaTime();
+	FApp::SetFixedDeltaTime(1.0 / RenderFps);
+	FApp::SetUseFixedTimeStep(true);
+	CaptureHandle = UGameViewportClient::OnScreenshotCaptured().AddUObject(this, &UDemoSubsystem::OnFrameCaptured);
+	bRendering = true;
+	StartShot(FirstShot); // again, now with the warm-up
+	OutReport = FString::Printf(TEXT("rendering %d shots from %d at %d fps into %s (sh.Demo.Stop to stop)"), Reel.Shots.Num() - FirstShot, FirstShot, RenderFps, *FramesFolder);
+	return true;
+}
+
+void UDemoSubsystem::OnFrameCaptured(int32 Width, int32 Height, const TArray<FColor>& Pixels)
+{
+	if (!bRendering)
+	{
+		return;
+	}
+	// Compress and write on a worker thread; wait if too many frames are queued (memory).
+	while (PendingWrites->GetValue() > 6)
+	{
+		FPlatformProcess::Sleep(0.005f);
+	}
+	PendingWrites->Increment();
+	const FString Path = FramesFolder / FString::Printf(TEXT("frame_%05d.jpg"), FrameNumber++);
+	Async(EAsyncExecution::ThreadPool, [Pixels, Width, Height, Path, Pending = PendingWrites]()
+	{
+		IImageWrapperModule& Module = FModuleManager::LoadModuleChecked<IImageWrapperModule>(TEXT("ImageWrapper"));
+		const TSharedPtr<IImageWrapper> Jpeg = Module.CreateImageWrapper(EImageFormat::JPEG);
+		if (Jpeg.IsValid() && Jpeg->SetRaw(Pixels.GetData(), Pixels.Num() * sizeof(FColor), Width, Height, ERGBFormat::BGRA, 8))
+		{
+			FFileHelper::SaveArrayToFile(Jpeg->GetCompressed(95), *Path);
+		}
+		Pending->Decrement();
+	});
+}
+
 void UDemoSubsystem::EnterCinematic()
 {
 	using namespace DemoSubsystemDetail;
@@ -227,6 +286,19 @@ void UDemoSubsystem::Stop()
 		return;
 	}
 	bPlaying = false;
+	if (bRendering)
+	{
+		bRendering = false;
+		UGameViewportClient::OnScreenshotCaptured().Remove(CaptureHandle);
+		FApp::SetUseFixedTimeStep(bSavedFixedTimeStep);
+		FApp::SetFixedDeltaTime(SavedFixedDeltaTime);
+		while (PendingWrites.IsValid() && PendingWrites->GetValue() > 0)
+		{
+			FPlatformProcess::Sleep(0.01f);
+		}
+		UE_LOG(LogShroomDebug, Display, TEXT("Demo: %d frames in %s. Encode them with:\n  ffmpeg -framerate %d -i \"%s/frame_%%05d.jpg\" -c:v libx264 -pix_fmt yuv420p -crf 16 ShroomHunt_demo.mp4"),
+			FrameNumber, *FramesFolder, RenderFps, *FramesFolder);
+	}
 	LeaveCinematic();
 	if (UWeatherSubsystem* Weather = GetWorld() ? GetWorld()->GetSubsystem<UWeatherSubsystem>() : nullptr)
 	{
@@ -312,12 +384,29 @@ void UDemoSubsystem::StartShot(int32 Index)
 	{
 		Camera->GetCameraComponent()->SetFieldOfView(Shot.FovDeg);
 	}
-	if (APlayerController* Controller = UGameplayStatics::GetPlayerController(this, 0))
+	WarmupFramesLeft = bRendering && Placements[Index].bFound ? WarmupFrames : 0;
+	if (WarmupFramesLeft > 0)
 	{
-		if (Controller->PlayerCameraManager)
+		// Black and still while the place loads; the motion starts after the warm-up.
+		if (const UGameInstance* GameInstance = GetWorld()->GetGameInstance())
 		{
-			Controller->PlayerCameraManager->StartCameraFade(1.0f, 0.0f, Reel.FadeSeconds, FLinearColor::Black, false, false);
+			if (UCalendarSubsystem* Calendar = GameInstance->GetSubsystem<UCalendarSubsystem>())
+			{
+				Calendar->SetTimePaused(true);
+			}
 		}
+		if (APlayerController* Controller = UGameplayStatics::GetPlayerController(this, 0))
+		{
+			if (Controller->PlayerCameraManager)
+			{
+				Controller->PlayerCameraManager->StartCameraFade(1.0f, 1.0f, 0.0f, FLinearColor::Black, false, true);
+			}
+		}
+		PlaceCamera(0.0f);
+	}
+	else
+	{
+		BeginShotMotion();
 	}
 	UE_LOG(LogShroomDebug, Display, TEXT("Demo: shot %d \"%s\" (%s)"), Index, *Shot.Title,
 		Placements[Index].bFound ? *Placements[Index].Description : TEXT("place NOT FOUND: skipped"));
@@ -334,6 +423,15 @@ void UDemoSubsystem::Tick(float DeltaTime)
 		return;
 	}
 	const FDemoShot& Shot = Reel.Shots[ShotIndex];
+	if (WarmupFramesLeft > 0)
+	{
+		PlaceCamera(0.0f);
+		if (--WarmupFramesLeft == 0)
+		{
+			BeginShotMotion();
+		}
+		return;
+	}
 	ShotTime += DeltaTime;
 	if (ShotTime >= Shot.Seconds)
 	{
@@ -346,17 +444,11 @@ void UDemoSubsystem::Tick(float DeltaTime)
 		return;
 	}
 
-	const FDemoPose Pose = DemoReel::Evaluate(*Field, Shot, Placements[ShotIndex], ShotTime / Shot.Seconds);
-	const FVector Position = FieldToWorld.TransformPosition(FVector(Pose.Position));
-	const FVector LookAt = FieldToWorld.TransformPosition(FVector(Pose.LookAt));
-	Camera->SetActorLocationAndRotation(Position, (LookAt - Position).Rotation());
-
+	PlaceCamera(ShotTime / Shot.Seconds);
 	APlayerController* Controller = UGameplayStatics::GetPlayerController(this, 0);
-	// The hidden pawn follows the camera: the runtime ground debris and the mushrooms are generated around it.
-	if (APawn* Pawn = Controller ? Controller->GetPawn() : nullptr)
+	if (bRendering)
 	{
-		const FVector Ground = FieldToWorld.TransformPosition(FVector(Pose.Position.X, Pose.Position.Y, Pose.Position.Z - Shot.EyeM + 1.0));
-		Pawn->SetActorLocation(Ground, false, nullptr, ETeleportType::TeleportPhysics);
+		FScreenshotRequest::RequestScreenshot(false); // caught by OnFrameCaptured at the end of this frame
 	}
 	if (bScreenshots && !bScreenshotTaken && ShotTime >= 0.5f * Shot.Seconds)
 	{
@@ -367,5 +459,40 @@ void UDemoSubsystem::Tick(float DeltaTime)
 	{
 		bFadingOut = true;
 		Controller->PlayerCameraManager->StartCameraFade(0.0f, 1.0f, Reel.FadeSeconds, FLinearColor::Black, false, true);
+	}
+}
+
+void UDemoSubsystem::PlaceCamera(float T)
+{
+	const FDemoShot& Shot = Reel.Shots[ShotIndex];
+	const FDemoPose Pose = DemoReel::Evaluate(*Field, Shot, Placements[ShotIndex], T);
+	const FVector Position = FieldToWorld.TransformPosition(FVector(Pose.Position));
+	const FVector LookAt = FieldToWorld.TransformPosition(FVector(Pose.LookAt));
+	Camera->SetActorLocationAndRotation(Position, (LookAt - Position).Rotation());
+	// The hidden pawn follows the camera: the runtime ground debris and the mushrooms are generated around it.
+	const APlayerController* Controller = UGameplayStatics::GetPlayerController(this, 0);
+	if (APawn* Pawn = Controller ? Controller->GetPawn() : nullptr)
+	{
+		const FVector Ground = FieldToWorld.TransformPosition(FVector(Pose.Position.X, Pose.Position.Y, Pose.Position.Z - Shot.EyeM + 1.0));
+		Pawn->SetActorLocation(Ground, false, nullptr, ETeleportType::TeleportPhysics);
+	}
+}
+
+void UDemoSubsystem::BeginShotMotion()
+{
+	const FDemoShot& Shot = Reel.Shots[ShotIndex];
+	if (const UGameInstance* GameInstance = GetWorld()->GetGameInstance())
+	{
+		if (UCalendarSubsystem* Calendar = GameInstance->GetSubsystem<UCalendarSubsystem>())
+		{
+			Calendar->SetTimePaused(Shot.TimeScale <= 0.0f);
+		}
+	}
+	if (APlayerController* Controller = UGameplayStatics::GetPlayerController(this, 0))
+	{
+		if (Controller->PlayerCameraManager)
+		{
+			Controller->PlayerCameraManager->StartCameraFade(1.0f, 0.0f, Reel.FadeSeconds, FLinearColor::Black, false, false);
+		}
 	}
 }
