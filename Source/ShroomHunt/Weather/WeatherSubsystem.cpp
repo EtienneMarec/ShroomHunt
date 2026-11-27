@@ -187,7 +187,7 @@ float UWeatherSubsystem::GetMeanTemperatureC(double FromGameSeconds, double ToGa
 	return Model.MeanTemperatureC(FromGameSeconds, ToGameSeconds, Overrides);
 }
 
-void UWeatherSubsystem::ForceWeather(EWeatherState State, float DurationGameHours)
+void UWeatherSubsystem::ForceWeather(EWeatherState State, float DurationGameHours, bool bAtOnce)
 {
 	if (State == EWeatherState::Count)
 	{
@@ -196,11 +196,12 @@ void UWeatherSubsystem::ForceWeather(EWeatherState State, float DurationGameHour
 	const double Now = GetNowGameSeconds();
 	FWeatherOverride Override;
 	Override.State = State;
-	Override.StartGameSeconds = Now;
+	Override.StartGameSeconds = bAtOnce ? Now - FWeatherModel::OverrideBlendGameSeconds : Now;
 	Override.EndGameSeconds = Now + static_cast<double>(FMath::Max(0.1f, DurationGameHours)) * 3600.0;
 	Overrides.Add(Override);
 	GroundTimer = 0.0f;
-	UE_LOG(LogShroomWeather, Log, TEXT("Forcing %s for %.1f game hours"), *StateName(State), DurationGameHours);
+	WetnessTimer = 0.0f;
+	UE_LOG(LogShroomWeather, Log, TEXT("Forcing %s for %.1f game hours%s"), *StateName(State), DurationGameHours, bAtOnce ? TEXT(", at once") : TEXT(""));
 }
 
 void UWeatherSubsystem::ClearForcedWeather()

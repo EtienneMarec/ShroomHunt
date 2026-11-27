@@ -73,9 +73,12 @@ public:
 	/** Mean temperature between two game times (game seconds). */
 	float GetMeanTemperatureC(double FromGameSeconds, double ToGameSeconds) const;
 
-	/** Forces a weather state for some game hours, starting now (blends in and out). */
+	/**
+	 * Forces a weather state for some game hours, starting now (blends in and out). bAtOnce starts it one
+	 * blend earlier so that it is fully there now (demo shots, often with the game time frozen).
+	 */
 	UFUNCTION(BlueprintCallable, Category = "ShroomHunt|Weather")
-	void ForceWeather(EWeatherState State, float DurationGameHours);
+	void ForceWeather(EWeatherState State, float DurationGameHours, bool bAtOnce = false);
 
 	/** Ends active and future overrides now (past ones stay in the history). */
 	UFUNCTION(BlueprintCallable, Category = "ShroomHunt|Weather")
