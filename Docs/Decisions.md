@@ -390,6 +390,14 @@ a leaf adds ~1.5 mm, pebbles rise ~0.7 of their radius, and the relief is soften
 the first version reused the exaggerated shading height and turned every leaf and pebble into a
 slab several centimeters high. 3D grass and moss tufts (runtime, like the 3D
 leaves) come next for what a heightfield cannot show.
+*Update 2026-11-27 (demo video feedback):* the ground looked grainy. Each leaf
+is now one smooth sheet resting on the highest point below it (thickness, a
+slight arch, curled edges; deep piles settle softly), instead of a per-pixel
+sum that made spikes once displaced; the fine noise is gone from the relief and
+almost gone from the color. Mushrooms looked buried in the litter and the snow:
+`M_Mushroom` lifts the spawner's mushrooms (Custom Primitive Data 0 = 1) by
+1.5 cm plus the snow depth under the landscape's own patchy snow mask, computed
+at the mushroom's position (`Tools/Python/add_mushroom_ground_lift.py`).
 
 **D-044 — Opaque wood, two-sided masked foliage** · Accepted · 2026-11-26
 F01 ran at ~48 ms of GPU per frame, 27 ms of it in shadow depths: every
@@ -419,6 +427,13 @@ shows ten close-ups; their date is searched, not set: `DemoReel::FindMushrooms`
 runs the spawn model (`SpawnModel::FruitBodiesAt`) over the days of the season
 with the world's weather and picks the densest group of good-looking
 mushrooms, so a shot never films an empty patch and needs no placed props.
+*Update 2026-11-27:* the real-time recording was choppy. `sh.Demo.Render` plays
+the reel at a fixed time step (`FApp::SetUseFixedTimeStep`) and saves every
+frame as a JPEG through the viewport's screenshot delegate, with a few black
+seconds before each shot for streaming and the runtime ground; ffmpeg or the
+video editor turns the frames into a smooth video whatever the frame rate.
+Clearings are now gaps with trees all around (clear-cuts showed bare ground)
+and landmarks are filmed whole from 20–30 m along the most open line of sight.
 
 **D-046 — Morels: closed caps carved by 3D noise** · Accepted · 2026-11-26
 Morels cannot be a revolved profile with an underside: their cap is a closed

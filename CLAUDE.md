@@ -219,7 +219,8 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   height-blends them inside `M_Landscape_Forest`.
 - **Demo** (D-045): `Data/Demo/DemoReel.json` → `DemoReel` (places found in the
   field, mushroom close-ups found by the spawn model, camera motion, pure) →
-  `UDemoSubsystem` (plays it in game). `sh.Demo.*`.
+  `UDemoSubsystem` (plays it in game; `sh.Demo.Render` renders it frame by frame
+  at a fixed time step into `Saved/DemoFrames`). `sh.Demo.*`.
 - **Debug**: `sh.*` console commands (`Debug/ShroomConsoleCommands.cpp`) and
   the on-screen HUD (`UShroomDebugSubsystem`, `sh.Debug.HUD`).
 - **Weather** (`FWeatherModel` pure + `UWeatherSubsystem`): deterministic,
@@ -389,3 +390,10 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   spikes taller than the player). Use 0.1 for 10 cm.
 - With `-game -nullrhi`, `-ExecCmds` run before the first actor tick: values
   computed in `Tick` still show their defaults.
+- A material's **Custom Primitive Data** is not a node of its own: it is a
+  *Scalar Parameter* with *Use Custom Primitive Data* and a *Primitive Data
+  Index* (Python: `use_custom_primitive_data`, `primitive_data_index`); set it
+  per component with `SetCustomPrimitiveDataFloat`. Components that do not set
+  it get the parameter's default.
+- `MaterialEditingLibrary.connect_material_expressions` names inputs by their
+  pin name; for the *Noise* node's Position use `""` (first input).
