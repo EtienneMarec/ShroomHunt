@@ -72,6 +72,7 @@ private:
 	int32 ShotIndex = 0;
 	float ShotTime = 0.0f;
 	int32 SavedDebugHud = 1;
+	bool bSavedScreenMessages = true;
 
 	/** Shot start: black and still until the place is streamed in (and the render warm-up is done). */
 	bool bWarmingUp = false;

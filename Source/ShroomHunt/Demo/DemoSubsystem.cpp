@@ -250,6 +250,10 @@ void UDemoSubsystem::EnterCinematic()
 	{
 		GEngine->ClearOnScreenDebugMessages();
 	}
+	// Engine messages drawn on the viewport ("LIGHTING NEEDS TO BE REBUILT", streaming warnings) would end
+	// up in the rendered frames: off during the reel (Slate UI is never captured).
+	bSavedScreenMessages = GAreScreenMessagesEnabled;
+	GAreScreenMessagesEnabled = false;
 	TArray<UUserWidget*> Widgets;
 	UWidgetBlueprintLibrary::GetAllWidgetsOfClass(this, Widgets, UUserWidget::StaticClass(), true);
 	for (UUserWidget* Widget : Widgets)
@@ -273,6 +277,7 @@ void UDemoSubsystem::LeaveCinematic()
 		}
 	}
 	HiddenWidgets.Reset();
+	GAreScreenMessagesEnabled = bSavedScreenMessages;
 	SetConsoleValue(TEXT("sh.Debug.HUD"), static_cast<float>(SavedDebugHud));
 	SetConsoleValue(TEXT("sh.Season.PreviewSnowCm"), -1.0f);
 	if (APlayerController* Controller = UGameplayStatics::GetPlayerController(this, 0))
