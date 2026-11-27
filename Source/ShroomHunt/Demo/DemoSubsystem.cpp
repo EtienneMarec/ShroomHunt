@@ -102,21 +102,30 @@ bool UDemoSubsystem::LoadReel(FString& OutReport)
 	FieldToWorld = ForestWorld::GetFieldToWorld(GetWorld(), FVector::ZeroVector);
 	Placements.Reset();
 	AMushroomSpawner* Spawner = AMushroomSpawner::Find(GetWorld());
+	const TSharedPtr<const FVegetationDefinition> Vegetation = ForestFieldCache::GetVegetation(Errors);
 	for (const FDemoShot& Shot : Reel.Shots)
 	{
 		if (Shot.Place != EDemoPlace::Mushrooms)
 		{
-			Placements.Add(DemoReel::FindPlace(*Field, Shot));
+			Placements.Add(DemoReel::FindPlace(*Field, Shot, Vegetation.Get()));
 			continue;
 		}
 		// Mushroom shots: the same model, patches, trunks and weather the spawner draws from.
 		const FMushroomSpeciesRow* Species = Spawner ? Spawner->FindSpecies(Shot.Species) : nullptr;
-		const FDemoMushroomScene Scene = Species ? DemoReel::FindMushrooms(Shot, Reel.Year, *Species, Spawner->GetPatches(), MakeSpawnContext(Spawner)) : FDemoMushroomScene();
 		const TSharedPtr<const FVegetationObstacleGrid> Obstacles = Spawner ? Spawner->GetObstacles() : nullptr;
-		Placements.Add(DemoReel::PlaceMushroomShot(*Field, Shot, Scene, [&Obstacles](const FVector2f& P, float Radius)
-		{
-			return Obstacles.IsValid() && Obstacles->Overlaps(P, Radius);
-		}));
+		const TSharedPtr<const FVegetationObstacleGrid> Cover = Spawner ? Spawner->GetCover() : nullptr;
+		const FDemoMushroomScene Scene = Species ? DemoReel::FindMushrooms(Shot, Reel.Year, *Species, Spawner->GetPatches(), MakeSpawnContext(Spawner),
+			[&Cover](const FVector2f& P) { return Cover.IsValid() && Cover->Overlaps(P, 0.05f); }) : FDemoMushroomScene();
+		// Grass tufts and herbs matter only near the mushrooms, where the line of sight runs low.
+		const TSharedPtr<const FVegetationObstacleGrid> Ground = Vegetation && Scene.bFound ? DemoReel::MakeGroundCover(*Field, *Vegetation, Scene.CenterM, 3.0).ToSharedPtr() : nullptr;
+		const FVector2d Center = Scene.CenterM;
+		Placements.Add(DemoReel::PlaceMushroomShot(*Field, Shot, Scene,
+			[&Obstacles](const FVector2f& P, float Radius) { return Obstacles.IsValid() && Obstacles->Overlaps(P, Radius); },
+			[&Cover, &Ground, Center](const FVector2f& P, float Radius)
+			{
+				return (Cover.IsValid() && Cover->Overlaps(P, Radius))
+					|| (Ground.IsValid() && FVector2d::Distance(FVector2d(P), Center) < 0.7 && Ground->Overlaps(P, Radius));
+			}));
 	}
 	return true;
 }

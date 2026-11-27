@@ -10,10 +10,16 @@
 #include "Mycology/SpawnModel.h"
 #include "Time/CalendarMath.h"
 #include "Time/TimeTypes.h"
+#include "Vegetation/VegetationObstacles.h"
+#include "Vegetation/VegetationScatter.h"
 
 namespace DemoReelDetail
 {
 	constexpr int32 Directions = 16;
+	/** Rise shots: least distance from the forest's boundary (m). */
+	constexpr double RiseMarginM = 160.0;
+	/** Mushroom close-ups: least distance from the forest's boundary (m). */
+	constexpr double MushroomMarginM = 60.0;
 
 	double Ground(const FForestField& Field, double X, double Y)
 	{
@@ -199,7 +205,7 @@ namespace DemoReel
 		return Parse(Text, Out, OutErrors);
 	}
 
-	FDemoPlacement FindPlace(const FForestField& Field, const FDemoShot& Shot)
+	FDemoPlacement FindPlace(const FForestField& Field, const FDemoShot& Shot, const FVegetationDefinition* Vegetation)
 	{
 		using namespace DemoReelDetail;
 		FDemoPlacement Out;
@@ -249,7 +255,8 @@ namespace DemoReel
 		case EDemoPlace::Clearing:
 			if (PickCandidate(Field, 6.0, 80.0, Shot.Pick, [&](const FVector2d& Q, const FForestSample& S, double& Score)
 				{
-					if (S.bWater || S.Canopy > 0.12f || S.PathDistanceM < 6.0f)
+					// A rising camera sees far: keep it well inside the forest, or the edge of the world shows.
+					if (S.bWater || S.Canopy > 0.12f || S.PathDistanceM < 6.0f || (Shot.Kind == EDemoShotKind::Rise && !Inside(Field, Q, RiseMarginM)))
 					{
 						return false;
 					}
@@ -265,11 +272,27 @@ namespace DemoReel
 						Trees += Field.Sample(static_cast<float>(Far.X), static_cast<float>(Far.Y)).Canopy;
 					}
 					Score = Open + 1.5 * Trees;
-					return Trees >= 4.0;
+					// Seen from above, a smaller gap is enough (and far from the boundary there are few big ones).
+					return Trees >= (Shot.Kind == EDemoShotKind::Rise ? 2.5 : 4.0);
 				}, P))
 			{
-				// Look toward the forest edge (where the canopy is densest 30 m away).
-				const double Angle = BestDirection(Field, P, 30.0, [](const FForestSample& S) { return S.Canopy; });
+				// Look toward the forest edge (where the canopy is densest 30 m away); a rising camera also
+				// looks toward the middle of the forest, away from its boundary.
+				const FVector2d ToMiddle = (FVector2d(Field.GetSizeM() * 0.5, Field.GetSizeM() * 0.5) - P).GetSafeNormal();
+				double BestScore = -1e30;
+				double Angle = 0.0;
+				for (int32 K = 0; K < Directions; ++K)
+				{
+					const double A = UE_DOUBLE_TWO_PI * K / Directions;
+					const FVector2d Q = P + Dir(A) * 30.0;
+					const double Inward = Shot.Kind == EDemoShotKind::Rise ? 1.5 * FVector2d::DotProduct(Dir(A), ToMiddle) : 0.0;
+					const double Score = Field.Sample(static_cast<float>(Q.X), static_cast<float>(Q.Y)).Canopy + Inward;
+					if (Score > BestScore)
+					{
+						BestScore = Score;
+						Angle = A;
+					}
+				}
 				Stand(P, P + Dir(Angle) * 30.0, 3.0);
 			}
 			break;
@@ -363,10 +386,21 @@ namespace DemoReel
 				const double Yaw = FMath::DegreesToRadians(Mark.YawDeg);
 				const double Near = 6.0 + Mark.LengthM * 0.5;
 				const double Far = FMath::Max(Near, static_cast<double>(Shot.DistanceM));
+				// Low crowns and shrubs around the landmark (the canopy alone said nothing of a thicket in front).
+				FVegetationObstacleGrid ViewCover;
+				if (Vegetation)
+				{
+					TArray<FVegetationInstance> Instances;
+					const FBox2d Around(Where - FVector2d(Far + 5.0), Where + FVector2d(Far + 5.0));
+					VegetationScatter::Scatter(Field, *Vegetation, EVegetationLayer::Trees, Around, Instances);
+					VegetationScatter::Scatter(Field, *Vegetation, EVegetationLayer::Understory, Around, Instances);
+					ViewCover.AddViewCover(*Vegetation, Instances);
+				}
 				// Seen whole, from a distance: the most open line of sight (low canopy between the camera
 				// and the landmark), the front side and the farthest distance preferred.
 				double BestScore = -1e30;
 				FVector2d Best = Where + Dir(Yaw) * Near;
+				double BestSide = 0.0;
 				for (int32 K = 0; K < 16; ++K)
 				{
 					const double Angle = Yaw + UE_DOUBLE_TWO_PI * K / 16;
@@ -374,7 +408,8 @@ namespace DemoReel
 					{
 						const double Distance = FMath::Max(Near, Far * Fraction);
 						const FVector2d Camera = Where + Dir(Angle) * Distance;
-						if (!Inside(Field, Camera, 5.0) || Field.Sample(static_cast<float>(Camera.X), static_cast<float>(Camera.Y)).bWater)
+						if (!Inside(Field, Camera, 5.0) || Field.Sample(static_cast<float>(Camera.X), static_cast<float>(Camera.Y)).bWater
+							|| ViewCover.Overlaps(FVector2f(Camera), 0.6f))
 						{
 							continue;
 						}
@@ -384,15 +419,25 @@ namespace DemoReel
 							const FVector2d Q = FMath::Lerp(Where + Dir(Angle) * Near * 0.5, Camera, (Step + 0.5) / 8.0);
 							Open += (1.0 - Field.Sample(static_cast<float>(Q.X), static_cast<float>(Q.Y)).Canopy) / 8.0;
 						}
-						const double Score = Open + 0.15 * FMath::Cos(Angle - Yaw) + 0.1 * Distance / Far;
+						int32 Hidden = 0;
+						for (int32 Step = 0; Step < 16; ++Step)
+						{
+							Hidden += ViewCover.Overlaps(FVector2f(FMath::Lerp(Where + Dir(Angle) * Near * 0.5, Camera, (Step + 0.5) / 16.0)), 0.2f) ? 1 : 0;
+						}
+						Open -= 2.0 * Hidden / 16.0;
+						// A side asked for (ViewDeg) outweighs a slightly more open view.
+						const double Side = Shot.ViewDeg != 0.0f ? 0.6 * FMath::Cos(Angle - Yaw - FMath::DegreesToRadians(static_cast<double>(Shot.ViewDeg))) : 0.15 * FMath::Cos(Angle - Yaw);
+						const double Score = Open + Side + 0.1 * Distance / Far;
 						if (Score > BestScore)
 						{
 							BestScore = Score;
 							Best = Camera;
+							BestSide = 360.0 * K / 16;
 						}
 					}
 				}
 				Stand(Best, Where, -Shot.EyeM + (Shot.LookAtM >= 0.0f ? Shot.LookAtM : 1.4));
+				Out.Description += FString::Printf(TEXT(", %.0f deg from its front"), BestSide > 180.0 ? BestSide - 360.0 : BestSide);
 			}
 			break;
 		}
@@ -481,7 +526,7 @@ namespace DemoReel
 	}
 
 	FDemoMushroomScene FindMushrooms(const FDemoShot& Shot, int32 Year, const FMushroomSpeciesRow& Species,
-		const TArray<FMyceliumPatch>& Patches, const FSpawnContext& Context)
+		const TArray<FMyceliumPatch>& Patches, const FSpawnContext& Context, TFunctionRef<bool(const FVector2f& PositionM)> IsCovered)
 	{
 		using namespace DemoReelDetail;
 		FDemoMushroomScene Out;
@@ -503,6 +548,8 @@ namespace DemoReel
 		TArray<FFruitBody> Fruits;
 		TArray<double> Weights;
 		TSet<uint32> PatchesFound;
+		// First only mushrooms in the open; when the species grows only under cover, any.
+		for (int32 Pass = 0; Pass < 2 && Groups.Num() == 0; ++Pass)
 		for (int32 Y = Year; Y < Year + 6 && PatchesFound.Num() <= Shot.Pick; ++Y)
 		{
 			for (int32 Day = 1; Day <= SeasonDays; ++Day)
@@ -516,12 +563,15 @@ namespace DemoReel
 					}
 					Fruits.Reset();
 					SpawnModel::FruitBodiesAt(Species, Patch, Context, Seconds, Fruits);
-					// Young to mature mushrooms look best; buttons a little, rotting ones not at all.
+					// Young to mature mushrooms look best; buttons a little, rotting ones and those hidden
+					// under bracken, brambles or shrubs not at all.
 					Weights.Reset();
 					for (const FFruitBody& Fruit : Fruits)
 					{
 						const float Age = Fruit.AgeFraction(Seconds);
-						Weights.Add(Age < 0.08f ? 0.3 : (Age < 0.75f ? 1.0 : (Age < 0.88f ? 0.3 : 0.0)));
+						// Not near the forest's boundary either: the void beyond would show in the background.
+						const bool bHidden = (Pass == 0 && IsCovered(Fruit.PositionM)) || (Context.Field && !Inside(*Context.Field, FVector2d(Fruit.PositionM), MushroomMarginM));
+						Weights.Add(bHidden ? 0.0 : (Age < 0.08f ? 0.3 : (Age < 0.75f ? 1.0 : (Age < 0.88f ? 0.3 : 0.0))));
 					}
 					// Densest group: the mushroom with the most good neighbours within a close-up frame.
 					FGroup Best;
@@ -580,14 +630,23 @@ namespace DemoReel
 			Out.GameSeconds = Chosen->Seconds;
 			Out.CenterM = Chosen->Center;
 			Out.Count = Chosen->Count;
-			Out.Description = FString::Printf(TEXT("%d %s, year %d %s day %d, at (%.0f, %.0f) m"), Chosen->Count, *Shot.Species.ToString(),
-				Chosen->Year, *Shot.Season, Chosen->Day, Chosen->Center.X, Chosen->Center.Y);
+			Out.Description = FString::Printf(TEXT("%d %s, year %d %s day %d, at (%.0f, %.0f) m%s"), Chosen->Count, *Shot.Species.ToString(),
+				Chosen->Year, *Shot.Season, Chosen->Day, Chosen->Center.X, Chosen->Center.Y, IsCovered(FVector2f(Chosen->Center)) ? TEXT(", under cover") : TEXT(""));
 		}
 		return Out;
 	}
 
+	TSharedRef<FVegetationObstacleGrid> MakeGroundCover(const FForestField& Field, const FVegetationDefinition& Vegetation, const FVector2d& Center, double RadiusM)
+	{
+		TSharedRef<FVegetationObstacleGrid> Grid = MakeShared<FVegetationObstacleGrid>();
+		TArray<FVegetationInstance> Instances;
+		VegetationScatter::Scatter(Field, Vegetation, EVegetationLayer::Ground, FBox2d(Center - FVector2d(RadiusM), Center + FVector2d(RadiusM)), Instances);
+		Grid->AddCover(Vegetation, Instances);
+		return Grid;
+	}
+
 	FDemoPlacement PlaceMushroomShot(const FForestField& Field, const FDemoShot& Shot, const FDemoMushroomScene& Scene,
-		TFunctionRef<bool(const FVector2f& PositionM, float RadiusM)> IsBlocked)
+		TFunctionRef<bool(const FVector2f& PositionM, float RadiusM)> IsBlocked, TFunctionRef<bool(const FVector2f& PositionM, float RadiusM)> IsCovered)
 	{
 		using namespace DemoReelDetail;
 		FDemoPlacement Out;
@@ -598,10 +657,13 @@ namespace DemoReel
 		const FVector2d Center = Scene.CenterM;
 		const double Arc = Shot.Kind == EDemoShotKind::Orbit ? FMath::DegreesToRadians(static_cast<double>(Shot.OrbitDeg)) : 0.0;
 		const double Dolly = Shot.Kind == EDemoShotKind::Static ? FMath::Min(static_cast<double>(Shot.DollyM), 0.6 * Shot.DistanceM) : 0.0;
-		// Camera positions along the shot must be free, and so must the view to the mushrooms.
+		// Camera positions along the shot must be free, and so must the view to the mushrooms: no trunk,
+		// and first try without any bracken, bramble or shrub in front (they hid mushrooms in the demo).
+		bool bAvoidCover = true;
 		auto Clear = [&](const FVector2d& P)
 		{
-			if (!Inside(Field, P, 2.0) || Field.Sample(static_cast<float>(P.X), static_cast<float>(P.Y)).bWater || IsBlocked(FVector2f(P), 0.35f))
+			if (!Inside(Field, P, 2.0) || Field.Sample(static_cast<float>(P.X), static_cast<float>(P.Y)).bWater || IsBlocked(FVector2f(P), 0.35f)
+				|| (bAvoidCover && IsCovered(FVector2f(P), 0.4f)))
 			{
 				return false;
 			}
@@ -612,11 +674,25 @@ namespace DemoReel
 					return false;
 				}
 			}
+			for (int32 Step = 1; bAvoidCover && Step < 8; ++Step)
+			{
+				if (IsCovered(FVector2f(FMath::Lerp(P, Center, Step / 8.0)), 0.05f))
+				{
+					return false;
+				}
+			}
 			return true;
 		};
 		const double Phase = ShroomHash::ToUnitFloat(ShroomHash::Hash(0xDE30u, static_cast<uint32>(Center.X * 10.0), static_cast<uint32>(Center.Y * 10.0))) * UE_DOUBLE_TWO_PI;
-		for (const double Distance : { static_cast<double>(Shot.DistanceM), 0.8 * Shot.DistanceM, 0.6 * Shot.DistanceM })
+		for (const double Distance : { static_cast<double>(Shot.DistanceM), 0.8 * Shot.DistanceM, 0.6 * Shot.DistanceM, -1.0,
+			static_cast<double>(Shot.DistanceM), 0.8 * Shot.DistanceM, 0.6 * Shot.DistanceM })
 		{
+			if (Distance < 0.0)
+			{
+				// No view free of cover: accept plants in front rather than no shot.
+				bAvoidCover = false;
+				continue;
+			}
 			for (int32 K = 0; K < 24; ++K)
 			{
 				const double Start = Phase + UE_DOUBLE_TWO_PI * K / 24;

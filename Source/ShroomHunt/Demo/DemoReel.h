@@ -7,6 +7,8 @@ class FForestField;
 struct FMushroomSpeciesRow;
 struct FMyceliumPatch;
 struct FSpawnContext;
+struct FVegetationDefinition;
+class FVegetationObstacleGrid;
 
 /** How the camera moves during a shot. */
 UENUM(BlueprintType)
@@ -66,6 +68,11 @@ struct FDemoShot
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Demo") float DistanceM = 1.3f;
 	/** Landmark: height of the point looked at above the ground (m); negative = the place's default. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Demo") float LookAtM = -1.0f;
+	/**
+	 * Landmark: the side the camera stands on, in degrees from the landmark's front, counterclockwise seen
+	 * from above (+40 = front-left for someone facing the landmark); 0 = the most open view near the front.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Demo") float ViewDeg = 0.0f;
 	/** Orbit: angle swept around the place over the shot (degrees). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Demo") float OrbitDeg = 50.0f;
 	/** Which candidate (0 = best): try another one when a place does not look good. */
@@ -141,20 +148,35 @@ namespace DemoReel
 	SHROOMHUNT_API bool Load(FDemoReel& Out, TArray<FString>& OutErrors);
 	SHROOMHUNT_API bool Parse(const FString& JsonText, FDemoReel& Out, TArray<FString>& OutErrors);
 
-	/** Place of a shot from the field alone; Mushrooms shots need FindMushrooms + PlaceMushroomShot. */
-	SHROOMHUNT_API FDemoPlacement FindPlace(const FForestField& Field, const FDemoShot& Shot);
+	/**
+	 * Place of a shot from the field; Mushrooms shots need FindMushrooms + PlaceMushroomShot. With the
+	 * vegetation, Landmark shots also keep saplings, young trees, shrubs and bracken out of the view.
+	 */
+	SHROOMHUNT_API FDemoPlacement FindPlace(const FForestField& Field, const FDemoShot& Shot, const FVegetationDefinition* Vegetation = nullptr);
 
 	/**
 	 * Mushrooms: scans the days of the shot's season (year Year, then up to five following years if the species
 	 * does not fruit) and returns the Pick-th best group of at least MinFruits mushrooms of the
-	 * species, by the same deterministic model the Mushroom Spawner draws.
+	 * species, by the same deterministic model the Mushroom Spawner draws. Mushrooms under low cover
+	 * (IsCovered: bracken, brambles, shrubs) do not count: they would not be seen.
 	 */
 	SHROOMHUNT_API FDemoMushroomScene FindMushrooms(const FDemoShot& Shot, int32 Year, const FMushroomSpeciesRow& Species,
-		const TArray<FMyceliumPatch>& Patches, const FSpawnContext& Context);
+		const TArray<FMyceliumPatch>& Patches, const FSpawnContext& Context, TFunctionRef<bool(const FVector2f& PositionM)> IsCovered);
 
-	/** Mushrooms: a low camera DistanceM from the group, with a free view and a free orbit (no trunk, no water). */
+	/**
+	 * Mushrooms: a low camera DistanceM from the group, with a free view and a free orbit: no trunk, no
+	 * water (IsBlocked), and when possible no bracken, bramble or shrub on the camera or in the line of
+	 * sight (IsCovered).
+	 */
 	SHROOMHUNT_API FDemoPlacement PlaceMushroomShot(const FForestField& Field, const FDemoShot& Shot, const FDemoMushroomScene& Scene,
-		TFunctionRef<bool(const FVector2f& PositionM, float RadiusM)> IsBlocked);
+		TFunctionRef<bool(const FVector2f& PositionM, float RadiusM)> IsBlocked, TFunctionRef<bool(const FVector2f& PositionM, float RadiusM)> IsCovered);
+
+	/**
+	 * Mushrooms: grass tufts and herbs of the ground layer within RadiusM of Center (generated at runtime
+	 * around the player, so not in the spawner's cover): they hide small mushrooms from a low camera.
+	 */
+	SHROOMHUNT_API TSharedRef<FVegetationObstacleGrid> MakeGroundCover(const FForestField& Field, const FVegetationDefinition& Vegetation,
+		const FVector2d& Center, double RadiusM);
 
 	/** Camera pose at T in [0, 1] of the shot. */
 	SHROOMHUNT_API FDemoPose Evaluate(const FForestField& Field, const FDemoShot& Shot, const FDemoPlacement& Placement, float T);
