@@ -7,22 +7,22 @@
   "LeafGenera": { "Fagus": 0.45, "Quercus": 0.35, "Carpinus": 0.15, "Betula": 0.05 },
 
   "Layers": [
-    { "Layer": "Litter", "ReliefScale": 3.5, "ReliefCm": 0.6, "ReliefBlurMm": 1.0, "MaxPileCm": 1.2, "TileM": 3.0, "Base": [0.16, 0.11, 0.07], "Mottle": [0.22, 0.15, 0.08], "MottleAmount": 0.4, "Grain": 0.1,
+    { "Layer": "Litter", "ReliefScale": 3.0, "ReliefCm": 0.6, "ReliefBlurMm": 1.0, "MaxPileCm": 1.0, "TileM": 3.0, "Base": [0.16, 0.11, 0.07], "Mottle": [0.22, 0.15, 0.08], "MottleAmount": 0.4, "Grain": 0.03,
       "LeavesPerM2": 420, "LeafDecay": 0.35, "LeafScale": 2.0, "TwigsPerM2": 4, "Roughness": 0.9, "NormalStrength": 1.0 },
 
-    { "Layer": "Moss", "ReliefScale": 2.0, "ReliefCm": 1.2, "TileM": 2.5, "Base": [0.11, 0.19, 0.06], "Mottle": [0.20, 0.27, 0.08], "MottleAmount": 0.5, "Grain": 0.12,
+    { "Layer": "Moss", "ReliefScale": 2.0, "ReliefCm": 1.2, "TileM": 2.5, "Base": [0.11, 0.19, 0.06], "Mottle": [0.20, 0.27, 0.08], "MottleAmount": 0.5, "Grain": 0.03,
       "MossBumpsPerM2": 2600, "MossTip": [0.30, 0.42, 0.12], "LeavesPerM2": 25, "LeafDecay": 0.5, "LeafScale": 2.0, "Roughness": 0.95, "NormalStrength": 1.2 },
 
-    { "Layer": "Grass", "ReliefScale": 2.5, "ReliefBlurMm": 1.0, "ReliefCm": 0.6, "TileM": 2.5, "Base": [0.16, 0.20, 0.08], "Mottle": [0.22, 0.22, 0.09], "MottleAmount": 0.4, "Grain": 0.1,
+    { "Layer": "Grass", "ReliefScale": 2.5, "ReliefBlurMm": 1.0, "ReliefCm": 0.6, "TileM": 2.5, "Base": [0.16, 0.20, 0.08], "Mottle": [0.22, 0.22, 0.09], "MottleAmount": 0.4, "Grain": 0.03,
       "BladesPerM2": 2200, "Blade": [0.34, 0.50, 0.15], "BladeLengthCm": 9, "LeavesPerM2": 20, "LeafDecay": 0.4, "LeafScale": 2.0, "Roughness": 0.9, "NormalStrength": 0.8 },
 
-    { "Layer": "Mud", "ReliefScale": 1.5, "ReliefCm": 1.0, "TileM": 3.0, "Base": [0.17, 0.13, 0.09], "Mottle": [0.23, 0.17, 0.11], "MottleAmount": 0.5, "Grain": 0.05,
+    { "Layer": "Mud", "ReliefScale": 1.5, "ReliefCm": 1.0, "TileM": 3.0, "Base": [0.17, 0.13, 0.09], "Mottle": [0.23, 0.17, 0.11], "MottleAmount": 0.5, "Grain": 0.03,
       "LeavesPerM2": 30, "LeafDecay": 0.7, "LeafScale": 2.0, "Puddles": 0.22, "Roughness": 0.55, "NormalStrength": 0.6 },
 
-    { "Layer": "Gravel", "ReliefScale": 1.0, "ReliefCm": 0.5, "TileM": 2.0, "Base": [0.38, 0.35, 0.30], "Mottle": [0.30, 0.27, 0.22], "MottleAmount": 0.4, "Grain": 0.08,
+    { "Layer": "Gravel", "ReliefScale": 1.0, "ReliefCm": 0.5, "TileM": 2.0, "Base": [0.38, 0.35, 0.30], "Mottle": [0.30, 0.27, 0.22], "MottleAmount": 0.4, "Grain": 0.03,
       "PebblesPerM2": 900, "Pebble": [0.55, 0.53, 0.49], "PebbleSizeCm": 3.5, "LeavesPerM2": 8, "LeafDecay": 0.5, "LeafScale": 2.0, "Roughness": 0.8, "NormalStrength": 1.0 },
 
-    { "Layer": "Dirt", "ReliefScale": 2.0, "ReliefCm": 1.0, "TileM": 3.0, "Base": [0.20, 0.14, 0.09], "Mottle": [0.26, 0.19, 0.12], "MottleAmount": 0.5, "Grain": 0.1,
+    { "Layer": "Dirt", "ReliefScale": 2.0, "ReliefCm": 1.0, "TileM": 3.0, "Base": [0.20, 0.14, 0.09], "Mottle": [0.26, 0.19, 0.12], "MottleAmount": 0.5, "Grain": 0.03,
       "PebblesPerM2": 60, "Pebble": [0.45, 0.42, 0.38], "PebbleSizeCm": 2.5, "TwigsPerM2": 10, "LeavesPerM2": 60, "LeafDecay": 0.5, "LeafScale": 2.0, "Roughness": 0.85, "NormalStrength": 0.9 }
   ]
 }

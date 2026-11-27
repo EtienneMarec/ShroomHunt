@@ -93,7 +93,7 @@ struct SHROOMHUNT_API FGroundTextureImage
 namespace GroundTextures
 {
 	/** Bump when the generated pixels change for the same data (the editor then rebakes the textures). */
-	constexpr int32 GeneratorVersion = 6;
+	constexpr int32 GeneratorVersion = 7;
 
 	SHROOMHUNT_API FString GetDefaultPath();
 	SHROOMHUNT_API bool Parse(const FString& JsonText, FGroundTexturesDefinition& Out, TArray<FString>& OutErrors);

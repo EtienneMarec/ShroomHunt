@@ -143,6 +143,23 @@ namespace GroundTexturesDetail
 		const double Length = Shape.LengthPx;
 		const double Width = Length * Shape.WidthRatio;
 		const double Rib = FMath::Max(0.8, Width * 0.04);
+		// The leaf is a sheet lying on whatever is below it: it rests on the highest of a few points
+		// under it, plus its own thickness, a slight arch along the midrib and curled edges. One smooth
+		// surface per leaf (a sum per pixel made a spiky, grainy relief once displaced).
+		const int32 CenterPixel = Canvas.Index(FMath::FloorToInt32(CX), FMath::FloorToInt32(CY));
+		const float Ground = Canvas.GroundRelief[CenterPixel];
+		float Rest = Ground;
+		for (const FVector2d& Offset : { FVector2d(0.0, 0.0), FVector2d(0.3, 0.0), FVector2d(-0.3, 0.0), FVector2d(0.0, 0.25), FVector2d(0.0, -0.25) })
+		{
+			const double A = Offset.X * Length;
+			const double B = Offset.Y * Width;
+			Rest = FMath::Max(Rest, Canvas.Relief[Canvas.Index(FMath::FloorToInt32(CX + A * Cos - B * Sin), FMath::FloorToInt32(CY + A * Sin + B * Cos))]);
+		}
+		if (Canvas.MaxPile > 0.0f)
+		{
+			// Deep piles settle: the height above the ground saturates softly, the top leaves keep their own relief.
+			Rest = Ground + Canvas.MaxPile * (1.0f - FMath::Exp(-(Rest - Ground) / Canvas.MaxPile));
+		}
 		Canvas.ForEachAround(CX, CY, Length * 0.55, [&](double DX, double DY, int32 Pixel)
 		{
 			const double A = DX * Cos + DY * Sin;
@@ -180,12 +197,9 @@ namespace GroundTexturesDetail
 			}
 			Canvas.Color[Pixel] = Shape.Color * Shade;
 			Canvas.Height[Pixel] = Lift + Curl * Edge * Edge;
-			// A leaf is a sheet: it adds ~1.5 mm on what lies below, its edges curl up a few mm.
-			Canvas.Relief[Pixel] += (0.15f + CurlCm * Edge * Edge) * Canvas.PerCm;
-			if (Canvas.MaxPile > 0.0f)
-			{
-				Canvas.Relief[Pixel] = FMath::Min(Canvas.Relief[Pixel], Canvas.GroundRelief[Pixel] + Canvas.MaxPile);
-			}
+			// ~1.2 mm thick, arched by ~1 mm along its length, edges curled up a few mm.
+			const float Arch = 0.1f * static_cast<float>(FMath::Sin(UE_DOUBLE_PI * U)) * (1.0f - Edge);
+			Canvas.Relief[Pixel] = FMath::Max(Canvas.Relief[Pixel], Rest + (0.12f + Arch + CurlCm * Edge * Edge) * Canvas.PerCm);
 			Canvas.Covered[Pixel] = true;
 		});
 	}
@@ -389,9 +403,9 @@ namespace GroundTextures
 				const float MottleAlpha = Style.MottleAmount * ShroomMath::SmoothStep01(0.35f, 0.7f, Large);
 				const int32 Pixel = Y * Size + X;
 				Canvas.Color[Pixel] = Lerp(Base, Mottle, MottleAlpha) * (1.0f + Style.Grain * Fine);
-				Canvas.Height[Pixel] = 0.25f + 0.12f * Large + 0.04f * Fine;
-				// Gentle mounds and hollows (leaf piles), a few millimeters of grain.
-				Canvas.Relief[Pixel] = ReliefGround + (Style.ReliefCm * (2.0f * Large - 1.0f) + 0.15f * Fine) * GroundPerCm;
+				Canvas.Height[Pixel] = 0.25f + 0.12f * Large + 0.01f * Fine;
+				// Gentle mounds and hollows (leaf piles); no fine noise: it read as grain once displaced and lit.
+				Canvas.Relief[Pixel] = ReliefGround + Style.ReliefCm * (2.0f * Large - 1.0f) * GroundPerCm;
 			}
 		}
 		Canvas.GroundRelief = Canvas.Relief;
@@ -473,7 +487,7 @@ namespace GroundTextures
 			// Older leaves lie lower in the pile: darker, flatter.
 			const float Depth = static_cast<float>(I) / FMath::Max(LeafCount, 1);
 			DrawLeaf(Canvas, Shape, Rng.FRand() * Size, Rng.FRand() * Size, Rng.FRandRange(0.0f, UE_TWO_PI),
-				Rng.FRandRange(0.8f, 1.15f) * FMath::Lerp(0.78f, 1.0f, Depth), Rng.FRandRange(0.03f, 0.12f), 0.4f + 0.25f * Depth, Rng.FRandRange(0.1f, 0.4f));
+				Rng.FRandRange(0.8f, 1.15f) * FMath::Lerp(0.78f, 1.0f, Depth), Rng.FRandRange(0.03f, 0.12f), 0.4f + 0.25f * Depth, Rng.FRandRange(0.05f, 0.25f));
 		}
 
 		// Puddles: a flat, dark water film over the low spots.
