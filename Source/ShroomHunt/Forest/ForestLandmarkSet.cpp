@@ -234,13 +234,6 @@ void AForestLandmarkSet::Build()
 		const FString Name = Names.IsValidIndex(Landmark.Node) ? Names[Landmark.Node] : FString();
 		switch (Landmark.Kind)
 		{
-		case EForestLandmarkKind::ForesterHouse:
-			if (!Name.IsEmpty())
-			{
-				AddText(Component, Name, FVector(306.0, 0.0, 300.0), 0.0f, 22.0f);
-			}
-			break;
-
 		case EForestLandmarkKind::Signpost:
 		{
 			if (!Name.IsEmpty())
