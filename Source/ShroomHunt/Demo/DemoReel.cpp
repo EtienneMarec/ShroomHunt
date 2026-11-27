@@ -591,7 +591,8 @@ namespace DemoReel
 						const float Age = Fruit.AgeFraction(Seconds);
 						// Not near the forest's boundary either: the void beyond would show in the background.
 						const bool bHidden = (Pass == 0 && IsCovered(Fruit.PositionM)) || (Context.Field && !Inside(*Context.Field, FVector2d(Fruit.PositionM), MushroomMarginM));
-						Weights.Add(bHidden ? 0.0 : (Age < 0.08f ? 0.3 : (Age < 0.75f ? 1.0 : (Age < 0.88f ? 0.3 : 0.0))));
+						// Grown mushrooms fill the frame; buttons (a couple of centimeters) looked like pebbles.
+						Weights.Add(bHidden ? 0.0 : (Age < 0.1f ? 0.05 : (Age < 0.25f ? 0.5 : (Age < 0.75f ? 1.0 : (Age < 0.88f ? 0.3 : 0.0)))));
 					}
 					// Densest group: the mushroom with the most good neighbours within a close-up frame.
 					FGroup Best;
