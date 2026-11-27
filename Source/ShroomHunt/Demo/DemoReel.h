@@ -78,6 +78,8 @@ struct FDemoShot
 	/** Which candidate (0 = best): try another one when a place does not look good. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Demo") int32 Pick = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Demo") float Seconds = 8.0f;
+	/** Walk: meters of the path skipped before the camera starts (to start past something ugly). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Demo") float StartM = 0.0f;
 	/** Walk speed (m/s); Static: dolly distance over the shot (m). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Demo") float SpeedMps = 1.4f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ShroomHunt|Demo") float DollyM = 3.0f;

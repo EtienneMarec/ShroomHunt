@@ -253,10 +253,23 @@ namespace DemoReel
 		case EDemoPlace::Road: PathWalk(EForestPathRank::Road); break;
 		case EDemoPlace::Footpath: PathWalk(EForestPathRank::Footpath); break;
 		case EDemoPlace::Clearing:
+		{
+			// Rise shots: low crowns and shrubs of the middle of the forest, to keep the way up clear.
+			FVegetationObstacleGrid RiseCover;
+			if (Vegetation && Shot.Kind == EDemoShotKind::Rise)
+			{
+				TArray<FVegetationInstance> Instances;
+				const FBox2d Middle(FVector2d(RiseMarginM - 20.0), FVector2d(Field.GetSizeM() - RiseMarginM + 20.0));
+				VegetationScatter::Scatter(Field, *Vegetation, EVegetationLayer::Trees, Middle, Instances);
+				VegetationScatter::Scatter(Field, *Vegetation, EVegetationLayer::Understory, Middle, Instances);
+				RiseCover.AddViewCover(*Vegetation, Instances);
+			}
 			if (PickCandidate(Field, 6.0, 80.0, Shot.Pick, [&](const FVector2d& Q, const FForestSample& S, double& Score)
 				{
 					// A rising camera sees far: keep it well inside the forest, or the edge of the world shows.
-					if (S.bWater || S.Canopy > 0.12f || S.PathDistanceM < 6.0f || (Shot.Kind == EDemoShotKind::Rise && !Inside(Field, Q, RiseMarginM)))
+					// and clear of young trees and shrubs (the last shot started inside a sapling's crown).
+					if (S.bWater || S.Canopy > 0.12f || S.PathDistanceM < 6.0f || (Shot.Kind == EDemoShotKind::Rise && !Inside(Field, Q, RiseMarginM))
+						|| (RiseCover.Num() > 0 && RiseCover.Overlaps(FVector2f(Q), 3.0f)))
 					{
 						return false;
 					}
@@ -286,7 +299,13 @@ namespace DemoReel
 					const double A = UE_DOUBLE_TWO_PI * K / Directions;
 					const FVector2d Q = P + Dir(A) * 30.0;
 					const double Inward = Shot.Kind == EDemoShotKind::Rise ? 1.5 * FVector2d::DotProduct(Dir(A), ToMiddle) : 0.0;
-					const double Score = Field.Sample(static_cast<float>(Q.X), static_cast<float>(Q.Y)).Canopy + Inward;
+					// The camera moves 0.3 x RiseM forward while rising: through no crown if possible.
+					int32 Crossed = 0;
+					for (double S = 1.0; RiseCover.Num() > 0 && S <= 0.3 * Shot.RiseM + 2.0; S += 1.0)
+					{
+						Crossed += RiseCover.Overlaps(FVector2f(P + Dir(A) * S), 0.5f) ? 1 : 0;
+					}
+					const double Score = Field.Sample(static_cast<float>(Q.X), static_cast<float>(Q.Y)).Canopy + Inward - 0.5 * Crossed;
 					if (Score > BestScore)
 					{
 						BestScore = Score;
@@ -296,6 +315,7 @@ namespace DemoReel
 				Stand(P, P + Dir(Angle) * 30.0, 3.0);
 			}
 			break;
+		}
 		case EDemoPlace::Pond:
 			if (PickCandidate(Field, 4.0, 80.0, Shot.Pick, [&](const FVector2d& Q, const FForestSample& S, double& Score)
 				{
@@ -474,7 +494,7 @@ namespace DemoReel
 		{
 		case EDemoShotKind::Walk:
 		{
-			const double D = Time * Shot.Seconds * Shot.SpeedMps;
+			const double D = FMath::Max(0.0, static_cast<double>(Shot.StartM)) + Time * Shot.Seconds * Shot.SpeedMps;
 			const FVector3d Here = AlongTrack(Placement.Track, D);
 			const FVector3d Ahead = AlongTrack(Placement.Track, D + 8.0);
 			// A light step rhythm (~0.75 m per step).

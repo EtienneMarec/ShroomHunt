@@ -1,12 +1,12 @@
 {
-  "_comment": "Demo reel (D-045): played in game by sh.Demo.Play. Places are found in the forest field (Kind: Walk/Static/Rise/Orbit; Place: Ride, Road, Footpath, Clearing, Pond, OldStand + Genus, YoungStand, Landmark + Landmark kind, Mushrooms + Species). Pick chooses another candidate. Season/Day/Hour set the date, Weather forces a state (empty = the forest's own), SnowCm shows snow at once, TimeScale is the game time speed during the shot (0 = frozen). Landmark shots stand DistanceM away at most, looking LookAtM up, on the side ViewDeg (degrees from the landmark's front, +40 = front-left; 0 = most open near the front). Mushrooms shots look for a day of the season when the species fruits well (Day is only the preferred day), MinFruits standing in a group, the camera DistanceM away at EyeM; Orbit sweeps OrbitDeg around them.",
+  "_comment": "Demo reel (D-045): played in game by sh.Demo.Play. Places are found in the forest field (Kind: Walk/Static/Rise/Orbit; Place: Ride, Road, Footpath, Clearing, Pond, OldStand + Genus, YoungStand, Landmark + Landmark kind, Mushrooms + Species). Pick chooses another candidate; StartM skips the first meters of a walk. Season/Day/Hour set the date, Weather forces a state (empty = the forest's own), SnowCm shows snow at once, TimeScale is the game time speed during the shot (0 = frozen). Landmark shots stand DistanceM away at most, looking LookAtM up, on the side ViewDeg (degrees from the landmark's front, +40 = front-left; 0 = most open near the front). Mushrooms shots look for a day of the season when the species fruits well (Day is only the preferred day), MinFruits standing in a group, the camera DistanceM away at EyeM; Orbit sweeps OrbitDeg around them.",
   "ForestName": "F01_LowlandOakBeech",
   "Year": 2,
   "FadeSeconds": 0.8,
   "Shots": [
     { "Title": "Dawn mist", "Kind": "Rise", "Place": "Clearing", "Pick": 0, "Seconds": 12, "RiseM": 36, "FovDeg": 65,
       "Season": "Summer", "Day": 4, "Hour": 6.2, "Weather": "Fog", "TimeScale": 1 },
-    { "Title": "Along a ride", "Kind": "Walk", "Place": "Ride", "Pick": 0, "Seconds": 14, "SpeedMps": 1.5,
+    { "Title": "Along a ride", "Kind": "Walk", "Place": "Ride", "Pick": 0, "Seconds": 14, "SpeedMps": 1.5, "StartM": 12,
       "Season": "Summer", "Day": 2, "Hour": 9.5, "Weather": "Clear", "TimeScale": 0.5 },
     { "Title": "Ceps", "Kind": "Orbit", "Place": "Mushrooms", "Species": "BoletusEdulis", "MinFruits": 2, "DistanceM": 1.3, "EyeM": 0.5, "OrbitDeg": 55,
       "Pick": 0, "Seconds": 9, "FovDeg": 55, "Season": "Summer", "Day": 3, "Hour": 10.5, "Weather": "PartlyCloudy" },

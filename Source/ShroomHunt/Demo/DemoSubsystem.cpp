@@ -377,7 +377,9 @@ void UDemoSubsystem::StartShot(int32 Index)
 		}
 		else
 		{
-			Weather->ForceWeather(static_cast<EWeatherState>(State), 48.0f);
+			// At once: a forced state blends in over half a game hour, and most shots freeze the game time
+			// (the rain of "Rain on the ride" never came).
+			Weather->ForceWeather(static_cast<EWeatherState>(State), 48.0f, true);
 		}
 	}
 	SetConsoleValue(TEXT("sh.Season.PreviewSnowCm"), Shot.SnowCm);
