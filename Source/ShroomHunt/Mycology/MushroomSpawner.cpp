@@ -253,6 +253,8 @@ void AMushroomSpawner::RebuildInstances(double NowGameSeconds)
 				Component->SetCastShadow(true);
 				Component->LDMaxDrawDistance = CullCm;
 				Component->SetCachedMaxDrawDistance(CullCm);
+				// M_Mushroom lifts mushrooms with this flag onto the displaced litter and snow (add_mushroom_ground_lift.py).
+				Component->SetCustomPrimitiveDataFloat(0, 1.0f);
 				Component->RegisterComponent();
 				MushroomComponents.Add(Component);
 			}
