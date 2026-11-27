@@ -53,6 +53,78 @@ bool FVegetationObstacleGrid::MakeObstacle(const FVegetationDefinition& Definiti
 	}
 }
 
+bool FVegetationObstacleGrid::MakeCover(const FVegetationDefinition& Definition, const FVegetationInstance& Instance, FVegetationObstacle& Out)
+{
+	const FVector2f P(static_cast<float>(Instance.PositionM.X), static_cast<float>(Instance.PositionM.Y));
+	Out.A = P;
+	Out.B = P;
+	// Typical footprint radii of the meshes (VegetationMeshBuilder: fronds 0.6 to 1.3 m long and arching,
+	// bramble mounds up to 0.5 + 0.85 m); shrubs from their crown, hazel's crown starting above a low camera.
+	float Radius = 0.0f;
+	switch (Instance.Kind)
+	{
+	case EVegetationKind::Bracken: Radius = 0.9f; break;
+	case EVegetationKind::Bramble: Radius = 1.0f; break;
+	// Ground layer (only near a close-up's subject: 16 to 30 cm tall).
+	case EVegetationKind::GrassTuft: Radius = 0.15f; break;
+	case EVegetationKind::Herb: Radius = 0.2f; break;
+	case EVegetationKind::Ivy: Radius = 0.5f; break;
+	case EVegetationKind::Hazel:
+	case EVegetationKind::Holly:
+		if (const FTreeArchetype* Shrub = Definition.FindShrubFor(Instance.Kind))
+		{
+			Radius = Shrub->CrownRadiusM * (Instance.Kind == EVegetationKind::Hazel ? 0.6f : 0.9f);
+		}
+		break;
+	default:
+		break;
+	}
+	Out.RadiusM = Radius * Instance.Scale;
+	return Out.RadiusM > 0.0f;
+}
+
+bool FVegetationObstacleGrid::MakeViewCover(const FVegetationDefinition& Definition, const FVegetationInstance& Instance, FVegetationObstacle& Out)
+{
+	if (Instance.Kind != EVegetationKind::Sapling && Instance.Kind != EVegetationKind::Young)
+	{
+		return MakeCover(Definition, Instance, Out);
+	}
+	const FTreeArchetype* Tree = Definition.FindTree(Instance.Genus);
+	const FTreeFormDefinition* Form = Definition.FindForm(Instance.Kind);
+	if (!Tree || !Form)
+	{
+		return false;
+	}
+	Out.A = FVector2f(static_cast<float>(Instance.PositionM.X), static_cast<float>(Instance.PositionM.Y));
+	Out.B = Out.A;
+	Out.RadiusM = Tree->CrownRadiusM * Form->Crown * Instance.Scale;
+	return Out.RadiusM > 0.0f;
+}
+
+void FVegetationObstacleGrid::AddViewCover(const FVegetationDefinition& Definition, const TArray<FVegetationInstance>& Instances)
+{
+	FVegetationObstacle Cover;
+	for (const FVegetationInstance& Instance : Instances)
+	{
+		if (MakeViewCover(Definition, Instance, Cover))
+		{
+			Add(Cover);
+		}
+	}
+}
+
+void FVegetationObstacleGrid::AddCover(const FVegetationDefinition& Definition, const TArray<FVegetationInstance>& Instances)
+{
+	FVegetationObstacle Cover;
+	for (const FVegetationInstance& Instance : Instances)
+	{
+		if (MakeCover(Definition, Instance, Cover))
+		{
+			Add(Cover);
+		}
+	}
+}
+
 void FVegetationObstacleGrid::Add(const FVegetationObstacle& Obstacle)
 {
 	const int32 Index = Obstacles.Add(Obstacle);

@@ -24,8 +24,25 @@ public:
 	/** Footprint of one instance; false for soft plants. */
 	static bool MakeObstacle(const FVegetationDefinition& Definition, const FVegetationInstance& Instance, FVegetationObstacle& Out);
 
+	/**
+	 * Low leafy cover of one instance: the disc of bracken, brambles and shrubs (and of the ground layer's
+	 * grass tufts and herbs) that hides what lies on the ground from a low point of view (demo close-ups);
+	 * false for everything else.
+	 */
+	static bool MakeCover(const FVegetationDefinition& Definition, const FVegetationInstance& Instance, FVegetationObstacle& Out);
+
+	/**
+	 * What blocks a view at eye height: the low cover (MakeCover) plus the crowns of saplings and young
+	 * trees, which start low on the stem (demo shots of landmarks).
+	 */
+	static bool MakeViewCover(const FVegetationDefinition& Definition, const FVegetationInstance& Instance, FVegetationObstacle& Out);
+
 	void Add(const FVegetationObstacle& Obstacle);
 	void AddInstances(const FVegetationDefinition& Definition, const TArray<FVegetationInstance>& Instances);
+	/** Adds the cover (MakeCover) of the instances instead of their solid parts. */
+	void AddCover(const FVegetationDefinition& Definition, const TArray<FVegetationInstance>& Instances);
+	/** Adds the view cover (MakeViewCover) of the instances. */
+	void AddViewCover(const FVegetationDefinition& Definition, const TArray<FVegetationInstance>& Instances);
 
 	/** True when a disc of RadiusM at P touches an obstacle. */
 	bool Overlaps(const FVector2f& P, float RadiusM) const;
