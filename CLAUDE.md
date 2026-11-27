@@ -397,3 +397,16 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   it get the parameter's default.
 - `MaterialEditingLibrary.connect_material_expressions` names inputs by their
   pin name; for the *Noise* node's Position use `""` (first input).
+- **Moving a PCG volume** (or generating before the landscape exists) leaves
+  partition actors with stale instances where no Cleanup reaches them:
+  floating trees, ground without trees (D-047). Diagnose with
+  `Tools/Python/diagnose_forest_streaming.py`, repair with
+  `fix_forest_pcg_alignment.py`, then load all and regenerate.
+- In a headless Python commandlet, `save_dirty_packages` saved nothing after
+  `set_actor_location` / `destroy_actors` on external actors: call
+  `actor.modify()` and save the actors' packages with
+  `EditorLoadingAndSavingUtils.save_packages(packages, False)` (saving a
+  destroyed actor's package deletes its file).
+- `WorldPartitionBlueprintLibrary.get_actor_descs()` lists every actor of a
+  World Partition level with its bounds, loaded or not (returns an
+  `unreal.Array`; `desc.name` is an `unreal.Name`: use `str()`).

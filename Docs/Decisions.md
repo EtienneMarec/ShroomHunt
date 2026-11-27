@@ -449,6 +449,16 @@ darker (no ambient occlusion on these meshes). `EUndersideType::Pitted` tells
 the identification texts there are no gills. The yellow morel and its deadly
 double, the false morel (*Gyromitra esculenta*), are taught by a new book.
 
+**D-047 — Vegetation is never placed without the landscape** · Accepted · 2026-11-27
+The Forest Scatter node maps field meters to the world through the landscape's
+transform. Its fallback (a fixed Forest Origin when no landscape is found) once
+placed a whole generation 504 m off, in partition actors that no Cleanup reached
+after the volume moved: floating trees for weeks. With *Align To Landscape* on,
+a missing landscape is now an error and nothing is generated; the volumes are
+kept centered on the landscape (`Tools/Python/fix_forest_pcg_alignment.py`) and
+`Tools/Python/diagnose_forest_streaming.py` reports how the level is cut into
+World Partition cells.
+
 ## Open questions (to the developer)
 
 - The 54 empty F01 partition files (2026-11-23): were they saved during a
