@@ -15,7 +15,7 @@
     { "Title": "Footpath, evening light", "Kind": "Walk", "Place": "Footpath", "Pick": 0, "Seconds": 12, "SpeedMps": 1.3,
       "Season": "Summer", "Day": 5, "Hour": 17.6, "Weather": "Clear", "TimeScale": 0.5 },
     { "Title": "The pond", "Kind": "Static", "Place": "Pond", "Pick": 0, "Seconds": 7, "DollyM": 2,
-      "Season": "Summer", "Day": 5, "Hour": 18.2, "Weather": "Clear", "TimeScale": 0.5 },
+      "Season": "Summer", "Day": 5, "Hour": 11.5, "Weather": "Clear", "TimeScale": 0.5 },
     { "Title": "Green brittlegill: edible", "Kind": "Static", "Place": "Mushrooms", "Species": "RussulaVirescens", "MinFruits": 2, "DistanceM": 1.3, "EyeM": 0.5, "DollyM": 0.5,
       "Pick": 0, "Seconds": 6, "FovDeg": 55, "Season": "Summer", "Day": 4, "Hour": 13, "Weather": "PartlyCloudy" },
     { "Title": "Death cap: deadly", "Kind": "Orbit", "Place": "Mushrooms", "Species": "AmanitaPhalloides", "MinFruits": 1, "DistanceM": 1.3, "EyeM": 0.55, "OrbitDeg": 40,
@@ -30,13 +30,13 @@
       "Season": "Autumn", "Day": 3, "Hour": 13, "Weather": "Rain" },
     { "Title": "Wood blewits", "Kind": "Orbit", "Place": "Mushrooms", "Species": "LepistaNuda", "MinFruits": 3, "DistanceM": 1.3, "EyeM": 0.5, "OrbitDeg": -45,
       "Pick": 0, "Seconds": 8, "FovDeg": 55, "Season": "Autumn", "Day": 7, "Hour": 12, "Weather": "Overcast" },
-    { "Title": "First snow", "Kind": "Static", "Place": "Clearing", "Pick": 1, "Seconds": 9, "DollyM": 2,
+    { "Title": "First snow", "Kind": "Static", "Place": "OldStand", "Genus": "Fagus", "Pick": 2, "Seconds": 9, "DollyM": 3, "FovDeg": 75,
       "Season": "Winter", "Day": 2, "Hour": 10, "Weather": "Snow", "SnowCm": 6 },
     { "Title": "Winter road", "Kind": "Walk", "Place": "Road", "Pick": 0, "Seconds": 12, "SpeedMps": 1.4,
       "Season": "Winter", "Day": 4, "Hour": 9.5, "Weather": "Clear", "SnowCm": 12, "TimeScale": 0.5 },
     { "Title": "Yellowfoot, late in the year", "Kind": "Orbit", "Place": "Mushrooms", "Species": "CraterellusTubaeformis", "MinFruits": 3, "DistanceM": 1.0, "EyeM": 0.4, "OrbitDeg": 45,
       "Pick": 0, "Seconds": 8, "FovDeg": 55, "Season": "Winter", "Day": 2, "Hour": 12, "Weather": "Overcast", "SnowCm": 0 },
-    { "Title": "Hunting tower in the snow", "Kind": "Static", "Place": "Landmark", "Landmark": "HuntingTower", "Pick": 0, "Seconds": 7, "DollyM": 2,
+    { "Title": "Hunting tower in the snow", "Kind": "Static", "Place": "Landmark", "Landmark": "HuntingTower", "Pick": 0, "Seconds": 7, "DollyM": 3, "DistanceM": 24, "LookAtM": 3.5,
       "Season": "Winter", "Day": 4, "Hour": 15.5, "Weather": "Clear", "SnowCm": 12 },
     { "Title": "Spring green", "Kind": "Static", "Place": "YoungStand", "Pick": 0, "Seconds": 8, "DollyM": 3,
       "Season": "Spring", "Day": 4, "Hour": 11, "Weather": "Clear" },
@@ -46,9 +46,9 @@
       "Pick": 0, "Seconds": 10, "FovDeg": 50, "Season": "Spring", "Day": 3, "Hour": 12, "Weather": "PartlyCloudy" },
     { "Title": "False morel: deadly", "Kind": "Orbit", "Place": "Mushrooms", "Species": "GyromitraEsculenta", "MinFruits": 1, "DistanceM": 0.9, "EyeM": 0.35, "OrbitDeg": -50,
       "Pick": 0, "Seconds": 7, "FovDeg": 50, "Season": "Spring", "Day": 3, "Hour": 12.5, "Weather": "PartlyCloudy" },
-    { "Title": "Forester's house", "Kind": "Static", "Place": "Landmark", "Landmark": "ForesterHouse", "Pick": 0, "Seconds": 7, "DollyM": 2,
+    { "Title": "Forester's house", "Kind": "Static", "Place": "Landmark", "Landmark": "ForesterHouse", "Pick": 0, "Seconds": 7, "DollyM": 3, "DistanceM": 26, "LookAtM": 2.5,
       "Season": "Spring", "Day": 5, "Hour": 18, "Weather": "Clear", "TimeScale": 0.5 },
     { "Title": "Over the canopy", "Kind": "Rise", "Place": "Clearing", "Pick": 2, "Seconds": 14, "RiseM": 42, "FovDeg": 65,
-      "Season": "Spring", "Day": 6, "Hour": 19.4, "Weather": "Clear", "TimeScale": 1 }
+      "Season": "Spring", "Day": 6, "Hour": 18.2, "Weather": "Clear", "TimeScale": 1 }
   ]
 }
