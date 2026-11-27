@@ -563,6 +563,7 @@ namespace DemoReel
 			FVector2d Center = FVector2d::ZeroVector;
 			int32 Count = 0;
 			double Score = 0.0;
+			double MeanAge = 0.0;
 		};
 		TArray<FGroup> Groups;
 		TArray<FFruitBody> Fruits;
@@ -603,6 +604,7 @@ namespace DemoReel
 							continue;
 						}
 						double Local = 0.0;
+						double AgeSum = 0.0;
 						FVector2d Sum = FVector2d::ZeroVector;
 						int32 Count = 0;
 						for (int32 J = 0; J < Fruits.Num(); ++J)
@@ -610,6 +612,7 @@ namespace DemoReel
 							if (Weights[J] > 0.0 && FVector2f::Distance(Fruits[I].PositionM, Fruits[J].PositionM) < 1.2f)
 							{
 								Local += Weights[J];
+								AgeSum += Fruits[J].AgeFraction(Seconds);
 								Sum += FVector2d(Fruits[J].PositionM) * Weights[J];
 								++Count;
 							}
@@ -617,7 +620,7 @@ namespace DemoReel
 						const double Score = Local - 0.05 * FMath::Abs(Day - Shot.Day) - 0.3 * (Y - Year);
 						if (Count >= Shot.MinFruits && (Best.Count == 0 || Score > Best.Score))
 						{
-							Best = { Seconds, Y, Day, Patch.Id, Sum / Local, Count, Score };
+							Best = { Seconds, Y, Day, Patch.Id, Sum / Local, Count, Score, AgeSum / Count };
 						}
 					}
 					if (Best.Count > 0)
@@ -651,8 +654,8 @@ namespace DemoReel
 			Out.GameSeconds = Chosen->Seconds;
 			Out.CenterM = Chosen->Center;
 			Out.Count = Chosen->Count;
-			Out.Description = FString::Printf(TEXT("%d %s, year %d %s day %d, at (%.0f, %.0f) m%s"), Chosen->Count, *Shot.Species.ToString(),
-				Chosen->Year, *Shot.Season, Chosen->Day, Chosen->Center.X, Chosen->Center.Y, IsCovered(FVector2f(Chosen->Center)) ? TEXT(", under cover") : TEXT(""));
+			Out.Description = FString::Printf(TEXT("%d %s (mean age %.2f), year %d %s day %d, at (%.0f, %.0f) m%s"), Chosen->Count, *Shot.Species.ToString(),
+				Chosen->MeanAge, Chosen->Year, *Shot.Season, Chosen->Day, Chosen->Center.X, Chosen->Center.Y, IsCovered(FVector2f(Chosen->Center)) ? TEXT(", under cover") : TEXT(""));
 		}
 		return Out;
 	}
