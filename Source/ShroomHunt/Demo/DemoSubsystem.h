@@ -73,6 +73,11 @@ private:
 	float ShotTime = 0.0f;
 	int32 SavedDebugHud = 1;
 
+	/** Shot start: black and still until the place is streamed in (and the render warm-up is done). */
+	bool bWarmingUp = false;
+	float WarmupSecondsLeft = 0.0f;
+	static constexpr float MaxStreamingWaitSeconds = 20.0f;
+
 	bool bRendering = false;
 	int32 RenderFps = 30;
 	int32 WarmupFrames = 0;

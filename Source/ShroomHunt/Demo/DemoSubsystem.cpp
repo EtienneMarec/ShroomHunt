@@ -29,6 +29,7 @@
 #include "Time/CalendarMath.h"
 #include "Time/CalendarSubsystem.h"
 #include "UnrealClient.h"
+#include "WorldPartition/WorldPartitionSubsystem.h"
 #include "Weather/WeatherSubsystem.h"
 
 namespace DemoSubsystemDetail
@@ -286,6 +287,7 @@ void UDemoSubsystem::Stop()
 		return;
 	}
 	bPlaying = false;
+	bWarmingUp = false;
 	if (bRendering)
 	{
 		bRendering = false;
@@ -385,7 +387,9 @@ void UDemoSubsystem::StartShot(int32 Index)
 		Camera->GetCameraComponent()->SetFieldOfView(Shot.FovDeg);
 	}
 	WarmupFramesLeft = bRendering && Placements[Index].bFound ? WarmupFrames : 0;
-	if (WarmupFramesLeft > 0)
+	WarmupSecondsLeft = Placements[Index].bFound ? MaxStreamingWaitSeconds : 0.0f;
+	bWarmingUp = Placements[Index].bFound;
+	if (bWarmingUp)
 	{
 		// Black and still while the place loads; the motion starts after the warm-up.
 		if (const UGameInstance* GameInstance = GetWorld()->GetGameInstance())
@@ -423,11 +427,23 @@ void UDemoSubsystem::Tick(float DeltaTime)
 		return;
 	}
 	const FDemoShot& Shot = Reel.Shots[ShotIndex];
-	if (WarmupFramesLeft > 0)
+	if (bWarmingUp)
 	{
+		// Black and still until the trees and the landscape around the camera are streamed in (World
+		// Partition loads asynchronously after the jump) and, when rendering, the warm-up frames are
+		// done; never longer than MaxStreamingWaitSeconds of real time.
 		PlaceCamera(0.0f);
-		if (--WarmupFramesLeft == 0)
+		WarmupFramesLeft = FMath::Max(0, WarmupFramesLeft - 1);
+		WarmupSecondsLeft -= FApp::GetDeltaTime() > 0.0 && !bRendering ? static_cast<float>(FApp::GetDeltaTime()) : static_cast<float>(1.0 / RenderFps);
+		const UWorldPartitionSubsystem* Streaming = GetWorld()->GetSubsystem<UWorldPartitionSubsystem>();
+		const bool bStreamed = !Streaming || Streaming->IsStreamingCompleted();
+		if ((bStreamed && WarmupFramesLeft == 0) || WarmupSecondsLeft <= 0.0f)
 		{
+			if (!bStreamed)
+			{
+				UE_LOG(LogShroomDebug, Warning, TEXT("Demo: shot %d starts before World Partition finished streaming"), ShotIndex);
+			}
+			bWarmingUp = false;
 			BeginShotMotion();
 		}
 		return;
