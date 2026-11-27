@@ -252,7 +252,9 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
   `UStaticMesh` cached per species x variant x age step (continuous growth from
   button to rot, D-028) in `UMushroomMeshSubsystem`
   (engine subsystem: works in the editor too); the inspected specimen gets a
-  unique mesh. `AMushroomGarden` previews them.
+  unique mesh. `AMushroomGarden` previews them. In snow, the landscape makes a
+  hollow around the eight mushrooms nearest to the camera
+  (`MPC_Season.SnowHollow0..7`, D-048).
 - **Vegetation** (D-024, D-039: all procedural, stylized, no scanned assets):
   `Data/Vegetation/Vegetation.json` → `TreeGrowth` (branching skeleton per genus;
   forms Sapling/Young/Pole/Mature/Old; shrubs Hazel/Holly from `Shrubs`, D-041)

@@ -398,6 +398,7 @@ almost gone from the color. Mushrooms looked buried in the litter and the snow:
 `M_Mushroom` lifts the spawner's mushrooms (Custom Primitive Data 0 = 1) by
 1.5 cm plus the snow depth under the landscape's own patchy snow mask, computed
 at the mushroom's position (`Tools/Python/add_mushroom_ground_lift.py`).
+*Superseded for snow by D-048:* the lift is now 1.5 cm only.
 
 **D-044 — Opaque wood, two-sided masked foliage** · Accepted · 2026-11-26
 F01 ran at ~48 ms of GPU per frame, 27 ms of it in shadow depths: every
@@ -434,6 +435,15 @@ seconds before each shot for streaming and the runtime ground; ffmpeg or the
 video editor turns the frames into a smooth video whatever the frame rate.
 Clearings are now gaps with trees all around (clear-cuts showed bare ground)
 and landmarks are filmed whole from 20–30 m along the most open line of sight.
+*Update 2026-11-27 (second video):* close-ups avoid what hides a mushroom from
+a low camera: bracken, brambles and shrubs (`FVegetationObstacleGrid::MakeCover`,
+built by the Mushroom Spawner with the trunks) and, near the group, the ground
+layer's grass tufts, herbs and ivy (`DemoReel::MakeGroundCover`); mushrooms
+under cover do not count when a group is chosen, nor within 60 m of the
+forest's boundary. Landmark views also avoid saplings, young trees and shrubs
+(`MakeViewCover`) and can be asked from one side (`ViewDeg`). Rising shots stay
+160 m inside the forest and look toward its middle: from 36 m up the void
+beyond the boundary showed.
 
 **D-046 — Morels: closed caps carved by 3D noise** · Accepted · 2026-11-26
 Morels cannot be a revolved profile with an underside: their cap is a closed
@@ -458,6 +468,19 @@ a missing landscape is now an error and nothing is generated; the volumes are
 kept centered on the landscape (`Tools/Python/fix_forest_pcg_alignment.py`) and
 `Tools/Python/diagnose_forest_streaming.py` reports how the level is cut into
 World Partition cells.
+
+**D-048 — Snow hollows around mushrooms instead of a lift** · Accepted · 2026-11-27
+Mushrooms were lifted onto the displaced snow (D-043 update), so they rose and
+sank with the snow pack, which looked odd during a thaw. They now stay on the
+leaf litter and the landscape lowers its snow around them: the Mushroom Spawner
+writes the eight mushrooms nearest to the camera (world position, cap radius)
+into `MPC_Season.SnowHollow0..7` when they change, and `M_Landscape_Forest`
+multiplies `SnowDepthCm` by a Custom node that is 0 at the stem and rises
+smoothly to 1 at the cap radius plus 1.5 × the snow depth (a cone, like snow
+melting around a stem), wired by `Tools/Python/add_snow_hollows.py`. Eight is
+enough for what a close look shows; farther mushrooms are under the snow, as
+small mushrooms would be. The alternative, a runtime virtual texture drawn by
+each mushroom, needs more assets and editor setup for the same result here.
 
 ## Open questions (to the developer)
 
