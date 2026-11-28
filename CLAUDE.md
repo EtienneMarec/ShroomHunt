@@ -370,6 +370,13 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
 - Vertex colors of our runtime meshes did not show through instanced static
   mesh components (white mushrooms): mushrooms use one component each.
   An ISM material also needs the *Used with Instanced Static Meshes* flag.
+- **Vertex colors reach the shader as stored**: a static mesh keeps them as
+  sRGB 8-bit values and the Vertex Color node returns those numbers. Our mesh
+  builders write sRGB colors, so a material must decode them
+  (`Power(rgb, 2.2)`, as in `M_Mushroom`) or they look washed out.
+- A forced weather blends in over half a game hour: with the game time frozen
+  it never arrives. Use `ForceWeather(..., bAtOnce = true)` for immediate
+  weather (the demo does).
 - An Enhanced Input action **consumes** its keys by default (`bConsumeInput`):
   a higher-priority mapping context that maps the mouse silently disabled the
   template's look action. Runtime actions sharing keys set `bConsumeInput = false`.
