@@ -3,13 +3,28 @@
 *A contemplative first-person mushroom-foraging game in procedurally generated
 French forests — Unreal Engine 5.8, C++.*
 
-> **Status: pre-alpha — vertical slice in progress (M1a time & weather ✅,
-> M1b species data ✅, M1c procedural mushrooms ✅, M1d forest terrain and vegetation ✅, M1e paths, landmarks and water ✅, M1f mushroom spawning ✅, M1g foraging and knowledge ✅, M1h rain and bad-weather light ✅).** Screenshots will be added as soon as the slice is playable.
+> **Status: pre-alpha.** The vertical slice is playable: a 1 km² procedural
+> forest with time, weather, seasons, 13 mushroom species that grow from a
+> mycological model, foraging, identification, a buyer's counter and saves.
+
+[![Demo reel: mushroom close-ups, seasons, rain, snow and landmarks of the first forest](Docs/Media/demo_teaser.gif)](Docs/Media/ShroomHunt_demo.mp4)
+
+*Extracts of the demo reel. **[Watch the full video (3 min 30)](Docs/Media/ShroomHunt_demo.mp4)**: every
+shot is placed by code from the forest data (the mushroom close-ups search the
+days when the spawn model makes the species fruit) and rendered offline at a
+fixed time step (`sh.Demo.Render`).*
+
+![Fly agarics, wood blewits, a morel, autumn beeches, a hunting tower in the snow and the forester's house](Docs/Media/demo_stills.jpg)
+
+*Everything on screen is generated from the data in `Data/`: trees, plants,
+ground debris, mushrooms, buildings and ground textures. No downloaded asset.*
 
 ![The 13 procedural mushroom species, young, mature and old](Docs/Media/procedural_mushrooms.png)
 
-*Procedural mushrooms generated from species data — fly agaric, cep and
-chanterelle, young / mature / old (offline preview render).*
+*The 13 species built from their species data, young / mature / old (offline
+preview render): ceps and bitter boletes, chanterelles and their false
+lookalike, fly agaric, death cap and panther cap, green brittlegill, wood
+blewit, yellowfoot, St George's mushroom, morel and the deadly false morel.*
 
 ![Forest field of the first forest: terrain, water, moisture, soils, pH, stands and canopy](Docs/Media/forest_f01_maps.png)
 
@@ -26,23 +41,40 @@ bitter bolete, or a chanterelle from a toxic jack-o'-lantern. Sell your
 harvest, buy field guides and test kits, fill your encyclopedia and unlock
 new forests, from lowland oak woods to subalpine larches.
 
-## Features (planned)
+## Features
 
-- **Deterministic procedural forests** inspired by French regions, with local
-  biomes from noise fields (altitude, moisture, pH, soil, exposure), parcels,
-  a hierarchical path network and believable landmarks.
-- **Mycologically grounded spawning**: static habitat suitability (host
-  trees, pH, moisture, light) creates persistent good spots; recent rain,
-  temperature and season trigger flushes after a growth delay.
-- **Procedural mushroom meshes**: each species is a set of parameter ranges,
-  each individual a deterministic draw (cap shape, gills/pores, stem, ring,
-  volva, colors, age stage).
-- **Day/night cycle, nuanced weather and short seasons.**
-- **Progressive identification**: unknown mushrooms only show observable
-  criteria; books, test kits and keys let you identify them; dangerous
-  lookalikes matter.
-- Debug tools: suitability/probability heat maps, time acceleration, forced
-  weather.
+Done in the vertical slice:
+
+- **Deterministic forest** from a seed and a JSON definition: terrain,
+  hydrology, soils, pH, parcels and stands, a graded path network (roads,
+  rides, footpaths), named crossroads with signposts, a forester's house, a
+  hunting tower, ponds and streams.
+- **Procedural vegetation**: trees grown from a branching skeleton per genus,
+  shrubs, bracken and brambles, ground debris (single leaves, twigs, moss,
+  stones) placed by a custom PCG node, baked to Nanite meshes at startup.
+- **Mushroom spawning** from a mycological model: habitat suitability,
+  persistent mycelium patches, flushes triggered by the rain of past days,
+  growth from button to rot.
+- **Procedural mushroom meshes**: gills, pores, ridges, warts, rings, volvas,
+  pitted morel caps carved by 3D noise; one deterministic individual per seed.
+- **Time, weather and seasons**: day/night, rain, fog, storms, snow cover
+  and frost, leaf colors and leaf fall per genus; snow makes a hollow around
+  the mushrooms instead of burying them.
+- **Foraging and knowledge**: examine a specimen by its observable criteria,
+  pick it, identify it with field guides found in the forest or bought at the
+  counter, sell the basket (quality, freshness, toxic basket rule); saves.
+
+Planned:
+
+- **More forests** inspired by French regions (pine heath, mountain beech-fir,
+  subalpine larch), unlocked as the player progresses.
+- **Identification tools**: keys, spore prints and test kits; the pharmacist's
+  check; an encyclopedia desk at the house.
+- **More species**, including wood-growing ones, and more landmarks.
+
+Debug tools: suitability and spawn maps, offline spawn simulation over years,
+time acceleration, forced weather, season preview, on-screen HUD (`sh.*`
+console commands).
 
 ## Architecture
 

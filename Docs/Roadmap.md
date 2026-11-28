@@ -23,7 +23,7 @@ world generation, progression, roadmap, decisions).
 | M1g-2 Knowledge ✅ (`Docs/Milestones/M1g.md`, part 2) | poster + torn page, names of known species, minimal encyclopedia | identify |
 | M1h Rain polish ✅ (`Docs/Milestones/M1h.md`) | wind heading, rain slanted by the wind, streak material, ground splashes (CPU collision events), less rain and dripping leaves under the canopy, rain sound, wet materials (`MF_Wetness`) | walk from a clearing into a dense stand in the rain |
 
-## V1 — Visual pass (brought forward from M6, `Docs/Milestones/V1.md`) — code done 2026-11-26, video to record
+## V1 — Visual pass (brought forward from M6, `Docs/Milestones/V1.md`) ✅ (demo video 2026-11-28)
 Look for the demo before M2 (D-033): stylized, detailed procedural trees
 grown from a branching skeleton per genus (D-039, replaces the Megascans
 mapping), forest floor materials, PCG ground debris (leaves, twigs, small
