@@ -179,8 +179,9 @@ menu name below differs in your editor, skip this step and tell me what you see.
      (0, 0, -1100).
    - *Particle Update*: if modules like *Curl Noise Force* or *Drag* exist,
      right-click > *Delete*.
-   - *Render > Sprite Renderer*: **Facing Mode** *Velocity Aligned*,
-     **Alignment** *Velocity Aligned*.
+   - *Render > Sprite Renderer*: **Alignment** *Velocity Aligned*,
+     **Facing Mode** *Face Camera Position* (Facing Mode has no velocity
+     option in UE 5.8).
 4. Toolbar **Compile**, then **Save**. Close.
 5. Double-click `BP_EnvironmentDirector` to open the Blueprint editor. In
    **Components** (top left) click **RainParticles**; in **Details** set
