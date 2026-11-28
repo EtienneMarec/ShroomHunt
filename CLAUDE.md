@@ -373,7 +373,8 @@ sound wave/cue, `IA_`/`IMC_` input, `Lvl_` level (kept from the template).
 - **Vertex colors reach the shader as stored**: a static mesh keeps them as
   sRGB 8-bit values and the Vertex Color node returns those numbers. Our mesh
   builders write sRGB colors, so a material must decode them
-  (`Power(rgb, 2.2)`, as in `M_Mushroom`) or they look washed out.
+  (`Power(rgb, 2.2)`, as in `M_Mushroom` and `M_Vegetation`) or they look
+  washed out.
 - A forced weather blends in over half a game hour: with the game time frozen
   it never arrives. Use `ForceWeather(..., bAtOnce = true)` for immediate
   weather (the demo does).
